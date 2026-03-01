@@ -1,0 +1,420 @@
+const express = require('express');
+const cors = require('cors');
+const { createClient } = require('@supabase/supabase-js');
+require('dotenv').config();
+
+const app = express();
+const PORT = process.env.PORT || 5000;
+
+// Supabase client
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_ANON_KEY
+);
+
+// Middleware
+app.use(cors());
+app.use(express.json());
+
+// Health check
+app.get('/api/health', async (req, res) => {
+  try {
+    const { data, error } = await supabase.from('schools').select('id').limit(1);
+    res.json({ 
+      message: 'Server and database connected!', 
+      timestamp: new Date(),
+      database: error ? 'error' : 'connected'
+    });
+  } catch (err) {
+    res.json({ message: 'Server running, database error', error: err.message });
+  }
+});
+
+// Registration endpoint
+app.post('/api/register', async (req, res) => {
+  console.log('Received registration data:', req.body);
+  
+  try {
+    const { 
+      familyName, 
+      parentFirstName, 
+      phone, 
+      email, 
+      password,
+      schoolId, 
+      children,
+      emergencyContact,
+      emergencyPhone,
+      address,
+      notificationSettings,
+      comments 
+    } = req.body;
+
+    const bcrypt = require('bcryptjs');
+    const familyCode = `F${Date.now().toString().slice(-6)}${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
+
+    // הצפן את הסיסמה
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    // צור משתמש חדש
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .insert([
+        {
+          school_id: schoolId,
+          email: email,
+          phone: phone,
+          password_hash: hashedPassword,
+          first_name: parentFirstName,
+          last_name: familyName,
+          role: 'parent',
+          status: 'pending'
+        }
+      ])
+      .select()
+      .single();
+
+    if (userError) {
+      throw userError;
+    }
+
+    // שמור את פרטי הילדים כהרשמה ממתינה
+    const { data: regData, error: regError } = await supabase
+      .from('pending_registrations')
+      .insert([
+        {
+          school_id: schoolId,
+          parent_name: `${parentFirstName || ''} ${familyName}`.trim(),
+          parent_phone: phone,
+          parent_email: email,
+          address: address,
+          emergency_contact: emergencyContact,
+          emergency_phone: emergencyPhone,
+          children_data: children,
+          notification_settings: notificationSettings,
+          comments: comments,
+          family_code: familyCode,
+          status: 'pending'
+        }
+      ])
+      .select();
+
+    if (regError) {
+      throw regError;
+    }
+
+    res.json({
+      success: true,
+      message: 'Registration completed successfully',
+      familyCode: familyCode,
+      userId: userData.id
+    });
+
+  } catch (error) {
+    console.error('Registration error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Login endpoint
+app.post('/api/login', async (req, res) => {
+  try {
+    const { username, password } = req.body;
+    
+    if (!username || !password) {
+      return res.status(400).json({ success: false, message: 'חסרים שם משתמש או סיסמה' });
+    }
+    
+    const bcrypt = require('bcryptjs');
+    
+    // חפש משתמש לפי email או phone
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('*')
+      .or(`email.eq.${username},phone.eq.${username}`)
+      .single();
+    
+    if (error || !user) {
+      return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
+    }
+    
+    // בדוק סיסמה
+    const validPassword = await bcrypt.compare(password, user.password_hash);
+    if (!validPassword) {
+      return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
+    }
+    
+    // החזר פרטי משתמש
+    res.json({
+      success: true,
+      user: {
+        id: user.id,
+        name: `${user.first_name} ${user.last_name}`,
+        type: user.role,
+        email: user.email,
+        phone: user.phone
+      }
+    });
+    
+    
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בהתחברות' });
+  }
+});
+
+// Get parent data with children
+app.get('/api/parent/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // קבל פרטי הורה
+    const { data: parent, error: parentError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (parentError || !parent) {
+      return res.status(404).json({ success: false, message: 'הורה לא נמצא' });
+    }
+
+    // קבל ילדים של ההורה
+    const { data: children, error: childrenError } = await supabase
+  .from('students')
+  .select('*')
+  .eq('parent_id', userId)
+  .eq('school_id', parent.school_id);
+
+    if (childrenError) {
+      console.error('Children fetch error:', childrenError);
+      return res.status(500).json({ success: false, message: 'שגיאה בטעינת ילדים' });
+    }
+
+    res.json({
+      success: true,
+      parent: {
+        name: `${parent.first_name} ${parent.last_name}`,
+        email: parent.email,
+        phone: parent.phone
+      },
+      children: children || []
+    });
+
+  } catch (error) {
+    console.error('Parent data error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת נתונים' });
+  }
+});
+
+// Add money to student
+app.post('/api/add-money', async (req, res) => {
+  try {
+    const { studentId, amount, paymentMethod } = req.body;
+    
+    if (!studentId || !amount || amount <= 0) {
+      return res.status(400).json({ success: false, message: 'נתונים לא תקינים' });
+    }
+
+    // קבל פרטי התלמיד
+    const { data: student, error: getError } = await supabase
+      .from('students')
+      .select('balance, school_id, first_name, last_name')
+      .eq('id', studentId)
+      .single();
+
+    if (getError) {
+      throw getError;
+    }
+
+    // עדכן יתרה
+    const newBalance = student.balance + parseFloat(amount);
+    const { data, error } = await supabase
+      .from('students')
+      .update({ balance: newBalance })
+      .eq('id', studentId)
+      .select()
+      .single();
+
+    if (error) {
+      throw error;
+    }
+
+    // יצור עסקה בהיסטוריה
+    const { error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        student_id: studentId,
+        school_id: student.school_id,
+        type: 'payment',
+        amount: parseFloat(amount),
+        description: `הוספת כסף - ${paymentMethod}`,
+        payment_method: paymentMethod,
+        transaction_date: new Date().toISOString()
+      });
+
+    if (transactionError) {
+      console.error('Transaction insert error:', transactionError);
+    }
+
+    res.json({
+      success: true,
+      message: 'כסף נוסף בהצלחה',
+      newBalance: data.balance
+    });
+
+  } catch (error) {
+    console.error('Add money error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בהוספת כסף' });
+  }
+});
+
+// Get transactions for parent's children
+app.get('/api/transactions/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    // קבל את הילדים של ההורה
+    const { data: children, error: childrenError } = await supabase
+      .from('students')
+      .select('id')
+      .eq('parent_id', userId);
+
+    if (childrenError) {
+      throw childrenError;
+    }
+
+    if (!children || children.length === 0) {
+      return res.json({ success: true, transactions: [] });
+    }
+
+// Get all students for secretary (by school)
+app.get('/api/school-students/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+
+    const { data: students, error } = await supabase
+      .from('students')
+      .select(`
+        *,
+        users (first_name, last_name, phone, email)
+      `)
+      .eq('school_id', schoolId)
+      .order('first_name');
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      students: students || []
+    });
+
+  } catch (error) {
+    console.error('School students error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת תלמידים' });
+  }
+});
+
+
+// Super Admin authentication
+app.post('/api/admin/auth', async (req, res) => {
+  const { password } = req.body;
+  const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
+  
+  console.log('Password received:', password);
+  console.log('Expected password:', adminPassword);
+
+  if (password === adminPassword) {
+    res.json({ success: true, message: 'Admin authenticated' });
+  } else {
+    res.status(401).json({ success: false, message: 'Wrong password' });
+  }
+});
+
+// Super Admin - Create new school
+app.post('/api/admin/schools', async (req, res) => {
+  try {
+    const { name, address, contact_person, contact_phone, contact_email } = req.body;
+
+    const { data, error } = await supabase
+      .from('schools')
+      .insert([
+        {
+          name,
+          address, 
+          contact_person,
+          contact_phone,
+          contact_email,
+          status: 'active'
+        }
+      ])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ 
+      success: true, 
+      message: 'School created successfully',
+      school: data 
+    });
+
+  } catch (error) {
+    console.error('Create school error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Get all transactions for school
+app.get('/api/school-transactions/:schoolId', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+
+    const { data: transactions, error } = await supabase
+      .from('transactions')
+      .select(`
+        *,
+        students (first_name, last_name)
+      `)
+      .eq('school_id', schoolId)
+      .order('transaction_date', { ascending: false })
+      .limit(50);
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({
+      success: true,
+      transactions: transactions || []
+    });
+
+  } catch (error) {
+    console.error('School transactions error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת עסקאות' });
+  }
+});
+
+// Super Admin - Get all schools
+app.get('/api/admin/schools', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('schools')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+    res.json(data);
+
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
+  console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+});
+
