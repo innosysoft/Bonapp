@@ -535,7 +535,10 @@ const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStude
       <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: '#333' }}>
         📷 מכוון את המצלמה לכיוון ה-QR Code
       </h3>
-      <div id="qr-reader" style={{ width: '100%' }}></div>
+      <div id="qr-reader" style={{ width: '100%', transform: 'scaleX(-1)' }}>
+
+        
+      </div>
     </div>
     <button
   onClick={() => {

@@ -3126,17 +3126,18 @@ const handleSendEmail = async () => {
       }}>
         {!capturedPhoto ? (
           <video
-            id="camera-preview"
-            autoPlay
-            playsInline
-            style={{
-              position: 'absolute',
-              top: 0,
-              left: 0,
-              width: '100%',
-              height: '100%',
-              objectFit: 'cover'
-            }}
+  id="camera-preview"
+  autoPlay
+  playsInline
+  style={{
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    objectFit: 'cover',
+    transform: 'scaleX(-1)'  // ← הוסף את זה!
+  }}
           />
         ) : (
           <img
