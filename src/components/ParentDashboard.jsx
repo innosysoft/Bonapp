@@ -50,6 +50,10 @@ const [schoolName, setSchoolName] = useState('');
 const [menuType, setMenuType] = useState('items');
 const [weeklyMenuData, setWeeklyMenuData] = useState([]);
 const [uploadingPhoto, setUploadingPhoto] = useState(false);
+const [showCameraModal, setShowCameraModal] = useState(false);
+const [cameraStream, setCameraStream] = useState(null);
+const [capturedPhoto, setCapturedPhoto] = useState(null);
+const [selectedChildForCamera, setSelectedChildForCamera] = useState(null);
 const [showEditStudent, setShowEditStudent] = useState(false);
 const [editingStudent, setEditingStudent] = useState(null);
 const [showAddStudent, setShowAddStudent] = useState(false);
@@ -291,6 +295,80 @@ const handlePhotoUpload = async (childIndex, file) => {
     alert('שגיאה בהעלאת תמונה');
     setUploadingPhoto(false);
   }
+};
+
+const startCamera = async (childIndex) => {
+  setSelectedChildForCamera(childIndex);
+  setShowCameraModal(true);
+  
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ 
+      video: { facingMode: 'user' } 
+    });
+    setCameraStream(stream);
+    
+    // חיבור ל-video element
+    setTimeout(() => {
+      const video = document.getElementById('camera-preview');
+      if (video) {
+        video.srcObject = stream;
+      }
+    }, 100);
+  } catch (error) {
+    console.error('Camera error:', error);
+    alert('לא ניתן לגשת למצלמה');
+    setShowCameraModal(false);
+  }
+};
+
+const capturePhoto = () => {
+  const video = document.getElementById('camera-preview');
+  const canvas = document.createElement('canvas');
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+  canvas.getContext('2d').drawImage(video, 0, 0);
+  
+  const photoData = canvas.toDataURL('image/jpeg', 0.8);
+  setCapturedPhoto(photoData);
+};
+
+const saveCapturedPhoto = async () => {
+  if (!capturedPhoto) return;
+  
+  setUploadingPhoto(true);
+  
+  try {
+    const childId = children[selectedChildForCamera].id;
+    const result = await uploadStudentPhoto(childId, capturedPhoto);
+    
+    if (result.success) {
+      const updatedChildren = [...children];
+      updatedChildren[selectedChildForCamera] = {
+        ...updatedChildren[selectedChildForCamera],
+        photo_url: result.photoUrl
+      };
+      setChildren(updatedChildren);
+      
+      alert('התמונה נשמרה בהצלחה!');
+      closeCameraModal();
+    } else {
+      alert('שגיאה בשמירת תמונה');
+    }
+  } catch (error) {
+    alert('שגיאה בשמירת תמונה');
+  }
+  
+  setUploadingPhoto(false);
+};
+
+const closeCameraModal = () => {
+  if (cameraStream) {
+    cameraStream.getTracks().forEach(track => track.stop());
+  }
+  setCameraStream(null);
+  setCapturedPhoto(null);
+  setShowCameraModal(false);
+  setSelectedChildForCamera(null);
 };
 
 const handleEditStudent = (student) => {
@@ -1044,12 +1122,40 @@ const handleSendEmail = async () => {
     alt={`${children[selectedChild]?.first_name} ${children[selectedChild]?.last_name}`}
     style={styles.childPhoto}
   />
+  <div style={{
+  position: 'absolute',
+  bottom: 0,
+  right: 0,
+  display: 'flex',
+  gap: '0.5rem'
+}}>
+  {/* כפתור צילום */}
+  <button
+    onClick={() => startCamera(selectedChild)}
+    disabled={uploadingPhoto}
+    style={{
+      background: '#2196F3',
+      color: 'white',
+      width: '32px',
+      height: '32px',
+      borderRadius: '50%',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      cursor: uploadingPhoto ? 'not-allowed' : 'pointer',
+      border: '3px solid white',
+      boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+      transition: 'all 0.3s'
+    }}
+    title="צלם תמונה"
+  >
+    📷
+  </button>
+  
+  {/* כפתור העלאה */}
   <label 
     htmlFor={`photo-upload-${selectedChild}`}
     style={{
-      position: 'absolute',
-      bottom: 0,
-      right: 0,
       background: '#4CAF50',
       color: 'white',
       width: '32px',
@@ -1063,9 +1169,9 @@ const handleSendEmail = async () => {
       boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
       transition: 'all 0.3s'
     }}
-    title="העלה תמונה"
+    title="העלה מגלריה"
   >
-    📷
+    📁
   </label>
   <input
     id={`photo-upload-${selectedChild}`}
@@ -1075,6 +1181,7 @@ const handleSendEmail = async () => {
     style={{ display: 'none' }}
     disabled={uploadingPhoto}
   />
+</div>
 </div>
 
 
@@ -2974,7 +3081,163 @@ const handleSendEmail = async () => {
         userEmail={parentData?.email}
       />
       
+      {/* מודל מצלמה */}
+{showCameraModal && (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.9)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 2000,
+    padding: '1rem'
+  }}>
+    <div style={{
+      background: 'white',
+      borderRadius: '16px',
+      padding: '2rem',
+      maxWidth: '600px',
+      width: '100%',
+      position: 'relative'
+    }}>
+      {/* כותרת */}
+      <h3 style={{
+        fontSize: '1.5rem',
+        fontWeight: 'bold',
+        marginBottom: '1.5rem',
+        textAlign: 'center'
+      }}>
+        {capturedPhoto ? 'תצוגה מקדימה' : 'צלם תמונה'}
+      </h3>
       
+      {/* תצוגת מצלמה או תמונה */}
+      <div style={{
+        width: '100%',
+        borderRadius: '12px',
+        overflow: 'hidden',
+        marginBottom: '1.5rem',
+        background: '#f0f0f0',
+        position: 'relative',
+        paddingBottom: '75%'
+      }}>
+        {!capturedPhoto ? (
+          <video
+            id="camera-preview"
+            autoPlay
+            playsInline
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
+        ) : (
+          <img
+            src={capturedPhoto}
+            alt="Captured"
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              width: '100%',
+              height: '100%',
+              objectFit: 'cover'
+            }}
+          />
+        )}
+      </div>
+      
+      {/* כפתורים */}
+      <div style={{
+        display: 'flex',
+        gap: '1rem',
+        justifyContent: 'center'
+      }}>
+        {!capturedPhoto ? (
+          <>
+            <button
+              onClick={capturePhoto}
+              style={{
+                padding: '1rem 2rem',
+                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+                color: 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                cursor: 'pointer',
+                boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)'
+              }}
+            >
+              📷 צלם
+            </button>
+            
+            <button
+              onClick={closeCameraModal}
+              style={{
+                padding: '1rem 2rem',
+                background: '#f8f9fa',
+                color: '#666',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                cursor: 'pointer'
+              }}
+            >
+              ביטול
+            </button>
+          </>
+        ) : (
+          <>
+            <button
+              onClick={saveCapturedPhoto}
+              disabled={uploadingPhoto}
+              style={{
+                padding: '1rem 2rem',
+                background: uploadingPhoto ? '#e0e0e0' : 'linear-gradient(135deg, #4CAF50, #45a049)',
+                color: uploadingPhoto ? '#999' : 'white',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                cursor: uploadingPhoto ? 'not-allowed' : 'pointer',
+                boxShadow: uploadingPhoto ? 'none' : '0 4px 15px rgba(76, 175, 80, 0.3)'
+              }}
+            >
+              {uploadingPhoto ? '⏳ שומר...' : '✅ שמור תמונה'}
+            </button>
+            
+            <button
+              onClick={() => setCapturedPhoto(null)}
+              disabled={uploadingPhoto}
+              style={{
+                padding: '1rem 2rem',
+                background: '#f8f9fa',
+                color: '#666',
+                border: 'none',
+                borderRadius: '12px',
+                fontSize: '1.1rem',
+                fontWeight: '600',
+                cursor: uploadingPhoto ? 'not-allowed' : 'pointer'
+              }}
+            >
+              🔄 צלם שוב
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  </div>
+)}
+
     </div>
   );
 };
