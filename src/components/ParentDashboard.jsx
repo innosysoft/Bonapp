@@ -230,26 +230,31 @@ console.log('weeklyMenuData state:', weeklyMenuData);
       } else {
         alert(result.message || 'שגיאה ביצירת תשלום Paybox');
       }
-    } else {
-      // שיטות תשלום אחרות (ביט, אשראי, מזומן)
-      const result = await addMoney(selectedChildData.id, parseFloat(amount), paymentMethod);
-      
-      if (result.success) {
-        // עדכן את יתרת הילד במקומי
-        const updatedChildren = [...children];
-        updatedChildren[selectedChild] = {
-          ...updatedChildren[selectedChild],
-          balance: result.newBalance
-        };
-        setChildren(updatedChildren);
-        
-        alert(`תשלום ${paymentMethod} בוצע בהצלחה!\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}\n\n(בסביבה אמיתית - זה יעבור דרך שירות תשלומים חיצוני)`);
-        setShowAddMoney(false);
-        setAmount('');
-      } else {
-        alert(result.message || 'שגיאה בהוספת כסף');
-      }
-    }
+    } else if (paymentMethod === 'cash') {
+  // מזומן - רק הנחיות, לא הוספה אוטומטית!
+  alert(`💵 הנחיות תשלום במזומן:\n\n1. קח ₪${amount} במזומן\n2. פנה למזכירת בית הספר\n3. תן לה את קוד המשפחה: ${parentData.uniqueCode}\n4. המזכירה תוסיף את הכסף ליתרה\n\n⏳ היתרה תתעדכן לאחר שהמזכירה תאשר את התשלום`);
+  setShowAddMoney(false);
+  setAmount('');
+} else {
+  // שיטות תשלום אחרות (ביט, אשראי)
+  const result = await addMoney(selectedChildData.id, parseFloat(amount), paymentMethod);
+  
+  if (result.success) {
+    // עדכן את יתרת הילד במקומי
+    const updatedChildren = [...children];
+    updatedChildren[selectedChild] = {
+      ...updatedChildren[selectedChild],
+      balance: result.newBalance
+    };
+    setChildren(updatedChildren);
+    
+    alert(`תשלום ${paymentMethod} בוצע בהצלחה!\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}\n\n(בסביבה אמיתית - זה יעבור דרך שירות תשלומים חיצוני)`);
+    setShowAddMoney(false);
+    setAmount('');
+  } else {
+    alert(result.message || 'שגיאה בהוספת כסף');
+  }
+}
   } catch (error) {
     console.error('Add money error:', error);
     alert('שגיאה בהוספת כסף. נסה שוב.');
