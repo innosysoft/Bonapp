@@ -6,7 +6,7 @@ const API_BASE_URL = config.API_URL;
 
 export const loginUser = async (username, password) => {
   try {
-    const response = await fetch(`${API_BASE_URL}/login`, {
+    const response = await fetch(`${API_URL}/login`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
