@@ -96,21 +96,24 @@ const LandingPage = () => {
     heroContent: {
       maxWidth: '800px'
     },
+
     heroTitle: {
-  fontSize: '2.8rem',
+  fontSize: 'clamp(1.8rem, 5vw, 2.8rem)',
   fontWeight: 'bold',
   marginBottom: '1.5rem',
   lineHeight: '1.2',
   color: '#7cb342'
 },
+
     heroSubtitle: {
-  fontSize: '1.4rem',
+  fontSize: 'clamp(1rem, 3vw, 1.4rem)',
   fontWeight: '500',
   marginBottom: '2.5rem',
   lineHeight: '1.8',
   color: '#4a6fa5',
   maxWidth: '700px',
-  margin: '0 auto 2.5rem'
+  margin: '0 auto 2.5rem',
+  padding: '0 1rem'
 },
 
     heroCTA: {

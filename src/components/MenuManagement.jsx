@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMenuItems, addMenuItem, updateMenuItem, deleteMenuItem, getSchools } from '../api';
 import { Plus, Edit2, Trash2, Check, X, ChefHat, ArrowRight, LogOut, QrCode } from 'lucide-react';
 
-const API_BASE_URL = 'https://api.bonapp.dev/api';
+const API_URL = 'https://api.bonapp.dev/api';
 
 const MenuManagement = () => {
   const navigate = useNavigate();
@@ -52,7 +52,7 @@ if (schoolsData.success) {
         }
 
         // טען תפריט יומי - הוסף את זה! 👇
-const dailyResult = await fetch(`${API_BASE_URL}/daily-menu/${user.school_id}`);
+const dailyResult = await fetch(`${API_URL}/daily-menu/${user.school_id}`);
 const dailyData = await dailyResult.json();
 if (dailyData.success) {
   setDailyMenu(dailyData.dailyMenu || []);
@@ -71,7 +71,7 @@ if (dailyData.success) {
 const handleMenuTypeChange = async (newType) => {
   try {
     // עדכן ב-backend (נוסיף route בהמשך)
-    const response = await fetch(`${API_BASE_URL}/schools/${currentUser.school_id}/menu-type`, {
+    const response = await fetch(`${API_URL}/schools/${currentUser.school_id}/menu-type`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ menu_type: newType })
@@ -142,7 +142,7 @@ const handleMenuTypeChange = async (newType) => {
   }
 
   try {
-    const response = await fetch(`${API_BASE_URL}/daily-menu`, {
+    const response = await fetch(`${API_URL}/daily-menu`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
