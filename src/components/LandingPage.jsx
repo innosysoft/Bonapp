@@ -320,7 +320,7 @@ const LandingPage = () => {
       <header style={styles.header}>
         <div style={styles.logo}>
   <img 
-    src="/images/bonapp-logo.png" 
+    src="/images/Bonapp-logo.png" 
     alt="BonApp Logo" 
     style={{ height: '30px', width: 'auto' }}
   />
