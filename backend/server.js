@@ -915,7 +915,7 @@ app.post('/api/students/:studentId/send-qr-email', async (req, res) => {
     
     
     await transporter.sendMail({
-      from: process.env.EMAIL_USER || 'your-email@gmail.com',
+      from: process.env.EMAIL_USER,
       to: parentEmail,
       subject: `QR Code - ${studentName} - ${schoolName}`,
       html: `
