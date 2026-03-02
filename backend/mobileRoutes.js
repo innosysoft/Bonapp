@@ -8,22 +8,19 @@ const nodemailer = require('nodemailer');
 
 // Email transporter
 const transporter = nodemailer.createTransport({
-  host: 'smtppro.zoho.com',
-  port: 587,
-  secure: false,
+  host: process.env.EMAIL_HOST,
+  port: parseInt(process.env.EMAIL_PORT),
+  secure: process.env.EMAIL_SECURE === 'true',
   auth: {
-    user: 'Inon@bonapp.dev',
-    pass: 'In@537099!In'
-  },
-  tls: {
-    rejectUnauthorized: false
+    user: process.env.EMAIL_USER,
+    pass: process.env.EMAIL_PASS
   }
 });
 
 // פונקציה לשליחת קישור מובייל
 const sendMobileLink = async (toEmail, userName, url) => {
   const mailOptions = {
-    from: '"מערכת ארוחות בית ספר" <Inon@bonapp.dev>',
+    from: '"מערכת ארוחות בית ספר" <bon-app@innosys.co.il>',
     to: toEmail,
     subject: '📱 קישור לאפליקציית ארוחות בית הספר',
     html: `
