@@ -19,18 +19,32 @@ app.use(express.urlencoded({ limit: '50mb', extended: true }));
 // Email transporter
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT),
-  secure: process.env.EMAIL_SECURE === 'true',
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  tls: {
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
+  },
+  requireTLS: true
 });
+
+console.log('📧 Email config:', {
+  host: process.env.EMAIL_HOST,
+  port: process.env.EMAIL_PORT,
+  user: process.env.EMAIL_USER
+});
+
+const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_USER || 'bon-app@innosys.co.il'}>`;
+const APP_URL = process.env.APP_URL || 'https://bonapp.dev';
 
 // פונקציה לשליחת קישור מובייל
 const sendMobileLink = async (toEmail, userName, url) => {
   const mailOptions = {
-    from: '"מערכת ארוחות בית ספר" <bon-app@innosys.co.il>',
+    from: EMAIL_FROM,
     to: toEmail,
     subject: '📱 קישור לאפליקציית ארוחות בית הספר',
     html: `
@@ -915,7 +929,7 @@ app.post('/api/students/:studentId/send-qr-email', async (req, res) => {
     
     
     await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+      from: EMAIL_FROM,
       to: parentEmail,
       subject: `QR Code - ${studentName} - ${schoolName}`,
       html: `
@@ -1868,6 +1882,35 @@ app.post('/api/daily-menu', async (req, res) => {
 
 // ===== EMAIL =====
 
+// 🧪 Test endpoint - /api/test-email?to=your@email.com
+app.get('/api/test-email', async (req, res) => {
+  const testEmail = req.query.to || process.env.EMAIL_USER;
+  try {
+    console.log('🧪 Testing email config:', {
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      user: process.env.EMAIL_USER
+    });
+    
+    await transporter.verify();
+    console.log('✅ SMTP connection verified!');
+    
+    const info = await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: testEmail,
+      subject: '✅ BonApp - בדיקת מייל',
+      html: `<div dir="rtl"><h2>🎉 מייל בדיקה עבד!</h2><p>אם קיבלת את זה - המייל עובד תקין.</p><p>זמן: ${new Date().toLocaleString('he-IL')}</p></div>`
+    });
+    
+    res.json({ success: true, message: 'מייל בדיקה נשלח!', to: testEmail, messageId: info.messageId });
+  } catch (error) {
+    console.error('❌ Email test failed:', error);
+    res.status(500).json({ success: false, error: error.message, code: error.code, command: error.command });
+  }
+});
+
+
+
 app.post('/api/send-login-email', async (req, res) => {
   try {
     const { parentEmail, parentName, password } = req.body;
@@ -1877,7 +1920,7 @@ app.post('/api/send-login-email', async (req, res) => {
     console.log('From:', 'bon-app@innosys.co.il');
     
     const mailOptions = {
-      from: 'bon-app@innosys.co.il',
+      from: EMAIL_FROM,
       to: parentEmail,
       subject: 'פרטי גישה למערכת ארוחות בית הספר',
       html: `
@@ -1891,7 +1934,7 @@ app.post('/api/send-login-email', async (req, res) => {
             <p><strong>סיסמה:</strong> ${password}</p>
           </div>
           
-          <p><a href="http://localhost:3000" style="background: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">היכנסו למערכת</a></p>
+          <p><a href="${APP_URL}" style="background: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">היכנסו למערכת</a></p>
           
           <p>בברכה,<br>צוות בית הספר</p>
         </div>
@@ -1925,7 +1968,7 @@ app.post('/api/send-user-email', async (req, res) => {
     };
 
     const mailOptions = {
-      from: 'bon-app@innosys.co.il',
+      from: EMAIL_FROM,
       to: userEmail,
       subject: `פרטי גישה למערכת ${schoolName}`,
       html: `
@@ -1940,7 +1983,7 @@ app.post('/api/send-user-email', async (req, res) => {
             <p><strong>סיסמה:</strong> ${password}</p>
           </div>
           
-          <p><a href="http://localhost:3000/login" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">היכנס למערכת</a></p>
+          <p><a href="${APP_URL}/login" style="background: #667eea; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">היכנס למערכת</a></p>
           
           <p style="color: #666; font-size: 0.9rem;">מומלץ לשנות את הסיסמה לאחר הכניסה הראשונה</p>
           

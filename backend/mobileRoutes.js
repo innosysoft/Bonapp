@@ -6,21 +6,28 @@ const crypto = require('crypto');
 
 const nodemailer = require('nodemailer');
 
-// Email transporter
 const transporter = nodemailer.createTransport({
   host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT),
-  secure: process.env.EMAIL_SECURE === 'true',
+  port: parseInt(process.env.EMAIL_PORT) || 587,
+  secure: false,
   auth: {
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
-  }
+  },
+  tls: {
+    rejectUnauthorized: false,
+    ciphers: 'SSLv3'
+  },
+  requireTLS: true
 });
+
+const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_USER || 'bon-app@innosys.co.il'}>`;
+
 
 // פונקציה לשליחת קישור מובייל
 const sendMobileLink = async (toEmail, userName, url) => {
   const mailOptions = {
-    from: '"מערכת ארוחות בית ספר" <bon-app@innosys.co.il>',
+    from: EMAIL_FROM,
     to: toEmail,
     subject: '📱 קישור לאפליקציית ארוחות בית הספר',
     html: `
