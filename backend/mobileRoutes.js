@@ -11,14 +11,13 @@ const transporter = nodemailer.createTransport({
   port: parseInt(process.env.EMAIL_PORT) || 587,
   secure: false,
   auth: {
+    type: 'LOGIN',
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   },
   tls: {
-    rejectUnauthorized: false,
-    ciphers: 'SSLv3'
-  },
-  requireTLS: true
+    rejectUnauthorized: false
+  }
 });
 
 const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_USER || 'bon-app@innosys.co.il'}>`;
