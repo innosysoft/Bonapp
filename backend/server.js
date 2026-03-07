@@ -1875,6 +1875,59 @@ app.post('/api/daily-menu', async (req, res) => {
   }
 });
 
+// ===== SCHOOL CONTACT FORM =====
+app.post('/api/school-contact', async (req, res) => {
+  try {
+    const { organizationName, fullName, phone, email } = req.body;
+
+    if (!organizationName || !fullName || !phone || !email) {
+      return res.status(400).json({ success: false, message: 'נא למלא את כל השדות' });
+    }
+
+    // שלח מייל למנהל המערכת
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: process.env.ADMIN_EMAIL || 'netproil@gmail.com',
+      subject: `🏫 בקשת הרשמה חדשה - ${organizationName}`,
+      html: `
+        <div dir="rtl" style="font-family: Arial; text-align: right;">
+          <h2>📋 בקשת הרשמה חדשה למערכת BonApp</h2>
+          <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>שם הארגון:</strong> ${organizationName}</p>
+            <p><strong>שם איש קשר:</strong> ${fullName}</p>
+            <p><strong>טלפון:</strong> ${phone}</p>
+            <p><strong>אימייל:</strong> ${email}</p>
+          </div>
+          <p>יש ליצור קשר עם הארגון ולהוסיף אותו למערכת.</p>
+        </div>
+      `
+    });
+
+    // שלח מייל אישור לפונה
+    await transporter.sendMail({
+      from: EMAIL_FROM,
+      to: email,
+      subject: '✅ קיבלנו את פנייתך - BonApp',
+      html: `
+        <div dir="rtl" style="font-family: Arial; text-align: right;">
+          <h2>שלום ${fullName}! 👋</h2>
+          <p>תודה על פנייתך למערכת BonApp.</p>
+          <p>קיבלנו את פרטי <strong>${organizationName}</strong> ונחזור אליך בהקדם.</p>
+          <br>
+          <p>בברכה,<br>צוות BonApp</p>
+        </div>
+      `
+    });
+
+    res.json({ success: true, message: 'הטופס נשלח בהצלחה!' });
+
+  } catch (error) {
+    console.error('School contact error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בשליחת הטופס: ' + error.message });
+  }
+});
+
+
 // ===== EMAIL =====
 
 // 🧪 Test endpoint - /api/test-email?to=your@email.com
