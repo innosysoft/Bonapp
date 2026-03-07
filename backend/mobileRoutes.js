@@ -16,7 +16,7 @@ const transporter = nodemailer.createTransport({
   }
 });
 
-const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_USER || 'bon-app@innosys.co.il'}>`;
+const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_FROM || 'bon-app@innosys.co.il'}>`;
 
 
 // פונקציה לשליחת קישור מובייל
