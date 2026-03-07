@@ -33,7 +33,7 @@ console.log('📧 Email config:', {
   user: process.env.EMAIL_USER
 });
 
-const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_USER || 'bon-app@innosys.co.il'}>`;
+const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_FROM || 'bon-app@innosys.co.il'}>`;
 const APP_URL = process.env.APP_URL || 'https://bonapp.dev';
 
 // פונקציה לשליחת קישור מובייל
@@ -924,32 +924,40 @@ app.post('/api/students/:studentId/send-qr-email', async (req, res) => {
     
     
     await transporter.sendMail({
-      from: EMAIL_FROM,
-      to: parentEmail,
-      subject: `QR Code - ${studentName} - ${schoolName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <h1 style="color: #2c3e50; text-align: center;">QR Code - ${studentName}</h1>
-          <p style="font-size: 16px; color: #555;">שלום ${parentName},</p>
-          <p style="font-size: 16px; color: #555;">
-            מצורף ה-QR Code של ${studentName} לשימוש במזנון בית הספר ${schoolName}.
-          </p>
-          
-          <div style="text-align: center; margin: 30px 0;">
-            <img src="${qrImageData}" alt="QR Code" style="max-width: 400px; border: 2px solid #ddd; padding: 20px;" />
-          </div>
-          
-          <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
-            <p style="margin: 0; color: #666;">קוד תלמיד:</p>
-            <p style="font-size: 20px; font-weight: bold; font-family: monospace; margin: 10px 0;">${qrRecord.qr_code}</p>
-          </div>
-          
-          <p style="font-size: 14px; color: #777; text-align: center;">
-            סרוק את הקוד במזנון בית הספר לביצוע רכישות
-          </p>
-        </div>
-      `
-    });
+  from: EMAIL_FROM,
+  to: parentEmail,
+  subject: `QR Code - ${studentName} - ${schoolName}`,
+  html: `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;" dir="rtl">
+      <h1 style="color: #2c3e50; text-align: center;">QR Code - ${studentName}</h1>
+      <p style="font-size: 16px; color: #555;">שלום ${parentName},</p>
+      <p style="font-size: 16px; color: #555;">
+        מצורף ה-QR Code של ${studentName} לשימוש במזנון בית הספר ${schoolName}.
+      </p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <img src="cid:qrcode" alt="QR Code" style="max-width: 400px; border: 2px solid #ddd; padding: 20px;" />
+      </div>
+      
+      <div style="background: #f8f9fa; padding: 15px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0; color: #666;">קוד תלמיד:</p>
+        <p style="font-size: 20px; font-weight: bold; font-family: monospace; margin: 10px 0;">${qrRecord.qr_code}</p>
+      </div>
+      
+      <p style="font-size: 14px; color: #777; text-align: center;">
+        סרוק את הקוד במזנון בית הספר לביצוע רכישות
+      </p>
+    </div>
+  `,
+  attachments: [
+    {
+      filename: `QR-${studentName}.png`,
+      content: qrImageData.split('base64,')[1],
+      encoding: 'base64',
+      cid: 'qrcode'
+    }
+  ]
+});
     
     res.json({ success: true, message: 'המייל נשלח בהצלחה' });
     
