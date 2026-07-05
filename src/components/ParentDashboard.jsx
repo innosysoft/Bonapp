@@ -144,6 +144,10 @@ if (data.children && data.children.length > 0) {
       setSchoolSettings(school);
       
       // אם חבילה חודשית - טען את לוח הארוחות לשכבת הילד
+      
+      console.log('child group_id:', data.children[0]?.group_id);
+console.log('enable_monthly_package:', school.enable_monthly_package);
+      
       if (school.enable_monthly_package && data.children[0].group_id) {
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
