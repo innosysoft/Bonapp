@@ -114,6 +114,7 @@ const GradeGroupsTab = ({ schoolId }) => {
     }
   };
 
+  if (!schoolId) return <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>טוען נתוני בית ספר...</div>;
   if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>טוען...</div>;
 
   return (
