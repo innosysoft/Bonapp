@@ -22,8 +22,10 @@ const GradeGroupsTab = ({ schoolId }) => {
 
   const loadGroups = async () => {
     try {
+      console.log('Loading groups for schoolId:', schoolId);
       const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}/groups`);
       const data = await response.json();
+      console.log('Groups data:', data);
       if (data.success) setGroups(data.groups);
     } catch (error) {
       console.error('Error loading groups:', error);
