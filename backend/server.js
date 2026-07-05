@@ -585,7 +585,7 @@ app.delete('/api/users/:userId', async (req, res) => {
 
 app.post('/api/students', async (req, res) => {
   try {
-    const { parent_id, school_id, first_name, last_name, grade, student_phone, student_id_number, system_access, can_edit_profile, spending_limit, parent_notifications, can_order_for_friends, max_daily_meals } = req.body;
+    const { parent_id, school_id, first_name, last_name, grade, student_phone, student_id_number, system_access, can_edit_profile, spending_limit, parent_notifications, can_order_for_friends, max_daily_meals, group_id } = req.body;
 
     if (!parent_id || !school_id || !first_name || !grade) {
       return res.status(400).json({
@@ -610,6 +610,7 @@ app.post('/api/students', async (req, res) => {
         parent_notifications: parent_notifications !== undefined ? parent_notifications : true,
         can_order_for_friends: can_order_for_friends || false,
         max_daily_meals: max_daily_meals || 2,
+        group_id: group_id || null,
         balance: 0.0,
         status: 'active'
       })
@@ -660,7 +661,8 @@ app.put('/api/students/:studentId', async (req, res) => {
       spending_limit,
       parent_notifications,
       can_order_for_friends,
-      max_daily_meals
+      max_daily_meals,
+      group_id
     } = req.body;
 
     const updateData = {};
@@ -675,6 +677,8 @@ app.put('/api/students/:studentId', async (req, res) => {
     if (parent_notifications !== undefined) updateData.parent_notifications = parent_notifications;
     if (can_order_for_friends !== undefined) updateData.can_order_for_friends = can_order_for_friends;
     if (max_daily_meals !== undefined) updateData.max_daily_meals = max_daily_meals;
+    if (group_id !== undefined) updateData.group_id = group_id;
+
 
     const { data: student, error } = await supabase
       .from('students')

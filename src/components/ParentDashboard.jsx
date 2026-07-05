@@ -66,6 +66,7 @@ const [showQRModal, setShowQRModal] = useState(false);
 const [currentQR, setCurrentQR] = useState(null);
 const [loadingQR, setLoadingQR] = useState(false);
 const [showSendToPhone, setShowSendToPhone] = useState(false);
+const [schoolGroups, setSchoolGroups] = useState([]);
 const [newStudent, setNewStudent] = useState({
   first_name: '',
   last_name: '',
@@ -171,7 +172,14 @@ console.log('weeklyMenuData state:', weeklyMenuData);
   }
 }
 
-
+// טען שכבות בית ספר
+if (data.children && data.children.length > 0) {
+  const groupsResponse = await fetch(`https://api.bonapp.dev/api/schools/${data.children[0].school_id}/groups`);
+  const groupsData = await groupsResponse.json();
+  if (groupsData.success) {
+    setSchoolGroups(groupsData.groups);
+  }
+}
 
       // טען עסקאות
       const transactionsData = await getTransactions(currentUser.id);
@@ -441,7 +449,15 @@ const handleAddStudent = async () => {
         first_name: '',
         last_name: '',
         grade: '',
-        student_phone: ''
+        group_id: '',
+        student_phone: '',
+        student_id_number: '',
+        system_access: false,
+        can_edit_profile: false,
+        spending_limit: 50,
+        parent_notifications: true,
+        can_order_for_friends: false,
+        max_daily_meals: 2
       });
       alert('התלמיד נוסף בהצלחה!');
     } else {
@@ -2383,23 +2399,29 @@ const handleSendEmail = async () => {
                 }}>
                   כיתה *
                 </label>
-                <input
-                  type="text"
-                  value={editingStudent.grade}
+                <select
+                  value={editingStudent.group_id || ''}
                   onChange={(e) => setEditingStudent({
                     ...editingStudent,
-                    grade: e.target.value
+                    group_id: e.target.value
                   })}
-                  placeholder="א1, ב3, ג5..."
                   style={{
                     width: '100%',
                     padding: '0.75rem',
                     border: '2px solid #e0e0e0',
                     borderRadius: '8px',
                     fontSize: '1rem',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    background: 'white'
                   }}
-                />
+                >
+                  <option value="">בחר שכבה</option>
+                  {schoolGroups.map(group => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>
@@ -2992,18 +3014,19 @@ const handleSendEmail = async () => {
                 onClick={() => {
                   setShowAddStudent(false);
                   setNewStudent({
-                    first_name: '',
-                    last_name: '',
-                    grade: '',
-                    student_phone: '',
-                    student_id_number: '',
-                    system_access: false,
-                    can_edit_profile: false,
-                    spending_limit: 50,
-                    parent_notifications: true,
-                    can_order_for_friends: false,
-                    max_daily_meals: 2
-                  });
+        first_name: '',
+        last_name: '',
+        grade: '',
+        group_id: '',
+        student_phone: '',
+        student_id_number: '',
+        system_access: false,
+        can_edit_profile: false,
+        spending_limit: 50,
+        parent_notifications: true,
+        can_order_for_friends: false,
+        max_daily_meals: 2
+      });
                 }}
                 style={{
                   flex: 1,
