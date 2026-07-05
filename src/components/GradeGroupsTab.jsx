@@ -16,12 +16,7 @@ const GradeGroupsTab = ({ schoolId }) => {
   const monthNames = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
     'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
- useEffect(() => {
-    console.log('useEffect fired, schoolId:', schoolId);
-    if (schoolId) loadGroups();
-  }, [schoolId]);
-
-  const loadGroups = async () => {
+    const loadGroups = async () => {
     try {
       console.log('Loading groups for schoolId:', schoolId);
       const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}/groups`);
@@ -33,6 +28,13 @@ const GradeGroupsTab = ({ schoolId }) => {
     }
     setLoading(false);
   };
+
+ useEffect(() => {
+    console.log('useEffect fired, schoolId:', schoolId);
+    if (schoolId) loadGroups();
+  }, [schoolId]);
+
+  
 
   const addGroup = async () => {
     if (!newGroupName.trim()) return;
