@@ -284,7 +284,8 @@ const saveSchoolSettings = async () => {
   enable_monthly_package: editingSchool.enable_monthly_package,
   enable_daily_payment: editingSchool.enable_daily_payment,
   daily_meal_price: editingSchool.daily_meal_price,
-  charge_absent_students: editingSchool.charge_absent_students
+  charge_absent_students: editingSchool.charge_absent_students,
+  enable_free_payment: editingSchool.enable_free_payment
       })
     });
 
