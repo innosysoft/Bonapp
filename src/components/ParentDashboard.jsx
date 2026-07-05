@@ -67,6 +67,8 @@ const [currentQR, setCurrentQR] = useState(null);
 const [loadingQR, setLoadingQR] = useState(false);
 const [showSendToPhone, setShowSendToPhone] = useState(false);
 const [schoolGroups, setSchoolGroups] = useState([]);
+const [schoolSettings, setSchoolSettings] = useState(null);
+const [monthlyPackageInfo, setMonthlyPackageInfo] = useState(null);
 const [newStudent, setNewStudent] = useState({
   first_name: '',
   last_name: '',
@@ -138,6 +140,21 @@ if (data.children && data.children.length > 0) {
 
       setSchoolName(school.name);
       setMenuType(school.menu_type || 'items');
+
+      setSchoolSettings(school);
+      
+      // אם חבילה חודשית - טען את לוח הארוחות לשכבת הילד
+      if (school.enable_monthly_package && data.children[0].group_id) {
+        const currentMonth = new Date().getMonth() + 1;
+        const currentYear = new Date().getFullYear();
+        const scheduleResponse = await fetch(
+          `https://api.bonapp.dev/api/groups/${data.children[0].group_id}/schedule?month=${currentMonth}&year=${currentYear}`
+        );
+        const scheduleData = await scheduleResponse.json();
+        if (scheduleData.success && scheduleData.schedule) {
+          setMonthlyPackageInfo(scheduleData.schedule);
+        }
+      }
       
       // טען תפריט לפי סוג
       if (school.menu_type === 'daily') {
@@ -1650,6 +1667,78 @@ const handleSendEmail = async () => {
               </div>
             </div>
             
+            {/* מידע על שיטת תשלום */}
+            {schoolSettings?.enable_monthly_package && monthlyPackageInfo && (
+              <div style={{
+                background: '#e3f2fd',
+                padding: '1rem',
+                borderRadius: '12px',
+                marginBottom: '1rem',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1976d2' }}>
+                  📅 חבילה חודשית - {new Date().toLocaleString('he-IL', { month: 'long' })}
+                </p>
+                <p style={{ margin: '0 0 0.5rem 0', color: '#555', fontSize: '0.9rem' }}>
+                  {monthlyPackageInfo.days_count} ימים × ₪{monthlyPackageInfo.meal_price} ליום
+                </p>
+                <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.3rem', color: '#1976d2' }}>
+                  סה"כ לתשלום: ₪{(monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2)}
+                </p>
+                <button
+                  onClick={() => setAmount((monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2))}
+                  style={{
+                    marginTop: '0.75rem',
+                    padding: '0.5rem 1rem',
+                    background: '#1976d2',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: '600'
+                  }}
+                >
+                  שלם סכום זה
+                </button>
+              </div>
+            )}
+
+            {schoolSettings?.enable_daily_payment && (
+              <div style={{
+                background: '#f3e5f5',
+                padding: '1rem',
+                borderRadius: '12px',
+                marginBottom: '1rem',
+                textAlign: 'center'
+              }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
+                  📆 תשלום יומי - ₪{schoolSettings.daily_meal_price} ליום
+                </p>
+                <p style={{ margin: '0 0 0.5rem 0', color: '#555', fontSize: '0.9rem' }}>
+                  כמה ימים תרצה לשלם?
+                </p>
+                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                  {[1, 2, 3, 5, 10].map(days => (
+                    <button
+                      key={days}
+                      onClick={() => setAmount((days * schoolSettings.daily_meal_price).toFixed(2))}
+                      style={{
+                        padding: '0.5rem 1rem',
+                        background: '#7b1fa2',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        fontWeight: '600'
+                      }}
+                    >
+                      {days} ימים = ₪{(days * schoolSettings.daily_meal_price).toFixed(2)}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div style={{
               marginBottom: '1.5rem'
             }}>
