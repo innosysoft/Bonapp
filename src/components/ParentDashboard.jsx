@@ -1711,68 +1711,33 @@ const handleSendEmail = async () => {
             )}
 
             {schoolSettings?.enable_daily_payment && (
-              <div style={{
-                background: '#f3e5f5',
-                padding: '1rem',
-                borderRadius: '12px',
-                marginBottom: '1rem',
-                textAlign: 'center'
-              }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
-                  📆 תשלום יומי - ₪{schoolSettings.daily_meal_price} ליום
-                </p>
-                <p style={{ margin: '0 0 0.5rem 0', color: '#555', fontSize: '0.9rem' }}>
-                  כמה ימים תרצה לשלם?
-                </p>
-                <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                  {[1, 2, 3, 5, 10].map(days => (
-                    <button
-                      key={days}
-                      onClick={() => setAmount((days * schoolSettings.daily_meal_price).toFixed(2))}
-                      style={{
-                        padding: '0.5rem 1rem',
-                        background: '#7b1fa2',
-                        color: 'white',
-                        border: 'none',
-                        borderRadius: '8px',
-                        cursor: 'pointer',
-                        fontWeight: '600'
-                      }}
-                    >
-                      {days} ימים = ₪{(days * schoolSettings.daily_meal_price).toFixed(2)}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            <div style={{
-              marginBottom: '1.5rem'
-            }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '0.5rem'
-              }}>
-                סכום להוספה
-              </label>
-              <input
-                type="number"
-                value={amount}
-                onChange={(e) => setAmount(e.target.value)}
-                placeholder="הכנס סכום בש״ח"
-                style={{
-                  width: '100%',
-                  padding: '1rem',
-                  border: '2px solid #e0e0e0',
-                  borderRadius: '12px',
-                  fontSize: '1.2rem',
-                  textAlign: 'center',
-                  boxSizing: 'border-box'
-                }}
-              />
-            </div>
+  <div style={{
+    background: '#f3e5f5',
+    padding: '1rem',
+    borderRadius: '12px',
+    marginBottom: '1rem',
+    textAlign: 'center'
+  }}>
+    <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
+      📆 תשלום יומי - ₪{schoolSettings.daily_meal_price} לארוחה
+    </p>
+    <button
+      onClick={() => setAmount(schoolSettings.daily_meal_price.toFixed(2))}
+      style={{
+        padding: '0.75rem 2rem',
+        background: '#7b1fa2',
+        color: 'white',
+        border: 'none',
+        borderRadius: '8px',
+        cursor: 'pointer',
+        fontWeight: '600',
+        fontSize: '1rem'
+      }}
+    >
+      שלם ₪{schoolSettings.daily_meal_price} לארוחה אחת
+    </button>
+  </div>
+)}
             
             <div style={{
               marginBottom: '1.5rem'
