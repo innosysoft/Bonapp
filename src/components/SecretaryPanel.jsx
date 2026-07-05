@@ -1842,6 +1842,45 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
   )}
 </div>
 
+            {/* מידע שיטת תשלום */}
+            {schoolData?.enable_monthly_package && paymentForm.studentId && (() => {
+              const student = students.find(s => String(s.id) === String(paymentForm.studentId));
+              return student?.group_id ? (
+                <div style={{
+                  background: '#e3f2fd', padding: '1rem', borderRadius: '12px',
+                  marginBottom: '1rem', textAlign: 'center'
+                }}>
+                  <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1976d2' }}>
+                    📅 חבילה חודשית - {new Date().toLocaleString('he-IL', { month: 'long' })}
+                  </p>
+                  <p style={{ fontSize: '0.85rem', color: '#555', margin: 0 }}>
+                    יש לבדוק את לוח הארוחות של השכבה לחישוב הסכום
+                  </p>
+                </div>
+              ) : null;
+            })()}
+
+            {schoolData?.enable_daily_payment && (
+              <div style={{
+                background: '#f3e5f5', padding: '1rem', borderRadius: '12px',
+                marginBottom: '1rem', textAlign: 'center'
+              }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
+                  📆 תשלום יומי - ₪{schoolData.daily_meal_price} לארוחה
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setPaymentForm(prev => ({...prev, amount: schoolData.daily_meal_price?.toFixed(2)}))}
+                  style={{
+                    padding: '0.5rem 1.5rem', background: '#7b1fa2', color: 'white',
+                    border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'
+                  }}
+                >
+                  שלם ₪{schoolData.daily_meal_price} לארוחה אחת
+                </button>
+              </div>
+            )}
+
             <div style={{ marginBottom: '2rem' }}>
               <label style={{
                 display: 'block', fontSize: '1rem', fontWeight: '600',
