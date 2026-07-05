@@ -1341,6 +1341,21 @@ onClick={() => {
 }}>
   <h3 style={{ marginBottom: '1rem' }}>🍽️ שיטת חיוב ארוחות</h3>
 
+{/* חופשי - מצב רגיל */}
+  <div style={{ marginBottom: '1rem' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+      <input
+        type="checkbox"
+        checked={editingSchool.enable_free_payment !== false}
+        onChange={(e) => setEditingSchool({...editingSchool, enable_free_payment: e.target.checked})}
+      />
+      <strong>🆓 חופשי (טעינת יתרה + סריקת QR)</strong>
+    </label>
+    <p style={{ fontSize: '0.85rem', color: '#666', marginRight: '1.5rem' }}>
+      ההורה טוען יתרה וכל ארוחה מנוכה בסריקה - המצב הרגיל
+    </p>
+  </div>
+  
   {/* חבילה חודשית */}
   <div style={{ marginBottom: '1rem' }}>
     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
