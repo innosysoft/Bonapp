@@ -1764,10 +1764,7 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
 
 {/* טאב שכבות */}
 {activeTab === 'groups' && (
-  <>
-    {console.log('schoolData:', schoolData)}
-    <GradeGroupsTab schoolId={schoolData?.id} />
-  </>
+  <GradeGroupsTab schoolId={schoolData?.id || currentUser?.school_id} />
 )}
 
       {/* מודל הוספת תשלום */}
