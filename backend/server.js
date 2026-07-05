@@ -1883,6 +1883,109 @@ app.post('/api/daily-menu', async (req, res) => {
   }
 });
 
+// ===== GRADE GROUPS (שכבות) =====
+
+// קבל כל השכבות של בית ספר
+app.get('/api/schools/:schoolId/groups', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { data, error } = await supabase
+      .from('grade_groups')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('name');
+    if (error) throw error;
+    res.json({ success: true, groups: data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// צור שכבה חדשה
+app.post('/api/schools/:schoolId/groups', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { name, description } = req.body;
+    const { data, error } = await supabase
+      .from('grade_groups')
+      .insert([{ school_id: schoolId, name, description }])
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, group: data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// מחק שכבה
+app.delete('/api/groups/:groupId', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { error } = await supabase
+      .from('grade_groups')
+      .delete()
+      .eq('id', groupId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// קבל/עדכן לוח ארוחות לשכבה לחודש
+app.post('/api/groups/:groupId/schedule', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { school_id, month, year, days_count, meal_price } = req.body;
+    const { data, error } = await supabase
+      .from('meal_schedules')
+      .upsert([{ group_id: groupId, school_id, month, year, days_count, meal_price }], 
+        { onConflict: 'group_id,month,year' })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, schedule: data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// קבל לוח ארוחות לשכבה לחודש
+app.get('/api/groups/:groupId/schedule', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { month, year } = req.query;
+    const { data, error } = await supabase
+      .from('meal_schedules')
+      .select('*')
+      .eq('group_id', groupId)
+      .eq('month', month)
+      .eq('year', year)
+      .single();
+    if (error && error.code !== 'PGRST116') throw error;
+    res.json({ success: true, schedule: data || null });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// עדכן שיטת תשלום לבית ספר
+app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { payment_method } = req.body;
+    const { error } = await supabase
+      .from('schools')
+      .update({ payment_method })
+      .eq('id', schoolId);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ===== SCHOOL CONTACT FORM =====
 app.post('/api/school-contact', async (req, res) => {
   try {
