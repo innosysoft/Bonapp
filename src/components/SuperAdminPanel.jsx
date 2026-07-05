@@ -65,7 +65,7 @@ useEffect(() => {
   try {
     // אם Super Admin - טען את כל בתי הספר
     if (!user || !user.school_id) {
-      const response = await fetch('https://api.bonapp.dev/api/admin/schools');
+      const response = await fetch(`https://api.bonapp.dev/api/admin/schools?t=${Date.now()}`);
       const data = await response.json();
       
       if (Array.isArray(data)) {
@@ -1355,7 +1355,7 @@ onClick={() => {
       ההורה טוען יתרה וכל ארוחה מנוכה בסריקה - המצב הרגיל
     </p>
   </div>
-  
+
   {/* חבילה חודשית */}
   <div style={{ marginBottom: '1rem' }}>
     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
