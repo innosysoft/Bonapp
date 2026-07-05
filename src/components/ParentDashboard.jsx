@@ -690,6 +690,8 @@ const handleSendEmail = async () => {
     );
   };
 
+  console.log('schoolSettings:', schoolSettings?.enable_monthly_package, 'monthlyPackageInfo:', monthlyPackageInfo);
+  
   const child = children[selectedChild];
 
   const styles = {
