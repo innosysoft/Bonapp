@@ -20,6 +20,7 @@ const [reportType, setReportType] = useState('');
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
   const [schoolData, setSchoolData] = useState(null);
+  const [selectedStudentSchedule, setSelectedStudentSchedule] = useState(null);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showStudentDetails, setShowStudentDetails] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -144,7 +145,29 @@ const [pendingRegistrations, setPendingRegistrations] = useState([
   
   ]);
 
-
+const loadStudentSchedule = async (studentId) => {
+  const student = students.find(s => String(s.id) === String(studentId));
+  if (!student?.group_id) {
+    setSelectedStudentSchedule(null);
+    return;
+  }
+  try {
+    const currentMonth = new Date().getMonth() + 1;
+    const currentYear = new Date().getFullYear();
+    const response = await fetch(
+      `https://api.bonapp.dev/api/groups/${student.group_id}/schedule?month=${currentMonth}&year=${currentYear}`
+    );
+    const data = await response.json();
+    if (data.success && data.schedule) {
+      setSelectedStudentSchedule(data.schedule);
+    } else {
+      setSelectedStudentSchedule(null);
+    }
+  } catch (error) {
+    console.error('Error loading schedule:', error);
+    setSelectedStudentSchedule(null);
+  }
+};
 
   const handleAddPayment = async () => {
   if (paymentForm.studentId && paymentForm.amount && parseFloat(paymentForm.amount) > 0) {
@@ -1825,7 +1848,10 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
     // אם אין תלמיד נבחר - הצג dropdown
     <select
       value={paymentForm.studentId}
-      onChange={(e) => setPaymentForm(prev => ({...prev, studentId: e.target.value}))}
+      onChange={(e) => {
+  setPaymentForm(prev => ({...prev, studentId: e.target.value}));
+  loadStudentSchedule(e.target.value);
+}}
       style={{
         width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
         borderRadius: '12px', fontSize: '1rem', transition: 'all 0.3s',
@@ -1843,22 +1869,40 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
 </div>
 
             {/* מידע שיטת תשלום */}
-            {schoolData?.enable_monthly_package && paymentForm.studentId && (() => {
-              const student = students.find(s => String(s.id) === String(paymentForm.studentId));
-              return student?.group_id ? (
-                <div style={{
-                  background: '#e3f2fd', padding: '1rem', borderRadius: '12px',
-                  marginBottom: '1rem', textAlign: 'center'
-                }}>
-                  <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1976d2' }}>
-                    📅 חבילה חודשית - {new Date().toLocaleString('he-IL', { month: 'long' })}
+            {schoolData?.enable_monthly_package && paymentForm.studentId && (
+              <div style={{
+                background: '#e3f2fd', padding: '1rem', borderRadius: '12px',
+                marginBottom: '1rem', textAlign: 'center'
+              }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1976d2' }}>
+                  📅 חבילה חודשית - {new Date().toLocaleString('he-IL', { month: 'long' })}
+                </p>
+                {selectedStudentSchedule ? (
+                  <>
+                    <p style={{ margin: '0 0 0.5rem 0', color: '#555', fontSize: '0.9rem' }}>
+                      {selectedStudentSchedule.days_count} ימים × ₪{selectedStudentSchedule.meal_price} = ₪{(selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => setPaymentForm(prev => ({
+                        ...prev,
+                        amount: (selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)
+                      }))}
+                      style={{
+                        padding: '0.5rem 1.5rem', background: '#1976d2', color: 'white',
+                        border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'
+                      }}
+                    >
+                      שלם ₪{(selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)}
+                    </button>
+                  </>
+                ) : (
+                  <p style={{ fontSize: '0.85rem', color: '#888', margin: 0 }}>
+                    לא הוגדר לוח ארוחות לשכבה זו החודש
                   </p>
-                  <p style={{ fontSize: '0.85rem', color: '#555', margin: 0 }}>
-                    יש לבדוק את לוח הארוחות של השכבה לחישוב הסכום
-                  </p>
-                </div>
-              ) : null;
-            })()}
+                )}
+              </div>
+            )}
 
             {schoolData?.enable_daily_payment && (
               <div style={{
