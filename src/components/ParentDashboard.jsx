@@ -419,6 +419,7 @@ const handleSaveStudent = async () => {
       first_name: editingStudent.first_name,
       last_name: editingStudent.last_name,
       grade: editingStudent.grade,
+      group_id: editingStudent.group_id,
       student_phone: editingStudent.student_phone,
       student_id_number: editingStudent.student_id_number,
       system_access: editingStudent.system_access,
