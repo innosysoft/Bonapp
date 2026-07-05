@@ -16,7 +16,8 @@ const GradeGroupsTab = ({ schoolId }) => {
   const monthNames = ['', 'ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
     'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
 
-  useEffect(() => {
+ useEffect(() => {
+    console.log('useEffect fired, schoolId:', schoolId);
     if (schoolId) loadGroups();
   }, [schoolId]);
 
