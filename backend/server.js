@@ -1656,6 +1656,7 @@ app.post('/api/pending-registrations/:registrationId/action', async (req, res) =
         first_name: child.firstName,
         last_name: child.lastName,
         grade: child.grade,
+        group_id: child.group_id || null,
         balance: 0.0,
         student_phone: child.phone,
         status: 'active'

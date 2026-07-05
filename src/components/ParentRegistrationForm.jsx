@@ -21,6 +21,7 @@ const ParentRegistrationForm = () => {
     firstName: '',
     lastName: '',
     grade: '',
+     group_id: '',
     phone: '',
     photo: null,
     photoPreview: null,
@@ -77,6 +78,19 @@ useEffect(() => {
   loadSchools();
 }, []);
 
+const [schoolGroups, setSchoolGroups] = useState([]);
+const loadSchoolGroups = async (schoolId) => {
+  if (!schoolId) return;
+  try {
+    const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}/groups`);
+    const data = await response.json();
+    if (data.success) {
+      setSchoolGroups(data.groups);
+    }
+  } catch (error) {
+    console.error('Error loading groups:', error);
+  }
+};
 
   const grades = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ז', 'ח', 'ט', 'י', 'יא', 'יב'];
 
@@ -136,6 +150,7 @@ useEffect(() => {
       firstName: '',
       lastName: '',
       grade: '',
+      group_id: '',
       phone: '',
       photo: null,
       photoPreview: null,
@@ -332,7 +347,10 @@ useEffect(() => {
       </label>
       <select 
         value={formData.schoolId}
-        onChange={(e) => setFormData({...formData, schoolId: e.target.value})}
+        onChange={(e) => {
+  setFormData({...formData, schoolId: e.target.value});
+  loadSchoolGroups(e.target.value);
+}}
         style={{ 
           width: '100%', 
           padding: '12px', 
@@ -612,11 +630,9 @@ useEffect(() => {
                       </label>
                       <select
                         required
-                        value={child.grade}
-                        onChange={(e) => updateChild(index, 'grade', e.target.value)}
-
+                        value={child.group_id || ''}
+                        onChange={(e) => updateChild(index, 'group_id', e.target.value)}
                         autoComplete="off"
-
                         style={{
                           width: '100%',
                           padding: '12px',
@@ -630,10 +646,14 @@ useEffect(() => {
                         onFocus={(e) => e.target.style.borderColor = '#2196f3'}
                         onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
                       >
-                        <option value="">בחר כיתה</option>
-                        {grades.map(grade => (
-                          <option key={grade} value={grade}>כיתה {grade}</option>
-                        ))}
+                        <option value="">בחר שכבה</option>
+                        {schoolGroups.length === 0 ? (
+                          <option disabled>בחר בית ספר קודם</option>
+                        ) : (
+                          schoolGroups.map(group => (
+                            <option key={group.id} value={group.id}>{group.name}</option>
+                          ))
+                        )}
                       </select>
                     </div>
                     
