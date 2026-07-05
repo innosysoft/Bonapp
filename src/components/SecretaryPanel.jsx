@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getParentData, getTransactions, generateQRCode } from '../api';
 import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools } from '../api';
 import * as XLSX from 'xlsx';
+import GradeGroupsTab from './GradeGroupsTab';
 import { 
   Search, Plus, DollarSign, Receipt, Edit, Eye, CreditCard, Banknote, Clock, 
   CheckCircle, User, Phone, Mail, FileText, Download, Filter, Settings, LogOut,
@@ -18,6 +19,7 @@ const [reportType, setReportType] = useState('');
   const [activeTab, setActiveTab] = useState('payments');
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
+  const [schoolData, setSchoolData] = useState(null);
   const [showAddPayment, setShowAddPayment] = useState(false);
   const [showStudentDetails, setShowStudentDetails] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
@@ -68,12 +70,13 @@ useEffect(() => {
         setStudents(schoolData.students);
       }
 
-      // טען שם בית ספר
+     // טען שם בית ספר
 const schoolsData = await getSchools();
 if (schoolsData.success) {
   const school = schoolsData.schools.find(s => s.id === currentUser.school_id);
   if (school) {
     setSchoolName(school.name);
+    setSchoolData(school);
   }
 }
 
@@ -678,8 +681,34 @@ const downloadReport = () => {
                 '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
             }}
           >
+
+            
             <FileText size={20} />
             דוחות
+          </button>
+
+          <button
+            onClick={() => setActiveTab('groups')}
+            style={{
+              padding: '1rem 2rem',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              fontWeight: '600',
+              fontSize: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              background: activeTab === 'groups' ? 
+                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
+              color: activeTab === 'groups' ? 'white' : '#667eea',
+              boxShadow: activeTab === 'groups' ? 
+                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
+            }}
+          >
+            <Users size={20} />
+            שכבות
           </button>
         </div>
 
@@ -1732,6 +1761,11 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
           )}
         </div>
       </div>
+
+{/* טאב שכבות */}
+{activeTab === 'groups' && (
+  <GradeGroupsTab schoolId={schoolData?.id} />
+)}
 
       {/* מודל הוספת תשלום */}
       {showAddPayment && (
