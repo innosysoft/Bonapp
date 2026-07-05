@@ -244,7 +244,7 @@ app.get('/api/schools', async (req, res) => {
   try {
     const { data: schools, error } = await supabase
       .from('schools')
-      .select('id, name, menu_type')
+      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash')
       .order('name');
 
     if (error) throw error;
