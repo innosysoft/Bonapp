@@ -401,7 +401,11 @@ const {
   enable_paybox,
   enable_bit,
   enable_cardcom,
-  enable_cash
+  enable_cash,
+  enable_monthly_package,
+  enable_daily_payment,
+  daily_meal_price,
+  charge_absent_students
 } = req.body;
 
 if (paybox_merchant_id !== undefined) updateData.paybox_merchant_id = paybox_merchant_id;
@@ -413,6 +417,10 @@ if (enable_paybox !== undefined) updateData.enable_paybox = enable_paybox;
 if (enable_bit !== undefined) updateData.enable_bit = enable_bit;
 if (enable_cardcom !== undefined) updateData.enable_cardcom = enable_cardcom;
 if (enable_cash !== undefined) updateData.enable_cash = enable_cash;
+if (enable_monthly_package !== undefined) updateData.enable_monthly_package = enable_monthly_package;
+if (enable_daily_payment !== undefined) updateData.enable_daily_payment = enable_daily_payment;
+if (daily_meal_price !== undefined) updateData.daily_meal_price = daily_meal_price;
+if (charge_absent_students !== undefined) updateData.charge_absent_students = charge_absent_students;
 
     const { data: school, error } = await supabase
       .from('schools')

@@ -1334,6 +1334,71 @@ onClick={() => {
   </div>
 </div>
 
+{/* שיטת חיוב ארוחות */}
+<div style={{
+  background: '#f8f9fa', padding: '1.5rem',
+  borderRadius: '12px', marginBottom: '1.5rem'
+}}>
+  <h3 style={{ marginBottom: '1rem' }}>🍽️ שיטת חיוב ארוחות</h3>
+
+  {/* חבילה חודשית */}
+  <div style={{ marginBottom: '1rem' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+      <input
+        type="checkbox"
+        checked={editingSchool.enable_monthly_package || false}
+        onChange={(e) => setEditingSchool({...editingSchool, enable_monthly_package: e.target.checked})}
+      />
+      <strong>📅 חבילה חודשית (לפי שכבה)</strong>
+    </label>
+    <p style={{ fontSize: '0.85rem', color: '#666', marginRight: '1.5rem' }}>
+      ההורה משלם לפי מספר ימי ארוחה בחודש × מחיר שכבה
+    </p>
+  </div>
+
+  {/* תשלום יומי */}
+  <div style={{ marginBottom: '1rem' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+      <input
+        type="checkbox"
+        checked={editingSchool.enable_daily_payment || false}
+        onChange={(e) => setEditingSchool({...editingSchool, enable_daily_payment: e.target.checked})}
+      />
+      <strong>📆 תשלום יומי</strong>
+    </label>
+
+    {editingSchool.enable_daily_payment && (
+      <div style={{ marginRight: '1.5rem', marginTop: '0.5rem' }}>
+        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+          מחיר ליום (₪)
+        </label>
+        <input
+          type="number"
+          value={editingSchool.daily_meal_price || ''}
+          onChange={(e) => setEditingSchool({...editingSchool, daily_meal_price: parseFloat(e.target.value) || 0})}
+          placeholder="25"
+          style={{
+            width: '150px', padding: '0.75rem', border: '2px solid #e0e0e0',
+            borderRadius: '8px', fontSize: '1rem'
+          }}
+        />
+      </div>
+    )}
+  </div>
+
+  {/* חיוב גם ללא נוכחות */}
+  <div>
+    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+      <input
+        type="checkbox"
+        checked={editingSchool.charge_absent_students || false}
+        onChange={(e) => setEditingSchool({...editingSchool, charge_absent_students: e.target.checked})}
+      />
+      <strong>⚠️ חייב גם אם התלמיד לא אכל</strong>
+    </label>
+  </div>
+</div>
+
             {/* כפתור שמירה */}
             <div style={{ display: 'flex', gap: '1rem' }}>
               <button onClick={() => setShowSettingsModal(false)}
