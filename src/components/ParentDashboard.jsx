@@ -1683,6 +1683,8 @@ const handleSendEmail = async () => {
     <button
       onClick={async () => {
         const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        console.log('User for payment:', user);
+        
         const child = children[selectedChild];
         const totalAmount = (monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2);
         
