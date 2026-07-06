@@ -1674,67 +1674,54 @@ const handleSendEmail = async () => {
               </div>
             </div>
             
-            {/* מידע על שיטת תשלום */}
-            {schoolSettings?.enable_monthly_package && monthlyPackageInfo && (
-              <div style={{
-                background: '#e3f2fd',
-                padding: '1rem',
-                borderRadius: '12px',
-                marginBottom: '1rem',
-                textAlign: 'center'
-              }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1976d2' }}>
-                  📅 חבילה חודשית - {new Date().toLocaleString('he-IL', { month: 'long' })}
-                </p>
-                <p style={{ margin: '0 0 0.5rem 0', color: '#555', fontSize: '0.9rem' }}>
-                  {monthlyPackageInfo.days_count} ימים × ₪{monthlyPackageInfo.meal_price} ליום
-                </p>
-                <p style={{ margin: 0, fontWeight: 'bold', fontSize: '1.3rem', color: '#1976d2' }}>
-                  סה"כ לתשלום: ₪{(monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2)}
-                </p>
-                <button
-                  onClick={() => setAmount((monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2))}
-                  style={{
-                    marginTop: '0.75rem',
-                    padding: '0.5rem 1rem',
-                    background: '#1976d2',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    fontWeight: '600'
-                  }}
-                >
-                  שלם סכום זה
-                </button>
-              </div>
-            )}
-
-            {schoolSettings?.enable_daily_payment && (
+  {/* כפתור תשלום */}
+{schoolSettings?.enable_monthly_package && monthlyPackageInfo && (
   <div style={{
-    background: '#f3e5f5',
-    padding: '1rem',
-    borderRadius: '12px',
-    marginBottom: '1rem',
-    textAlign: 'center'
+    background: '#e8f5e9', padding: '1rem', borderRadius: '12px',
+    marginBottom: '1rem', textAlign: 'center'
   }}>
-    <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
-      📆 תשלום יומי - ₪{schoolSettings.daily_meal_price} לארוחה
-    </p>
     <button
-      onClick={() => setAmount(schoolSettings.daily_meal_price.toFixed(2))}
+      onClick={async () => {
+        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const child = children[selectedChild];
+        const totalAmount = (monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2);
+        
+        try {
+          const response = await fetch('https://api.bonapp.dev/api/create-grow-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              parent_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+              parent_phone: user.phone || '',
+              amount: totalAmount,
+              student_name: `${child.first_name} ${child.last_name}`,
+              description: `תשלום ארוחות ${new Date().toLocaleString('he-IL', { month: 'long' })} - ${child.first_name}`,
+              student_id: child.id
+            })
+          });
+          const result = await response.json();
+          if (result.success && result.paymentUrl) {
+            window.location.href = result.paymentUrl;
+          } else {
+            alert('שגיאה ביצירת קישור תשלום');
+          }
+        } catch (error) {
+          alert('שגיאה ביצירת קישור תשלום');
+        }
+      }}
       style={{
-        padding: '0.75rem 2rem',
-        background: '#7b1fa2',
+        padding: '1rem 2rem',
+        background: 'linear-gradient(135deg, #43a047, #2e7d32)',
         color: 'white',
         border: 'none',
-        borderRadius: '8px',
+        borderRadius: '12px',
         cursor: 'pointer',
         fontWeight: '600',
-        fontSize: '1rem'
+        fontSize: '1rem',
+        width: '100%'
       }}
     >
-      שלם ₪{schoolSettings.daily_meal_price} לארוחה אחת
+      💳 שלם ₪{(monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2)}
     </button>
   </div>
 )}

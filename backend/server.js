@@ -2001,6 +2001,66 @@ app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
   }
 });
 
+// ===== GROW PAYMENT =====
+
+// מקבל payment URL מ-Make ושומר זמנית
+const growPaymentLinks = {}; // זיכרון זמני
+
+app.post('/api/grow-payment-link', async (req, res) => {
+  try {
+    const { payment_url, parent_name, amount } = req.body;
+    console.log('📥 Grow payment link received:', { payment_url, parent_name, amount });
+    
+    // שמור את הקישור עם מזהה ייחודי
+    const linkId = Date.now().toString();
+    growPaymentLinks[linkId] = {
+      url: payment_url,
+      parent_name,
+      amount,
+      created_at: new Date()
+    };
+    
+    res.json({ success: true, linkId });
+  } catch (error) {
+    console.error('Grow payment link error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// יצירת קישור תשלום דרך Make
+app.post('/api/create-grow-payment', async (req, res) => {
+  try {
+    const { parent_name, parent_phone, amount, student_name, description, student_id } = req.body;
+    
+    // שלח ל-Make Webhook
+    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
+    
+    const response = await fetch(makeWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parent_name,
+        parent_phone,
+        amount,
+        student_name,
+        description,
+        student_id
+      })
+    });
+    
+    const data = await response.json();
+    console.log('Make webhook response:', data);
+    
+    // Make מחזיר את ה-URL של Grow
+    const paymentUrl = data.url || data;
+    
+    res.json({ success: true, paymentUrl });
+  } catch (error) {
+    console.error('Create Grow payment error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ===== SCHOOL CONTACT FORM =====
 app.post('/api/school-contact', async (req, res) => {
   try {
