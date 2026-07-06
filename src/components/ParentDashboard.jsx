@@ -1684,7 +1684,7 @@ const handleSendEmail = async () => {
       onClick={async () => {
         const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
         console.log('User for payment:', user);
-        
+
         const child = children[selectedChild];
         const totalAmount = (monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2);
         
@@ -1693,7 +1693,7 @@ const handleSendEmail = async () => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-              parent_name: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+              parent_name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
               parent_phone: user.phone || '',
               amount: totalAmount,
               student_name: `${child.first_name} ${child.last_name}`,
