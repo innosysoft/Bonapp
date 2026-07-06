@@ -1694,7 +1694,7 @@ const handleSendEmail = async () => {
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
               parent_name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-              parent_phone: user.phone || '',
+              parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
               amount: totalAmount,
               student_name: `${child.first_name} ${child.last_name}`,
               description: `תשלום ארוחות ${new Date().toLocaleString('he-IL', { month: 'long' })} - ${child.first_name}`,
