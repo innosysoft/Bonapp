@@ -34,9 +34,15 @@ const PaymentSuccess = () => {
         <h1 style={{ color: '#2e7d32', fontSize: '2rem', marginBottom: '1rem' }}>
           התשלום התקבל בהצלחה!
         </h1>
-        <p style={{ color: '#555', fontSize: '1.1rem', marginBottom: '2rem' }}>
+        <p style={{ color: '#555', fontSize: '1.1rem', marginBottom: '1rem' }}>
           היתרה תתעדכן בקרוב בחשבונך
         </p>
+        <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '2rem', 
+          background: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+          📧 חשבונית תשלום תישלח למייל שלך.<br/>
+          אם לא מופיעה - בדוק בתיקיית הספאם.
+        </p>
+        
         <p style={{ color: '#999', fontSize: '0.9rem', marginBottom: '2rem' }}>
           מועבר לפאנל ההורה בעוד 5 שניות...
         </p>

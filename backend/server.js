@@ -2006,6 +2006,63 @@ app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
 // מקבל payment URL מ-Make ושומר זמנית
 const growPaymentLinks = {}; // זיכרון זמני
 
+// Webhook מ-Grow אחרי תשלום
+app.post('/api/grow-webhook', async (req, res) => {
+  try {
+    console.log('📥 Grow webhook received:', req.body);
+    
+    const { StatusCode, Amount, CustomField1 } = req.body;
+    
+    // StatusCode 0 = תשלום הצליח
+    if (StatusCode === '0' || StatusCode === 0) {
+      const studentId = CustomField1;
+      const amount = parseFloat(Amount) / 100; // Grow שולח באגורות
+      
+      console.log(`✅ Payment confirmed for student ${studentId}: ₪${amount}`);
+      
+      if (studentId) {
+        // קבל יתרה נוכחית
+        const { data: student, error: studentError } = await supabase
+          .from('students')
+          .select('balance')
+          .eq('id', studentId)
+          .single();
+        
+        if (!studentError && student) {
+          const newBalance = (student.balance || 0) + amount;
+          
+          // עדכן יתרה
+          await supabase
+            .from('students')
+            .update({ balance: newBalance })
+            .eq('id', studentId);
+          
+          // שמור עסקה
+          await supabase
+            .from('transactions')
+            .insert({
+              student_id: studentId,
+              amount: amount,
+              type: 'payment',
+              method: 'grow',
+              description: `תשלום Grow - ₪${amount}`,
+              transaction_date: new Date().toISOString()
+            });
+          
+          console.log(`✅ Balance updated: ₪${newBalance}`);
+        }
+      }
+    }
+    
+    // Grow מצפה ל-OK
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Grow webhook error:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
 app.post('/api/grow-payment-link', async (req, res) => {
   try {
     const { payment_url, parent_name, amount } = req.body;
@@ -2062,7 +2119,7 @@ app.post('/api/create-grow-payment', async (req, res) => {
     }
     
     res.json({ success: true, paymentUrl });
-    
+
   } catch (error) {
     console.error('Create Grow payment error:', error);
     res.status(500).json({ success: false, message: error.message });
