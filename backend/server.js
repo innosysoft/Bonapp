@@ -2037,17 +2037,24 @@ app.post('/api/grow-webhook', async (req, res) => {
             .update({ balance: newBalance })
             .eq('id', studentId);
           
-          // שמור עסקה
-          await supabase
-            .from('transactions')
-            .insert({
-              student_id: studentId,
-              amount: amount,
-              type: 'payment',
-              method: 'grow',
-              description: `תשלום Grow - ₪${amount}`,
-              transaction_date: new Date().toISOString()
-            });
+          // קבל school_id של התלמיד
+const { data: studentData } = await supabase
+  .from('students')
+  .select('school_id')
+  .eq('id', studentId)
+  .single();
+
+await supabase
+  .from('transactions')
+  .insert({
+    student_id: studentId,
+    school_id: studentData?.school_id,
+    amount: amount,
+    type: 'payment',
+    payment_method: 'grow',
+    description: `תשלום Grow - ₪${amount}`,
+    transaction_date: new Date().toISOString()
+  });
           
           console.log(`✅ Balance updated: ₪${newBalance}`);
         }
