@@ -2011,12 +2011,12 @@ app.post('/api/grow-webhook', async (req, res) => {
   try {
     console.log('📥 Grow webhook received:', req.body);
     
-    const { StatusCode, Amount, CustomField1 } = req.body;
+    const { data, status } = req.body;
     
-    // StatusCode 0 = תשלום הצליח
-    if (StatusCode === '0' || StatusCode === 0) {
-      const studentId = CustomField1;
-      const amount = parseFloat(Amount) / 100; // Grow שולח באגורות
+    // status 1 = תשלום הצליח
+    if (status === '1' && data) {
+      const studentId = data.customFields?.cField1;
+      const amount = parseFloat(data.sum) || 0;
       
       console.log(`✅ Payment confirmed for student ${studentId}: ₪${amount}`);
       
