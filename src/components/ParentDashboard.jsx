@@ -1704,7 +1704,7 @@ const handleSendEmail = async () => {
           const result = await response.json();
           console.log('Grow payment result:', result);
           if (result.success && result.paymentUrl) {
-            window.open(result.paymentUrl, '_blank');
+            window.location.href = result.paymentUrl;
           } else {
             console.log('No payment URL:', result);
             alert('שגיאה ביצירת קישור תשלום');
@@ -1758,7 +1758,7 @@ const handleSendEmail = async () => {
           const result = await response.json();
           console.log('Grow daily payment result:', result);
           if (result.success && result.paymentUrl) {
-            window.open(result.paymentUrl, '_blank');
+            window.location.href = result.paymentUrl;
           } else {
             alert('שגיאה ביצירת קישור תשלום');
           }
