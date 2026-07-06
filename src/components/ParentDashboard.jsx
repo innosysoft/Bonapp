@@ -1726,6 +1726,54 @@ const handleSendEmail = async () => {
   </div>
 )}
             
+{schoolSettings?.enable_daily_payment && (
+  <div style={{
+    background: '#f3e5f5', padding: '1rem', borderRadius: '12px',
+    marginBottom: '1rem', textAlign: 'center'
+  }}>
+    <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
+      📆 תשלום יומי - ₪{schoolSettings.daily_meal_price} לארוחה
+    </p>
+    <button
+      onClick={() => setAmount(schoolSettings.daily_meal_price.toFixed(2))}
+      style={{
+        padding: '0.75rem 2rem', background: '#7b1fa2', color: 'white',
+        border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'
+      }}
+    >
+      שלם ₪{schoolSettings.daily_meal_price} לארוחה אחת
+    </button>
+  </div>
+)}
+
+{(!schoolSettings?.enable_monthly_package && !schoolSettings?.enable_daily_payment) || schoolSettings?.enable_free_payment ? (
+  <div style={{ marginBottom: '1.5rem' }}>
+    <label style={{
+      display: 'block', fontSize: '0.9rem', fontWeight: '600', marginBottom: '0.5rem'
+    }}>
+      סכום להוספה
+    </label>
+    <input
+      type="number"
+      value={amount}
+      onChange={(e) => setAmount(e.target.value)}
+      placeholder="הכנס סכום בש״ח"
+      style={{
+        width: '100%', padding: '1rem', border: '2px solid #e0e0e0',
+        borderRadius: '12px', fontSize: '1.2rem', textAlign: 'center',
+        boxSizing: 'border-box'
+      }}
+    />
+  </div>
+) : (
+  <div style={{
+    marginBottom: '1.5rem', padding: '1rem', background: '#f8f9fa',
+    borderRadius: '12px', textAlign: 'center', color: '#666'
+  }}>
+    {amount ? `סכום לתשלום: ₪${amount}` : 'בחר אפשרות תשלום למעלה'}
+  </div>
+)}
+
             <div style={{
               marginBottom: '1.5rem'
             }}>
