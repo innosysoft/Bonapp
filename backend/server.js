@@ -2048,11 +2048,16 @@ app.post('/api/create-grow-payment', async (req, res) => {
       })
     });
     
-    const data = await response.json();
-    console.log('Make webhook response:', data);
+    const text = await response.text();
+    console.log('Make webhook response:', text);
     
-    // Make מחזיר את ה-URL של Grow
-    const paymentUrl = data.url || data;
+    let paymentUrl;
+    try {
+      const data = JSON.parse(text);
+      paymentUrl = data.url || data;
+    } catch (e) {
+      paymentUrl = text;
+    }
     
     res.json({ success: true, paymentUrl });
   } catch (error) {
