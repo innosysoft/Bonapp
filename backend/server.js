@@ -2056,10 +2056,13 @@ app.post('/api/create-grow-payment', async (req, res) => {
       const data = JSON.parse(text);
       paymentUrl = data.url || data;
     } catch (e) {
-      paymentUrl = text;
+      // נסה לחלץ URL מהטקסט
+      const urlMatch = text.match(/https:\/\/pay\.grow\.link\/[^\s"'}]+/);
+      paymentUrl = urlMatch ? urlMatch[0] : text;
     }
     
     res.json({ success: true, paymentUrl });
+    
   } catch (error) {
     console.error('Create Grow payment error:', error);
     res.status(500).json({ success: false, message: error.message });
