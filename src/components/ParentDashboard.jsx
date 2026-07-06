@@ -1739,7 +1739,33 @@ const handleSendEmail = async () => {
       📆 תשלום יומי - ₪{schoolSettings.daily_meal_price} לארוחה
     </p>
     <button
-      onClick={() => setAmount(schoolSettings.daily_meal_price.toFixed(2))}
+      onClick={async () => {
+        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+        const child = children[selectedChild];
+        try {
+          const response = await fetch('https://api.bonapp.dev/api/create-grow-payment', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              parent_name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+              parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
+              amount: schoolSettings.daily_meal_price.toFixed(2),
+              student_name: `${child.first_name} ${child.last_name}`,
+              description: `תשלום ארוחה בודדת - ${child.first_name}`,
+              student_id: child.id
+            })
+          });
+          const result = await response.json();
+          console.log('Grow daily payment result:', result);
+          if (result.success && result.paymentUrl) {
+            window.open(result.paymentUrl, '_blank');
+          } else {
+            alert('שגיאה ביצירת קישור תשלום');
+          }
+        } catch (error) {
+          alert('שגיאה ביצירת קישור תשלום');
+        }
+      }}
       style={{
         padding: '0.75rem 2rem', background: '#7b1fa2', color: 'white',
         border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'
@@ -1778,17 +1804,18 @@ const handleSendEmail = async () => {
   </div>
 )}
 
-            <div style={{
-              marginBottom: '1.5rem'
-            }}>
-              <label style={{
-                display: 'block',
-                fontSize: '0.9rem',
-                fontWeight: '600',
-                marginBottom: '1rem'
-              }}>
-                אמצעי תשלום
-              </label>
+            {((!schoolSettings?.enable_monthly_package && !schoolSettings?.enable_daily_payment) || schoolSettings?.enable_free_payment) && (
+<div style={{
+  marginBottom: '1.5rem'
+}}>
+  <label style={{
+    display: 'block',
+    fontSize: '0.9rem',
+    fontWeight: '600',
+    marginBottom: '1rem'
+  }}>
+    אמצעי תשלום
+  </label>
               
               <div style={{
                 display: 'grid',
@@ -1877,6 +1904,7 @@ const handleSendEmail = async () => {
                 </button>
               </div>
             </div>
+            )}
             
             <div style={{
               fontSize: '0.8rem',
