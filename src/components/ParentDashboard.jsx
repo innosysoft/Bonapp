@@ -1700,9 +1700,11 @@ const handleSendEmail = async () => {
             })
           });
           const result = await response.json();
+          console.log('Grow payment result:', result);
           if (result.success && result.paymentUrl) {
-            window.location.href = result.paymentUrl;
+            window.open(result.paymentUrl, '_blank');
           } else {
+            console.log('No payment URL:', result);
             alert('שגיאה ביצירת קישור תשלום');
           }
         } catch (error) {
