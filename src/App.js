@@ -11,7 +11,7 @@ import KitchenPOS from './components/KitchenPOS';
 import SecretaryPanel from './components/SecretaryPanel';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import MenuManagement from './components/MenuManagement';
-
+import PaymentSuccess from './components/PaymentSuccess';
 import MobileParentApp from './components/MobileParentApp';
 import MobileStudentApp from './components/MobileStudentApp';
 import SchoolContactForm from './components/SchoolContactForm';
@@ -42,7 +42,7 @@ function App() {
           <Route path="/mobile/parent/:token" element={<MobileParentApp />} />
 <Route path="/mobile/student/:token" element={<MobileStudentApp />} />
 <Route path="/school-contact" element={<SchoolContactForm />} />
-          
+ <Route path="/payment-success" element={<PaymentSuccess />} />         
           
           {/* נתיבים ישנים (למקרה שיש קישורים קיימים) */}
           <Route path="/parent-login" element={<ParentLogin />} />
