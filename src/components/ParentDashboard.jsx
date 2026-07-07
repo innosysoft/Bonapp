@@ -1697,7 +1697,7 @@ const handleSendEmail = async () => {
               parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
               amount: totalAmount,
               student_name: `${child.first_name} ${child.last_name}`,
-              description: `תשלום ארוחות ${new Date().toLocaleString('he-IL', { month: 'long' })} - ${child.first_name}`,
+              description: `BonApp-${child.id}`,
               student_id: child.id
             })
           });
@@ -1751,7 +1751,7 @@ const handleSendEmail = async () => {
               parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
               amount: schoolSettings.daily_meal_price.toFixed(2),
               student_name: `${child.first_name} ${child.last_name}`,
-              description: `תשלום ארוחה בודדת - ${child.first_name}`,
+              description: `BonApp-${child.id}`,
               student_id: child.id
             })
           });

@@ -2006,6 +2006,72 @@ app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
 // מקבל payment URL מ-Make ושומר זמנית
 const growPaymentLinks = {}; // זיכרון זמני
 
+// Webhook חדש מ-Grow דרך Make
+app.post('/api/grow-webhook-v2', async (req, res) => {
+  try {
+    console.log('📥 Grow webhook v2 received:', req.body);
+    
+    const { payment_sum, payment_desc } = req.body;
+    
+    // חלץ student_id מה-description
+    // פורמט: "BonApp-{student_id}"
+    let studentId = null;
+    if (payment_desc && payment_desc.startsWith('BonApp-')) {
+      studentId = payment_desc.replace('BonApp-', '');
+    }
+    
+    if (!studentId) {
+      console.log('⚠️ No student ID found in payment_desc:', payment_desc);
+      return res.json({ success: true });
+    }
+    
+    const amount = parseFloat(payment_sum) || 0;
+    
+    console.log(`✅ Payment confirmed for student ${studentId}: ₪${amount}`);
+    
+    // קבל יתרה נוכחית
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('balance, school_id')
+      .eq('id', studentId)
+      .single();
+    
+    if (studentError || !student) {
+      console.error('Student not found:', studentId);
+      return res.json({ success: true });
+    }
+    
+    const newBalance = (student.balance || 0) + amount;
+    
+    // עדכן יתרה
+    await supabase
+      .from('students')
+      .update({ balance: newBalance })
+      .eq('id', studentId);
+    
+    // שמור עסקה
+    await supabase
+      .from('transactions')
+      .insert({
+        student_id: studentId,
+        school_id: student.school_id,
+        amount: amount,
+        type: 'payment',
+        payment_method: 'grow',
+        description: `תשלום Grow - ₪${amount}`,
+        transaction_date: new Date().toISOString()
+      });
+    
+    console.log(`✅ Balance updated: ₪${newBalance}`);
+    
+    res.json({ success: true });
+    
+  } catch (error) {
+    console.error('Grow webhook v2 error:', error);
+    res.status(500).json({ success: false });
+  }
+});
+
 // Webhook מ-Grow אחרי תשלום
 app.post('/api/grow-webhook', async (req, res) => {
   try {
