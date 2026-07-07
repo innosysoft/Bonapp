@@ -2180,6 +2180,9 @@ app.post('/api/grow-payment-link', async (req, res) => {
 
 // יצירת קישור תשלום דרך Make
 app.post('/api/create-grow-payment', async (req, res) => {
+
+console.log('🔵 Create Grow payment:', req.body);
+
   try {
     const { parent_name, parent_phone, amount, student_name, description, student_id } = req.body;
     
