@@ -2011,6 +2011,12 @@ app.post('/api/grow-webhook', async (req, res) => {
   try {
     console.log('📥 Grow webhook received:', req.body);
     
+    console.log('Grow webhook body:', JSON.stringify(req.body));
+    
+    if (!req.body) {
+      return res.json({ success: true });
+    }
+    
     const { data, status } = req.body;
     
     // status 1 = תשלום הצליח
