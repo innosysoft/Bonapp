@@ -2023,6 +2023,21 @@ app.post('/api/grow-webhook', async (req, res) => {
     if (status === '1' && data) {
       const studentId = data.customFields?.cField1;
       const amount = parseFloat(data.sum) || 0;
+      const transactionId = data.transactionId;
+      
+      // בדוק אם כבר עיבדנו את העסקה הזאת
+      if (transactionId) {
+        const { data: existing } = await supabase
+          .from('transactions')
+          .select('id')
+          .eq('description', `תשלום Grow - עסקה ${transactionId}`)
+          .single();
+        
+        if (existing) {
+          console.log('⚠️ Transaction already processed:', transactionId);
+          return res.json({ success: true });
+        }
+      }
       
       console.log(`✅ Payment confirmed for student ${studentId}: ₪${amount}`);
       
@@ -2058,7 +2073,7 @@ await supabase
     amount: amount,
     type: 'payment',
     payment_method: 'grow',
-    description: `תשלום Grow - ₪${amount}`,
+    description: `תשלום Grow - עסקה ${transactionId || Date.now()}`,
     transaction_date: new Date().toISOString()
   });
           
