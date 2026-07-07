@@ -7,7 +7,7 @@ const PaymentSuccess = () => {
   useEffect(() => {
     // אחרי 5 שניות חזור לפאנל הורה
     const timer = setTimeout(() => {
-      navigate('/parent-dashboard');
+      window.location.href = '/parent-dashboard';
     }, 5000);
     return () => clearTimeout(timer);
   }, [navigate]);
