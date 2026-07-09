@@ -1985,14 +1985,20 @@ app.get('/api/groups/:groupId/schedule', async (req, res) => {
   }
 });
 
-// עדכן שיטת תשלום לבית ספר
+// עדכן הגדרות תשלום לבית ספר
 app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
   try {
     const { schoolId } = req.params;
-    const { payment_method } = req.body;
+    const { payment_method, daily_meal_price, monthly_meal_price } = req.body;
+    
+    const updateData = {};
+    if (payment_method !== undefined) updateData.payment_method = payment_method;
+    if (daily_meal_price !== undefined) updateData.daily_meal_price = daily_meal_price;
+    if (monthly_meal_price !== undefined) updateData.monthly_meal_price = monthly_meal_price;
+    
     const { error } = await supabase
       .from('schools')
-      .update({ payment_method })
+      .update(updateData)
       .eq('id', schoolId);
     if (error) throw error;
     res.json({ success: true });
