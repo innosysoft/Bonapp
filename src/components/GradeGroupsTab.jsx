@@ -139,20 +139,24 @@ const toggleStudyDay = async (date) => {
   }
 };
 
-  const saveSchedule = async () => {
+ const saveSchedule = async () => {
     if (!selectedGroup) return;
+    const daysInMonth = studyDays.filter(d => 
+      d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)
+    ).length;
     try {
       const response = await fetch(`https://api.bonapp.dev/api/groups/${selectedGroup.id}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           school_id: schoolId,
-          month: currentMonth,
-          year: currentYear,
-          days_count: parseInt(schedule.days_count),
+          month: calendarMonth,
+          year: calendarYear,
+          days_count: daysInMonth,
           meal_price: parseFloat(schedule.meal_price)
         })
       });
+      
       const data = await response.json();
       if (data.success) {
         setMessage('✅ לוח הארוחות נשמר בהצלחה');
@@ -286,42 +290,12 @@ const toggleStudyDay = async (date) => {
                 שכבה: {selectedGroup.name}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '600' }}>
-                    מספר ימי ארוחה בחודש
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="לדוגמה: 18"
-                    value={schedule.days_count}
-                    onChange={(e) => setSchedule({ ...schedule, days_count: e.target.value })}
-                    style={{
-                      width: '100%', padding: '0.75rem 1rem', borderRadius: '8px',
-                      border: '2px solid #e0e0e0', fontSize: '1rem', boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '600' }}>
-                    מחיר ארוחה (₪)
-                  </label>
-                  <input
-                    type="number"
-                    placeholder="לדוגמה: 25"
-                    value={schedule.meal_price}
-                    onChange={(e) => setSchedule({ ...schedule, meal_price: e.target.value })}
-                    style={{
-                      width: '100%', padding: '0.75rem 1rem', borderRadius: '8px',
-                      border: '2px solid #e0e0e0', fontSize: '1rem', boxSizing: 'border-box'
-                    }}
-                  />
-                </div>
-                {schedule.days_count && schedule.meal_price && (
+                {studyDays.length > 0 && schedule.meal_price && (
                   <div style={{
                     background: '#e8f5e9', padding: '1rem', borderRadius: '8px', textAlign: 'center'
                   }}>
                     <p style={{ margin: 0, color: '#2e7d32', fontWeight: '600', fontSize: '1.2rem' }}>
-                      סה"כ לתשלום: ₪{(schedule.days_count * schedule.meal_price).toFixed(2)}
+                      {studyDays.filter(d => d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)).length} ימים × ₪{schedule.meal_price} = ₪{(studyDays.filter(d => d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)).length * schedule.meal_price).toFixed(2)}
                     </p>
                   </div>
                 )}
