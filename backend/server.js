@@ -2300,16 +2300,17 @@ app.post('/api/groups/:groupId/study-days/toggle', async (req, res) => {
     const { date, school_id } = req.body;
     
     // בדוק אם קיים
-    const { data: existing } = await supabase
+    const { data: existing, error } = await supabase
       .from('study_days')
       .select('id')
       .eq('group_id', groupId)
-      .eq('date', date)
-      .single();
+      .eq('date', date);
     
-    if (existing) {
+    console.log('Toggle study day:', { groupId, date, existing, error });
+    
+    if (existing && existing.length > 0) {
       // מחק
-      await supabase.from('study_days').delete().eq('id', existing.id);
+      await supabase.from('study_days').delete().eq('id', existing[0].id);
       res.json({ success: true, action: 'removed' });
     } else {
       // הוסף
