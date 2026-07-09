@@ -2314,7 +2314,10 @@ app.post('/api/groups/:groupId/study-days/toggle', async (req, res) => {
       res.json({ success: true, action: 'removed' });
     } else {
       // הוסף
-      await supabase.from('study_days').insert({ group_id: groupId, school_id, date });
+      const { data: inserted, error: insertError } = await supabase
+        .from('study_days')
+        .insert({ group_id: groupId, school_id, date });
+      console.log('Insert result:', { inserted, insertError });
       res.json({ success: true, action: 'added' });
     }
   } catch (error) {
