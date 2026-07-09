@@ -2223,6 +2223,62 @@ console.log('🔵 Create Grow payment:', req.body);
   }
 });
 
+// ===== STUDY DAYS =====
+
+// קבל ימי לימוד לשכבה לפי חודש
+app.get('/api/groups/:groupId/study-days', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { month, year } = req.query;
+    
+    const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
+    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
+    
+    const { data, error } = await supabase
+      .from('study_days')
+      .select('*')
+      .eq('group_id', groupId)
+      .gte('date', startDate)
+      .lte('date', endDate)
+      .order('date');
+    
+    if (error) throw error;
+    res.json({ success: true, studyDays: data });
+  } catch (error) {
+    console.error('Get study days error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// הוסף/הסר יום לימוד
+app.post('/api/groups/:groupId/study-days/toggle', async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { date, school_id } = req.body;
+    
+    // בדוק אם קיים
+    const { data: existing } = await supabase
+      .from('study_days')
+      .select('id')
+      .eq('group_id', groupId)
+      .eq('date', date)
+      .single();
+    
+    if (existing) {
+      // מחק
+      await supabase.from('study_days').delete().eq('id', existing.id);
+      res.json({ success: true, action: 'removed' });
+    } else {
+      // הוסף
+      await supabase.from('study_days').insert({ group_id: groupId, school_id, date });
+      res.json({ success: true, action: 'added' });
+    }
+  } catch (error) {
+    console.error('Toggle study day error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ===== SCHOOL CONTACT FORM =====
 app.post('/api/school-contact', async (req, res) => {
   try {

@@ -8,7 +8,11 @@ const GradeGroupsTab = ({ schoolId }) => {
   const [newGroupDesc, setNewGroupDesc] = useState('');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [schedule, setSchedule] = useState({ days_count: '', meal_price: '' });
-  const [message, setMessage] = useState('');
+const [message, setMessage] = useState('');
+const [studyDays, setStudyDays] = useState([]);
+const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
+const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
+
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -77,7 +81,9 @@ const GradeGroupsTab = ({ schoolId }) => {
 
   const loadSchedule = async (group) => {
     setSelectedGroup(group);
+    loadStudyDays(group.id);
     try {
+
       const response = await fetch(
         `https://api.bonapp.dev/api/groups/${group.id}/schedule?month=${currentMonth}&year=${currentYear}`
       );
@@ -94,6 +100,44 @@ const GradeGroupsTab = ({ schoolId }) => {
       console.error('Error loading schedule:', error);
     }
   };
+
+const loadStudyDays = async (groupId) => {
+  try {
+    const response = await fetch(
+      `https://api.bonapp.dev/api/groups/${groupId}/study-days?month=${calendarMonth}&year=${calendarYear}`
+    );
+    const data = await response.json();
+    if (data.success) {
+      setStudyDays(data.studyDays.map(d => d.date));
+    }
+  } catch (error) {
+    console.error('Error loading study days:', error);
+  }
+};
+
+const toggleStudyDay = async (date) => {
+  if (!selectedGroup) return;
+  try {
+    const response = await fetch(
+      `https://api.bonapp.dev/api/groups/${selectedGroup.id}/study-days/toggle`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ date, school_id: schoolId })
+      }
+    );
+    const data = await response.json();
+    if (data.success) {
+      if (data.action === 'added') {
+        setStudyDays([...studyDays, date]);
+      } else {
+        setStudyDays(studyDays.filter(d => d !== date));
+      }
+    }
+  } catch (error) {
+    console.error('Error toggling study day:', error);
+  }
+};
 
   const saveSchedule = async () => {
     if (!selectedGroup) return;
@@ -281,6 +325,90 @@ const GradeGroupsTab = ({ schoolId }) => {
                     </p>
                   </div>
                 )}
+
+{/* לוח שנה לסימון ימי לימוד */}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '600' }}>
+                    📅 סמן ימי לימוד - {monthNames[calendarMonth]} {calendarYear}
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <button onClick={() => {
+                      const d = new Date(calendarYear, calendarMonth - 2, 1);
+                      setCalendarMonth(d.getMonth() + 1);
+                      setCalendarYear(d.getFullYear());
+                      loadStudyDays(selectedGroup.id);
+                    }} style={{ padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer' }}>
+                      ◀
+                    </button>
+                    <span style={{ flex: 1, textAlign: 'center', fontWeight: '600' }}>
+                      {monthNames[calendarMonth]} {calendarYear}
+                    </span>
+                    <button onClick={() => {
+                      const d = new Date(calendarYear, calendarMonth, 1);
+                      setCalendarMonth(d.getMonth() + 1);
+                      setCalendarYear(d.getFullYear());
+                      loadStudyDays(selectedGroup.id);
+                    }} style={{ padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer' }}>
+                      ▶
+                    </button>
+                  </div>
+                  
+                  {/* כותרות ימים */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '2px' }}>
+                    {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(d => (
+                      <div key={d} style={{ textAlign: 'center', fontSize: '0.75rem', color: '#999', padding: '4px' }}>{d}</div>
+                    ))}
+                  </div>
+                  
+                  {/* ימי החודש */}
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+                    {(() => {
+                      const firstDay = new Date(calendarYear, calendarMonth - 1, 1).getDay();
+                      const daysInMonth = new Date(calendarYear, calendarMonth, 0).getDate();
+                      const cells = [];
+                      
+                      // תאי ריקים בהתחלה
+                      for (let i = 0; i < firstDay; i++) {
+                        cells.push(<div key={`empty-${i}`} />);
+                      }
+                      
+                      // ימי החודש
+                      for (let day = 1; day <= daysInMonth; day++) {
+                        const dateStr = `${calendarYear}-${String(calendarMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                        const isStudyDay = studyDays.includes(dateStr);
+                        const dayOfWeek = new Date(calendarYear, calendarMonth - 1, day).getDay();
+                        const isFriday = dayOfWeek === 5;
+                        const isSaturday = dayOfWeek === 6;
+                        
+                        cells.push(
+                          <div
+                            key={day}
+                            onClick={() => !isSaturday && toggleStudyDay(dateStr)}
+                            style={{
+                              textAlign: 'center',
+                              padding: '6px 2px',
+                              borderRadius: '6px',
+                              cursor: isSaturday ? 'default' : 'pointer',
+                              background: isStudyDay ? '#4CAF50' : isSaturday ? '#f5f5f5' : isFriday ? '#fff3e0' : 'white',
+                              color: isStudyDay ? 'white' : isSaturday ? '#ccc' : '#333',
+                              border: `1px solid ${isStudyDay ? '#4CAF50' : '#e0e0e0'}`,
+                              fontSize: '0.85rem',
+                              fontWeight: isStudyDay ? '600' : 'normal'
+                            }}
+                          >
+                            {day}
+                          </div>
+                        );
+                      }
+                      return cells;
+                    })()}
+                  </div>
+                  <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '0.5rem' }}>
+                    ירוק = יום לימוד | לחץ להוסיף/להסיר
+                  </p>
+                </div>
+
+
                 <button
                   onClick={saveSchedule}
                   style={{
