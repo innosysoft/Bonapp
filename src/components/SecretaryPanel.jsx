@@ -733,6 +733,30 @@ const downloadReport = () => {
             <Users size={20} />
             שכבות
           </button>
+
+          <button
+            onClick={() => setActiveTab('settings')}
+            style={{
+              padding: '1rem 2rem',
+              borderRadius: '12px',
+              border: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.3s',
+              fontWeight: '600',
+              fontSize: '1rem',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              background: activeTab === 'settings' ? 
+                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
+              color: activeTab === 'settings' ? 'white' : '#667eea',
+              boxShadow: activeTab === 'settings' ? 
+                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
+            }}
+          >
+            ⚙️ הגדרות
+          </button>
+          
         </div>
 
         {/* תוכן ראשי */}
@@ -1788,6 +1812,59 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
 {/* טאב שכבות */}
 {activeTab === 'groups' && (
   <GradeGroupsTab schoolId={schoolData?.id || currentUser?.school_id} />
+)}
+
+{/* טאב הגדרות */}
+{activeTab === 'settings' && (
+  <div style={{ direction: 'rtl' }}>
+    <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333', marginBottom: '2rem' }}>
+      ⚙️ הגדרות בית ספר
+    </h2>
+    
+    <div style={{
+      background: 'white', padding: '2rem', borderRadius: '16px',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.05)', maxWidth: '500px'
+    }}>
+      <h3 style={{ margin: '0 0 1.5rem 0', color: '#555' }}>💰 תמחור</h3>
+      
+      {schoolData?.enable_daily_payment && (
+        <div style={{ marginBottom: '1.5rem' }}>
+          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#333' }}>
+            מחיר ארוחה יומית (₪)
+          </label>
+          <input
+            type="number"
+            value={schoolData?.daily_meal_price || ''}
+            onChange={async (e) => {
+              const newPrice = parseFloat(e.target.value) || 0;
+              try {
+                const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolData.id}/payment-method`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ daily_meal_price: newPrice })
+                });
+                const data = await response.json();
+                if (data.success) {
+                  setSchoolData({ ...schoolData, daily_meal_price: newPrice });
+                }
+              } catch (error) {
+                console.error('Error updating price:', error);
+              }
+            }}
+            placeholder="25"
+            style={{
+              width: '150px', padding: '0.75rem', border: '2px solid #e0e0e0',
+              borderRadius: '8px', fontSize: '1rem'
+            }}
+          />
+        </div>
+      )}
+      
+      <p style={{ color: '#999', fontSize: '0.9rem' }}>
+        הגדרות נוספות מנוהלות ע"י מנהל המערכת
+      </p>
+    </div>
+  </div>
 )}
 
       {/* מודל הוספת תשלום */}

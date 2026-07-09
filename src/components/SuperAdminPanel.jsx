@@ -1387,23 +1387,7 @@ onClick={() => {
       <strong>📆 תשלום יומי</strong>
     </label>
 
-    {editingSchool.enable_daily_payment && (
-      <div style={{ marginRight: '1.5rem', marginTop: '0.5rem' }}>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
-          מחיר ליום (₪)
-        </label>
-        <input
-          type="number"
-          value={editingSchool.daily_meal_price || ''}
-          onChange={(e) => setEditingSchool({...editingSchool, daily_meal_price: parseFloat(e.target.value) || 0})}
-          placeholder="25"
-          style={{
-            width: '150px', padding: '0.75rem', border: '2px solid #e0e0e0',
-            borderRadius: '8px', fontSize: '1rem'
-          }}
-        />
-      </div>
-    )}
+    
   </div>
 
   {/* חיוב גם ללא נוכחות */}
