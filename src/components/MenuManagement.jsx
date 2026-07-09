@@ -96,7 +96,13 @@ const saveMealPrices = async () => {
     const data = await response.json();
     if (data.success) {
       alert('✅ המחירים נשמרו בהצלחה');
+      // עדכן state
+      setMealPrices({
+        daily_meal_price: parseFloat(mealPrices.daily_meal_price) || 0,
+        monthly_meal_price: parseFloat(mealPrices.monthly_meal_price) || 0
+      });
     }
+    
   } catch (error) {
     console.error('Error saving prices:', error);
     alert('שגיאה בשמירת המחירים');
@@ -597,18 +603,7 @@ const handleMenuTypeChange = async (newType) => {
     💰 הגדרות מחירים
   </h3>
   <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
-    <div>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
-        מחיר ארוחה יומית (₪)
-      </label>
-      <input
-        type="number"
-        value={mealPrices.daily_meal_price}
-        onChange={(e) => setMealPrices({ ...mealPrices, daily_meal_price: e.target.value })}
-        placeholder="25"
-        style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
-      />
-    </div>
+    
     <div>
       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
         מחיר ארוחה בחבילה חודשית (₪)

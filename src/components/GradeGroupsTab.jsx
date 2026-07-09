@@ -124,6 +124,10 @@ const toggleStudyDay = async (date) => {
     );
     const data = await response.json();
     if (data.success) {
+      console.log('date:', date);
+console.log('studyDays:', studyDays);
+console.log('action:', data.action);
+
       if (data.action === 'added') {
         setStudyDays([...studyDays, date]);
       } else {
