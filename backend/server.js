@@ -1441,14 +1441,13 @@ app.get('/api/transactions/:schoolId/recent', async (req, res) => {
     res.status(500).json({ success: false, message: 'שגיאה בטעינת עסקאות' });
   }
 });
-
 app.post('/api/process-meal-purchase', async (req, res) => {
   try {
     const { studentId, items, total, forceOverride } = req.body;
 
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('*, schools(allow_negative_balance, max_negative_balance)')
+      .select('*, schools(allow_negative_balance, max_negative_balance, daily_meal_price, monthly_meal_price, enable_monthly_package, enable_daily_payment)')
       .eq('id', studentId)
       .single();
 
@@ -1456,10 +1455,34 @@ app.post('/api/process-meal-purchase', async (req, res) => {
       return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
     }
 
-    const newBalance = student.balance - total;
     const school = student.schools;
 
-    if (student.balance < total && !forceOverride) {
+    // קבע את הסכום לחיוב לפי סוג התשלום האחרון
+    let chargeAmount = total;
+    
+    if (school.enable_monthly_package || school.enable_daily_payment) {
+      // בדוק את סוג התשלום האחרון של התלמיד
+      const { data: lastPayment } = await supabase
+        .from('transactions')
+        .select('payment_type')
+        .eq('student_id', studentId)
+        .eq('type', 'payment')
+        .order('transaction_date', { ascending: false })
+        .limit(1)
+        .single();
+
+      const paymentType = lastPayment?.payment_type || 'daily';
+      
+      if (paymentType === 'monthly') {
+        chargeAmount = parseFloat(school.monthly_meal_price) || total;
+      } else if (paymentType === 'daily') {
+        chargeAmount = parseFloat(school.daily_meal_price) || total;
+      }
+    }
+
+    const newBalance = student.balance - chargeAmount;
+
+    if (student.balance < chargeAmount && !forceOverride) {
       if (school.allow_negative_balance) {
         if (newBalance < school.max_negative_balance) {
           return res.status(400).json({ 
@@ -1499,9 +1522,11 @@ app.post('/api/process-meal-purchase', async (req, res) => {
         student_id: studentId,
         school_id: student.school_id,
         items: items,
-        amount: total,
+        amount: chargeAmount,
+        type: 'meal',
         transaction_type: 'purchase',
-        status: 'completed'
+        status: 'completed',
+        transaction_date: new Date().toISOString()
       });
 
     if (transactionError) throw transactionError;
@@ -1509,6 +1534,7 @@ app.post('/api/process-meal-purchase', async (req, res) => {
     res.json({
       success: true,
       newBalance: newBalance,
+      chargeAmount: chargeAmount,
       message: 'רכישה בוצעה בהצלחה'
     });
 
@@ -2019,11 +2045,22 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
     
     const { payment_sum, payment_desc } = req.body;
     
-    // חלץ student_id מה-description
-    // פורמט: "BonApp-{student_id}"
+    // חלץ student_id וסוג תשלום מה-description
+    // פורמט: "BonApp-{student_id}-monthly" או "BonApp-{student_id}-daily"
     let studentId = null;
+    let paymentType = 'balance';
+    
     if (payment_desc && payment_desc.startsWith('BonApp-')) {
-      studentId = payment_desc.replace('BonApp-', '');
+      const parts = payment_desc.split('-');
+      const lastPart = parts[parts.length - 1];
+      
+      if (lastPart === 'monthly' || lastPart === 'daily') {
+        paymentType = lastPart;
+        // הסר את הסוג מה-UUID
+        studentId = parts.slice(1, -1).join('-');
+      } else {
+        studentId = payment_desc.replace('BonApp-', '');
+      }
     }
     
     if (!studentId) {
@@ -2655,12 +2692,13 @@ app.post('/api/paybox-callback', async (req, res) => {
       await supabase
         .from('transactions')
         .insert({
-          student_id: payment.student_id,
-          school_id: payment.school_id,
+          student_id: studentId,
+          school_id: student.school_id,
+          amount: amount,
           type: 'payment',
-          amount: parseFloat(amount),
-          description: 'תשלום Paybox',
-          payment_method: 'paybox',
+          payment_method: 'grow',
+          payment_type: paymentType,
+          description: `תשלום Grow - עסקה ${transactionId || Date.now()}`,
           transaction_date: new Date().toISOString()
         });
       

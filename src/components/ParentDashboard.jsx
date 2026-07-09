@@ -1539,15 +1539,21 @@ const handleSendEmail = async () => {
                   fontSize: '0.9rem',
                   color: '#2e7d32'
                 }}>
-                  סה״כ יתרות
+                  {schoolSettings?.enable_monthly_package ? 'סטטוס תשלום חודשי' : 'סה״כ יתרות'}
                 </span>
                 <span style={{
                   fontSize: '1.1rem',
                   fontWeight: 'bold',
-                  color: '#2e7d32'
+                  color: schoolSettings?.enable_monthly_package 
+                    ? (children[selectedChild]?.balance > 0 ? '#2e7d32' : '#f44336')
+                    : '#2e7d32'
                 }}>
-                  ₪{children.reduce((sum, child) => sum + (child.balance || 0), 0).toFixed(2)}
+                  {schoolSettings?.enable_monthly_package 
+                    ? (children[selectedChild]?.balance > 0 ? '✅ שולם' : '❌ טרם שולם')
+                    : `₪${children.reduce((sum, child) => sum + (child.balance || 0), 0).toFixed(2)}`
+                  }
                 </span>
+              
               </div>
               
               <div style={{
@@ -1713,7 +1719,7 @@ const handleSendEmail = async () => {
               parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
               amount: totalAmount,
               student_name: `${child.first_name} ${child.last_name}`,
-              description: `BonApp-${child.id}`,
+              description: `BonApp-${child.id}-monthly`,
               student_id: child.id
             })
           });
@@ -1771,7 +1777,7 @@ setTimeout(() => setIsPolling(false), 600000);
               parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
               amount: schoolSettings.daily_meal_price.toFixed(2),
               student_name: `${child.first_name} ${child.last_name}`,
-              description: `BonApp-${child.id}`,
+              description: `BonApp-${child.id}-daily`,
               student_id: child.id
             })
           });
