@@ -587,15 +587,10 @@ const handleMenuTypeChange = async (newType) => {
   </div>
 </div>
 
-                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                <div style={styles.card}>
-  {menuType === 'items' ? (
-    // תפריט פריטים (הקוד הקיים)
-    <>
-
 {/* הגדרות מחירים */}
 <div style={{
-  background: 'white', borderRadius: '16px', padding: '2rem',
-  boxShadow: '0 4px 16px rgba(0,0,0,0.05)', marginBottom: '2rem',
+  background: 'rgba(255, 255, 255, 0.95)', borderRadius: '16px', padding: '2rem',
+  boxShadow: '0 8px 32px rgba(0,0,0,0.1)', marginBottom: '2rem',
   direction: 'rtl'
 }}>
   <h3 style={{ margin: '0 0 1.5rem 0', color: '#333', fontSize: '1.3rem' }}>
@@ -611,28 +606,37 @@ const handleMenuTypeChange = async (newType) => {
         value={mealPrices.daily_meal_price}
         onChange={(e) => setMealPrices({ ...mealPrices, daily_meal_price: e.target.value })}
         placeholder="25"
-        style={{
-          padding: '0.75rem', border: '2px solid #e0e0e0',
-          borderRadius: '8px', fontSize: '1rem', width: '150px'
-        }}
+        style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
       />
     </div>
-    
+    <div>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+        מחיר ארוחה בחבילה חודשית (₪)
+      </label>
+      <input
+        type="number"
+        value={mealPrices.monthly_meal_price}
+        onChange={(e) => setMealPrices({ ...mealPrices, monthly_meal_price: e.target.value })}
+        placeholder="20"
+        style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
+      />
+    </div>
     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
-      <button
-        onClick={saveMealPrices}
-        disabled={savingPrices}
-        style={{
-          padding: '0.75rem 1.5rem', background: '#4CAF50', color: 'white',
-          border: 'none', borderRadius: '8px', cursor: 'pointer',
-          fontWeight: '600', fontSize: '1rem'
-        }}
-      >
+      <button onClick={saveMealPrices} disabled={savingPrices}
+        style={{ padding: '0.75rem 1.5rem', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
         {savingPrices ? 'שומר...' : '💾 שמור מחירים'}
       </button>
     </div>
   </div>
 </div>
+
+<div style={styles.card}></div>
+
+  <div style={styles.card}>
+  {menuType === 'items' ? (
+    // תפריט פריטים (הקוד הקיים)
+    <>
+
 
       <div style={styles.cardHeader}>
         <h2 style={styles.cardTitle}>
