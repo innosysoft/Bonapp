@@ -67,6 +67,7 @@ const [currentQR, setCurrentQR] = useState(null);
 const [loadingQR, setLoadingQR] = useState(false);
 const [showSendToPhone, setShowSendToPhone] = useState(false);
 const [schoolGroups, setSchoolGroups] = useState([]);
+const [isPolling, setIsPolling] = useState(false);
 const [schoolSettings, setSchoolSettings] = useState(null);
 const [monthlyPackageInfo, setMonthlyPackageInfo] = useState(null);
 const [newStudent, setNewStudent] = useState({
@@ -219,6 +220,21 @@ if (data.children && data.children.length > 0) {
   
 }, [navigate]);
 
+// Polling לרענון יתרה
+useEffect(() => {
+  let interval;
+  if (isPolling) {
+    interval = setInterval(async () => {
+      const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+      if (!currentUser) return;
+      const data = await getParentData(currentUser.id);
+      if (data.success) {
+        setChildren(data.children);
+      }
+    }, 30000); // כל 30 שניות
+  }
+  return () => clearInterval(interval);
+}, [isPolling]);
 
   const handleAddMoney = async () => {
   if (!amount || parseFloat(amount) <= 0) return;
@@ -1704,6 +1720,10 @@ const handleSendEmail = async () => {
           const result = await response.json();
           console.log('Grow payment result:', result);
           if (result.success && result.paymentUrl) {
+
+setIsPolling(true);
+setTimeout(() => setIsPolling(false), 600000);
+
             window.location.href = result.paymentUrl;
           } else {
             console.log('No payment URL:', result);
@@ -1758,6 +1778,10 @@ const handleSendEmail = async () => {
           const result = await response.json();
           console.log('Grow daily payment result:', result);
           if (result.success && result.paymentUrl) {
+
+setIsPolling(true);
+setTimeout(() => setIsPolling(false), 600000);
+
             window.location.href = result.paymentUrl;
           } else {
             alert('שגיאה ביצירת קישור תשלום');
