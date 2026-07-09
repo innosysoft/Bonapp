@@ -13,6 +13,8 @@ const MenuManagement = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
   const [menuType, setMenuType] = useState('items'); 
+  const [mealPrices, setMealPrices] = useState({ daily_meal_price: '', monthly_meal_price: '' });
+const [savingPrices, setSavingPrices] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [formData, setFormData] = useState({
@@ -45,6 +47,18 @@ if (schoolsData.success) {
   }
 }
 
+// טען מחירי ארוחות
+        const schoolsData2 = await getSchools();
+        if (schoolsData2.success) {
+          const school = schoolsData2.schools.find(s => s.id === user.school_id);
+          if (school) {
+            setMealPrices({
+              daily_meal_price: school.daily_meal_price || '',
+              monthly_meal_price: school.monthly_meal_price || ''
+            });
+          }
+        }
+
         // טען תפריט
         const result = await getMenuItems(user.school_id);
         if (result.success) {
@@ -67,6 +81,28 @@ if (dailyData.success) {
 
     loadData();
   }, [navigate]);
+
+const saveMealPrices = async () => {
+  setSavingPrices(true);
+  try {
+    const response = await fetch(`${API_URL}/schools/${currentUser.school_id}/payment-method`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        daily_meal_price: parseFloat(mealPrices.daily_meal_price) || 0,
+        monthly_meal_price: parseFloat(mealPrices.monthly_meal_price) || 0
+      })
+    });
+    const data = await response.json();
+    if (data.success) {
+      alert('✅ המחירים נשמרו בהצלחה');
+    }
+  } catch (error) {
+    console.error('Error saving prices:', error);
+    alert('שגיאה בשמירת המחירים');
+  }
+  setSavingPrices(false);
+};
 
 const handleMenuTypeChange = async (newType) => {
   try {
@@ -555,6 +591,49 @@ const handleMenuTypeChange = async (newType) => {
   {menuType === 'items' ? (
     // תפריט פריטים (הקוד הקיים)
     <>
+
+{/* הגדרות מחירים */}
+<div style={{
+  background: 'white', borderRadius: '16px', padding: '2rem',
+  boxShadow: '0 4px 16px rgba(0,0,0,0.05)', marginBottom: '2rem',
+  direction: 'rtl'
+}}>
+  <h3 style={{ margin: '0 0 1.5rem 0', color: '#333', fontSize: '1.3rem' }}>
+    💰 הגדרות מחירים
+  </h3>
+  <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
+    <div>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+        מחיר ארוחה יומית (₪)
+      </label>
+      <input
+        type="number"
+        value={mealPrices.daily_meal_price}
+        onChange={(e) => setMealPrices({ ...mealPrices, daily_meal_price: e.target.value })}
+        placeholder="25"
+        style={{
+          padding: '0.75rem', border: '2px solid #e0e0e0',
+          borderRadius: '8px', fontSize: '1rem', width: '150px'
+        }}
+      />
+    </div>
+    
+    <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+      <button
+        onClick={saveMealPrices}
+        disabled={savingPrices}
+        style={{
+          padding: '0.75rem 1.5rem', background: '#4CAF50', color: 'white',
+          border: 'none', borderRadius: '8px', cursor: 'pointer',
+          fontWeight: '600', fontSize: '1rem'
+        }}
+      >
+        {savingPrices ? 'שומר...' : '💾 שמור מחירים'}
+      </button>
+    </div>
+  </div>
+</div>
+
       <div style={styles.cardHeader}>
         <h2 style={styles.cardTitle}>
           <ChefHat size={24} />
@@ -632,6 +711,8 @@ const handleMenuTypeChange = async (newType) => {
       </table>
     </>
   ) : (
+
+
     // תפריט יומי - חדש! 👇
     <>
       <div style={styles.cardHeader}>

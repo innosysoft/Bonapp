@@ -81,30 +81,26 @@ const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
   const loadSchedule = async (group) => {
     setSelectedGroup(group);
-    loadStudyDays(group.id);
+    loadStudyDays(group.id, calendarMonth, calendarYear);
     try {
-
-      const response = await fetch(
-        `https://api.bonapp.dev/api/groups/${group.id}/schedule?month=${currentMonth}&year=${currentYear}`
-      );
-      const data = await response.json();
-      if (data.success && data.schedule) {
+      // טען מחיר ממנהל מטבח
+      const schoolResponse = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}`);
+      const schoolData = await schoolResponse.json();
+      if (schoolData.success) {
         setSchedule({
-          days_count: data.schedule.days_count,
-          meal_price: data.schedule.meal_price
+          days_count: '',
+          meal_price: schoolData.school?.monthly_meal_price || ''
         });
-      } else {
-        setSchedule({ days_count: '', meal_price: '' });
       }
     } catch (error) {
       console.error('Error loading schedule:', error);
     }
   };
 
-const loadStudyDays = async (groupId) => {
+const loadStudyDays = async (groupId, month = calendarMonth, year = calendarYear) => {
   try {
     const response = await fetch(
-      `https://api.bonapp.dev/api/groups/${groupId}/study-days?month=${calendarMonth}&year=${calendarYear}`
+      `https://api.bonapp.dev/api/groups/${groupId}/study-days?month=${month}&year=${year}`
     );
     const data = await response.json();
     if (data.success) {
@@ -153,10 +149,10 @@ const toggleStudyDay = async (date) => {
           month: calendarMonth,
           year: calendarYear,
           days_count: daysInMonth,
-          meal_price: parseFloat(schedule.meal_price)
+          meal_price: parseFloat(schedule.meal_price) || 0
         })
       });
-      
+
       const data = await response.json();
       if (data.success) {
         setMessage('✅ לוח הארוחות נשמר בהצלחה');
