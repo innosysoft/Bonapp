@@ -426,6 +426,8 @@ if (enable_free_payment !== undefined) updateData.enable_free_payment = enable_f
 if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.body.payment_gateway;
 if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
 
+
+console.log('updateData:', JSON.stringify(updateData));
     const { data: school, error } = await supabase
       .from('schools')
       .update(updateData)
