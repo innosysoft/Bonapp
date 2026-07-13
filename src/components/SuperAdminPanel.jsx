@@ -1275,58 +1275,7 @@ onClick={() => {
     )}
   </div>
 
-  {/* Cardcom */}
-  <div style={{ marginBottom: '1rem' }}>
-    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-      <input
-        type="checkbox"
-        checked={editingSchool.enable_cardcom || false}
-        onChange={(e) => setEditingSchool({...editingSchool, enable_cardcom: e.target.checked})}
-      />
-      <strong>🟡 Cardcom (בקרוב)</strong>
-    </label>
-    
-    {editingSchool.enable_cardcom && (
-      <>
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-            Terminal Number
-          </label>
-          <input
-            type="text"
-            value={editingSchool.cardcom_terminal || ''}
-            onChange={(e) => setEditingSchool({...editingSchool, cardcom_terminal: e.target.value})}
-            placeholder="1000"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #e0e0e0',
-              borderRadius: '8px',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem' }}>
-            Username
-          </label>
-          <input
-            type="text"
-            value={editingSchool.cardcom_username || ''}
-            onChange={(e) => setEditingSchool({...editingSchool, cardcom_username: e.target.value})}
-            placeholder="username"
-            style={{
-              width: '100%',
-              padding: '0.75rem',
-              border: '2px solid #e0e0e0',
-              borderRadius: '8px',
-              boxSizing: 'border-box'
-            }}
-          />
-        </div>
-      </>
-    )}
-  </div>
+  
 
   {/* Cash */}
   <div>
