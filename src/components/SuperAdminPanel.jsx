@@ -285,7 +285,9 @@ const saveSchoolSettings = async () => {
   enable_daily_payment: editingSchool.enable_daily_payment,
   daily_meal_price: editingSchool.daily_meal_price,
   charge_absent_students: editingSchool.charge_absent_students,
-  enable_free_payment: editingSchool.enable_free_payment
+  enable_free_payment: editingSchool.enable_free_payment,
+  payment_gateway: editingSchool.payment_gateway,
+  gateway_webhook_url: editingSchool.gateway_webhook_url
       })
     });
 
@@ -1375,6 +1377,50 @@ onClick={() => {
       ההורה משלם לפי מספר ימי ארוחה בחודש × מחיר שכבה
     </p>
   </div>
+
+{isSuperAdmin && (
+<div style={{ marginBottom: '1.5rem' }}>
+  <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>💳 הגדרות סליקה</h4>
+  
+  <div style={{ marginBottom: '1rem' }}>
+    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+      ספק סליקה
+    </label>
+    <select
+      value={editingSchool.payment_gateway || 'none'}
+      onChange={(e) => setEditingSchool({...editingSchool, payment_gateway: e.target.value})}
+      style={{
+        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+        borderRadius: '8px', fontSize: '1rem'
+      }}
+    >
+      <option value="none">ללא סליקה</option>
+      <option value="grow">Grow</option>
+      <option value="cardcom">Cardcom</option>
+      <option value="tranzila">Tranzila</option>
+    </select>
+  </div>
+
+  {editingSchool.payment_gateway === 'grow' && (
+    <div style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+        Make Webhook URL
+      </label>
+      <input
+        type="text"
+        value={editingSchool.gateway_webhook_url || ''}
+        onChange={(e) => setEditingSchool({...editingSchool, gateway_webhook_url: e.target.value})}
+        placeholder="https://hook.eu1.make.com/..."
+        style={{
+          width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+          borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box'
+        }}
+      />
+    </div>
+  )}
+</div>
+)}
+
 
   {/* תשלום יומי */}
   <div style={{ marginBottom: '1rem' }}>

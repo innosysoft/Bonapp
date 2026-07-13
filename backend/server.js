@@ -423,6 +423,8 @@ if (enable_daily_payment !== undefined) updateData.enable_daily_payment = enable
 if (daily_meal_price !== undefined) updateData.daily_meal_price = daily_meal_price;
 if (charge_absent_students !== undefined) updateData.charge_absent_students = charge_absent_students;
 if (enable_free_payment !== undefined) updateData.enable_free_payment = enable_free_payment;
+if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.body.payment_gateway;
+if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
 
     const { data: school, error } = await supabase
       .from('schools')
@@ -2223,14 +2225,22 @@ app.post('/api/grow-payment-link', async (req, res) => {
 
 // יצירת קישור תשלום דרך Make
 app.post('/api/create-grow-payment', async (req, res) => {
-
-console.log('🔵 Create Grow payment:', req.body);
-
   try {
     const { parent_name, parent_phone, amount, student_name, description, student_id } = req.body;
     
-    // שלח ל-Make Webhook
-    const makeWebhookUrl = process.env.MAKE_WEBHOOK_URL || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
+    // קבל את ה-webhook URL של בית הספר של התלמיד
+    const { data: student } = await supabase
+      .from('students')
+      .select('school_id, schools(gateway_webhook_url, payment_gateway)')
+      .eq('id', student_id)
+      .single();
+    
+    const makeWebhookUrl = student?.schools?.gateway_webhook_url 
+      || process.env.MAKE_WEBHOOK_URL 
+      || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
+    
+    console.log('Using webhook URL:', makeWebhookUrl, 'for school:', student?.school_id);
+    
     
     const response = await fetch(makeWebhookUrl, {
       method: 'POST',
