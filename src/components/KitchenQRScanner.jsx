@@ -8,6 +8,7 @@ const KitchenQRScanner = () => {
   const navigate = useNavigate();
   const [isScanning, setIsScanning] = useState(false);
   const [scannedStudent, setScannedStudent] = useState(null);
+  const [studentPaymentType, setStudentPaymentType] = useState('daily');
   const [cart, setCart] = useState([]);
   const [todayMenu, setTodayMenu] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
@@ -78,6 +79,19 @@ const onScanSuccess = async (decodedText) => {
     if (result.success) {
       setScannedStudent(result.student);
       setCart([]);
+      
+      // שלוף סוג התשלום האחרון של התלמיד
+      try {
+        const paymentResponse = await fetch(
+          `https://api.bonapp.dev/api/students/${result.student.id}/last-payment-type`
+        );
+        const paymentData = await paymentResponse.json();
+        if (paymentData.success) {
+          setStudentPaymentType(paymentData.payment_type || 'daily');
+        }
+      } catch (e) {
+        setStudentPaymentType('daily');
+      }
     } else {
       alert('QR לא תקין או תלמיד לא נמצא');
     }
@@ -682,13 +696,17 @@ const selectStudent = (student) => {
               color: '#667eea',
               fontSize: '1.2rem'
             }}>
-              ₪{(schoolSettings?.daily_meal_price || todayMenu.price).toFixed(2)}
+              ₪{(studentPaymentType === 'monthly' 
+                ? schoolSettings?.monthly_meal_price 
+                : schoolSettings?.daily_meal_price || todayMenu.price).toFixed(2)}
             </span>
             <button
               onClick={() => addToCart({
                 id: `daily-${today}`,
                 name: 'ארוחת היום',
-                price: schoolSettings?.daily_meal_price || todayMenu.price,
+                price: studentPaymentType === 'monthly' 
+                  ? schoolSettings?.monthly_meal_price 
+                  : schoolSettings?.daily_meal_price || todayMenu.price,
                 category: 'ארוחה',
                 available: todayMenu.active
               })}

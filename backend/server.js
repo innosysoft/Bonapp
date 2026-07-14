@@ -2037,6 +2037,30 @@ app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
   }
 });
 
+// קבל סוג תשלום אחרון של תלמיד
+app.get('/api/students/:studentId/last-payment-type', async (req, res) => {
+  try {
+    const { studentId } = req.params;
+    const { data: lastPayment } = await supabase
+      .from('transactions')
+      .select('payment_type')
+      .eq('student_id', studentId)
+      .eq('type', 'payment')
+      .not('transaction_date', 'is', null)
+      .in('payment_type', ['monthly', 'daily'])
+      .order('transaction_date', { ascending: false })
+      .limit(1)
+      .single();
+    
+    res.json({ 
+      success: true, 
+      payment_type: lastPayment?.payment_type || 'daily'
+    });
+  } catch (error) {
+    res.json({ success: true, payment_type: 'daily' });
+  }
+});
+
 // ===== GROW PAYMENT =====
 
 // מקבל payment URL מ-Make ושומר זמנית
