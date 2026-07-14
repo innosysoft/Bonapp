@@ -96,6 +96,11 @@ const saveMealPrices = async () => {
     const data = await response.json();
     if (data.success) {
       alert('✅ המחירים נשמרו בהצלחה');
+      setMealPrices({
+        daily_meal_price: parseFloat(mealPrices.daily_meal_price) || 0,
+        monthly_meal_price: parseFloat(mealPrices.monthly_meal_price) || 0
+      });
+      
       // עדכן state
       setMealPrices({
         daily_meal_price: parseFloat(mealPrices.daily_meal_price) || 0,
