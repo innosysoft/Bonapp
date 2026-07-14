@@ -31,7 +31,7 @@ const KitchenQRScanner = () => {
     }
   }, [scannedStudent]);
 
-  
+
   // דמה של תפריט יומי
   const [menuItems, setMenuItems] = useState([]);
 const [loading, setLoading] = useState(true);
@@ -46,7 +46,9 @@ const [schoolSettings, setSchoolSettings] = useState({
   max_negative_balance: -50.00,
   menu_type: 'items',
   kitchen_open_time: '08:00',
-  kitchen_close_time: '16:00'
+  kitchen_close_time: '16:00',
+  monthly_meal_price: 0,
+  daily_meal_price: 0
 });
 
 const [searchTerm, setSearchTerm] = useState('');
