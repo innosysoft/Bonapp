@@ -159,6 +159,7 @@ console.log('enable_monthly_package:', school.enable_monthly_package);
         if (scheduleData.success && scheduleData.schedule) {
           setMonthlyPackageInfo({
             ...scheduleData.schedule,
+            console.log('school.monthly_meal_price:', school.monthly_meal_price);
             meal_price: school.monthly_meal_price || scheduleData.schedule.meal_price
           });
         }
