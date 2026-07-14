@@ -157,7 +157,10 @@ console.log('enable_monthly_package:', school.enable_monthly_package);
         );
         const scheduleData = await scheduleResponse.json();
         if (scheduleData.success && scheduleData.schedule) {
-          setMonthlyPackageInfo(scheduleData.schedule);
+          setMonthlyPackageInfo({
+            ...scheduleData.schedule,
+            meal_price: school.monthly_meal_price || scheduleData.schedule.meal_price
+          });
         }
       }
       

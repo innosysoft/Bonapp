@@ -153,7 +153,7 @@ console.log('action:', data.action);
           month: calendarMonth,
           year: calendarYear,
           days_count: daysInMonth,
-          meal_price: parseFloat(schedule.meal_price) || 0
+          meal_price: 0
         })
       });
 
