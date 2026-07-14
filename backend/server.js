@@ -2105,6 +2105,7 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
         amount: amount,
         type: 'payment',
         payment_method: 'grow',
+        payment_type: paymentType,
         description: `תשלום Grow - ₪${amount}`,
         transaction_date: new Date().toISOString()
       });
