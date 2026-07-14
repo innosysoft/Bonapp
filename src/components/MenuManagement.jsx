@@ -100,7 +100,7 @@ const saveMealPrices = async () => {
         daily_meal_price: parseFloat(mealPrices.daily_meal_price) || 0,
         monthly_meal_price: parseFloat(mealPrices.monthly_meal_price) || 0
       });
-      
+
       // עדכן state
       setMealPrices({
         daily_meal_price: parseFloat(mealPrices.daily_meal_price) || 0,
@@ -609,6 +609,20 @@ const handleMenuTypeChange = async (newType) => {
   </h3>
   <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
     
+
+<div>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+        מחיר ארוחה יומית (₪)
+      </label>
+      <input
+        type="number"
+        value={mealPrices.daily_meal_price}
+        onChange={(e) => setMealPrices({ ...mealPrices, daily_meal_price: e.target.value })}
+        placeholder="25"
+        style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
+      />
+    </div>
+
     <div>
       <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
         מחיר ארוחה בחבילה חודשית (₪)
@@ -895,17 +909,7 @@ const handleMenuTypeChange = async (newType) => {
       />
     </div>
 
-    <div style={styles.formGroup}>
-      <label style={styles.label}>מחיר (₪) *</label>
-      <input
-        type="number"
-        step="0.1"
-        value={formData.price}
-        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
-        style={styles.input}
-        placeholder="0.00"
-      />
-    </div>
+    
 
     <div style={styles.formGroup}>
       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
