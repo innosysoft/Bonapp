@@ -1461,29 +1461,27 @@ app.post('/api/process-meal-purchase', async (req, res) => {
 
     const school = student.schools;
 
-    // קבע את הסכום לחיוב לפי סוג התשלום האחרון
-    let chargeAmount = total;
-    console.log('process-meal-purchase:', { total, paymentType: 'checking...', monthly_meal_price: school?.monthly_meal_price });
-    
-    if (school.enable_monthly_package || school.enable_daily_payment) {
-      // בדוק את סוג התשלום האחרון של התלמיד
-      const { data: lastPayment } = await supabase
-        .from('transactions')
-        .select('payment_type')
-        .eq('student_id', studentId)
-        .eq('type', 'payment')
-        .order('transaction_date', { ascending: false })
-        .limit(1)
-        .single();
+   
+    // קבע סכום לחיוב לפי סוג התשלום האחרון
+    const { data: lastPayment } = await supabase
+      .from('transactions')
+      .select('payment_type')
+      .eq('student_id', studentId)
+      .eq('type', 'payment')
+      .order('transaction_date', { ascending: false })
+      .limit(1)
+      .single();
 
-      const paymentType = lastPayment?.payment_type || 'daily';
-      
-      if (paymentType === 'monthly') {
-        chargeAmount = parseFloat(school.monthly_meal_price) || total;
-      } else if (paymentType === 'daily') {
-        chargeAmount = parseFloat(school.daily_meal_price) || total;
-      }
+    const paymentType = lastPayment?.payment_type || 'daily';
+    console.log('paymentType:', paymentType);
+
+    let chargeAmount;
+    if (paymentType === 'monthly') {
+      chargeAmount = parseFloat(school.monthly_meal_price) || 0;
+    } else {
+      chargeAmount = parseFloat(school.daily_meal_price) || 0;
     }
+    console.log('chargeAmount:', chargeAmount);
 
     const newBalance = student.balance - chargeAmount;
 
