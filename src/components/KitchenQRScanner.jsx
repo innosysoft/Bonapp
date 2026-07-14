@@ -123,7 +123,9 @@ if (schoolData.success) {
   max_negative_balance: school.max_negative_balance || -50.00,
   menu_type: school.menu_type || 'items',
   kitchen_open_time: school.kitchen_open_time || '08:00',
-  kitchen_close_time: school.kitchen_close_time || '16:00'
+  kitchen_close_time: school.kitchen_close_time || '16:00',
+  monthly_meal_price: school.monthly_meal_price || 0,
+  daily_meal_price: school.daily_meal_price || 0
 });
     
     // טען תפריט לפי סוג
@@ -680,13 +682,13 @@ const selectStudent = (student) => {
               color: '#667eea',
               fontSize: '1.2rem'
             }}>
-              ₪{todayMenu.price.toFixed(2)}
+              ₪{(schoolSettings?.daily_meal_price || todayMenu.price).toFixed(2)}
             </span>
             <button
               onClick={() => addToCart({
                 id: `daily-${today}`,
                 name: 'ארוחת היום',
-                price: todayMenu.price,
+                price: schoolSettings?.daily_meal_price || todayMenu.price,
                 category: 'ארוחה',
                 available: todayMenu.active
               })}
