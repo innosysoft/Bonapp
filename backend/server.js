@@ -1463,6 +1463,7 @@ app.post('/api/process-meal-purchase', async (req, res) => {
 
     // קבע את הסכום לחיוב לפי סוג התשלום האחרון
     let chargeAmount = total;
+    console.log('process-meal-purchase:', { total, paymentType: 'checking...', monthly_meal_price: school?.monthly_meal_price });
     
     if (school.enable_monthly_package || school.enable_daily_payment) {
       // בדוק את סוג התשלום האחרון של התלמיד
