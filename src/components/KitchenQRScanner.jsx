@@ -86,6 +86,8 @@ const onScanSuccess = async (decodedText) => {
           `https://api.bonapp.dev/api/students/${result.student.id}/last-payment-type`
         );
         const paymentData = await paymentResponse.json();
+console.log('paymentData:', paymentData);
+
         if (paymentData.success) {
           setStudentPaymentType(paymentData.payment_type || 'daily');
         }
