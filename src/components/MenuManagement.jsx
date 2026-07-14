@@ -774,14 +774,8 @@ const handleMenuTypeChange = async (newType) => {
                       }}>
                         {dayMenu.menu_description}
                       </p>
-                      <p style={{
-                        margin: 0,
-                        fontSize: '1.1rem',
-                        fontWeight: 'bold',
-                        color: '#667eea'
-                      }}>
-                        ₪{dayMenu.price.toFixed(2)}
-                      </p>
+                      
+                      
                     </>
                   ) : (
                     <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>
