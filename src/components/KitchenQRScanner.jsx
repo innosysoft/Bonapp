@@ -16,6 +16,22 @@ const KitchenQRScanner = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
+  useEffect(() => {
+    if (scannedStudent) {
+      fetch(`https://api.bonapp.dev/api/students/${scannedStudent.id}/last-payment-type`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            setStudentPaymentType(data.payment_type || 'daily');
+          }
+        })
+        .catch(() => setStudentPaymentType('daily'));
+    } else {
+      setStudentPaymentType('daily');
+    }
+  }, [scannedStudent]);
+
+  
   // דמה של תפריט יומי
   const [menuItems, setMenuItems] = useState([]);
 const [loading, setLoading] = useState(true);
