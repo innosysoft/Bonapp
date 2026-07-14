@@ -698,6 +698,8 @@ const selectStudent = (student) => {
               color: '#667eea',
               fontSize: '1.2rem'
             }}>
+             
+             {console.log('studentPaymentType in render:', studentPaymentType)}
               ₪{(studentPaymentType === 'monthly' 
                 ? schoolSettings?.monthly_meal_price 
                 : schoolSettings?.daily_meal_price || todayMenu.price).toFixed(2)}
