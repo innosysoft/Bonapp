@@ -150,12 +150,14 @@ if (data.children && data.children.length > 0) {
 console.log('enable_monthly_package:', school.enable_monthly_package);
       
       if (school.enable_monthly_package && data.children[0].group_id) {
+        
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
         const scheduleResponse = await fetch(
           `https://api.bonapp.dev/api/groups/${data.children[0].group_id}/schedule?month=${currentMonth}&year=${currentYear}`
         );
         const scheduleData = await scheduleResponse.json();
+        console.log('scheduleData:', JSON.stringify(scheduleData));
         if (scheduleData.success && scheduleData.schedule) {
           console.log('school.monthly_meal_price:', school.monthly_meal_price);
           setMonthlyPackageInfo({
