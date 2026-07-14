@@ -1468,6 +1468,7 @@ app.post('/api/process-meal-purchase', async (req, res) => {
       .select('payment_type')
       .eq('student_id', studentId)
       .eq('type', 'payment')
+      .not('transaction_date', 'is', null)
       .order('transaction_date', { ascending: false })
       .limit(1)
       .single();
