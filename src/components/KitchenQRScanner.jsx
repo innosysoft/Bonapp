@@ -9,6 +9,7 @@ const KitchenQRScanner = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [scannedStudent, setScannedStudent] = useState(null);
   const [studentPaymentType, setStudentPaymentType] = useState('daily');
+  
   const [cart, setCart] = useState([]);
   const [todayMenu, setTodayMenu] = useState([]);
   const [recentTransactions, setRecentTransactions] = useState([]);
@@ -68,6 +69,8 @@ const [searchResults, setSearchResults] = useState([]);
 const [showSearchResults, setShowSearchResults] = useState(false);
 const [scanning, setScanning] = useState(false);
 const [scannerReady, setScannerReady] = useState(false);
+
+
 
 useEffect(() => {
   if (scanning && !scannerReady) {
@@ -368,7 +371,7 @@ const selectStudent = (student) => {
         id: Date.now(),
         student: scannedStudent,
         items: [...cart],
-        total: total,
+        total: result.chargeAmount || total,
         timestamp: new Date().toLocaleString('he-IL'),
         status: 'completed'
       };
