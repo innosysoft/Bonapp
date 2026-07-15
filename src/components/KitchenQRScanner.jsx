@@ -199,6 +199,7 @@ if (result.success) {
 
 // טען עסקאות אחרונות
 const transactionsResult = await getRecentTransactions(user.school_id, 10);
+console.log('transactions:', transactionsResult);
 if (transactionsResult.success) {
   const formattedTransactions = transactionsResult.transactions.map(t => ({
     id: t.id,
