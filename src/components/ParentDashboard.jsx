@@ -2349,7 +2349,7 @@ setTimeout(() => setIsPolling(false), 600000);
                         color: '#7f8c8d',
                         margin: 0
                       }}>
-                       {child.grade || schoolGroups.find(g => g.id === child.group_id)?.name || ''} • {child.student_phone}
+                       {schoolGroups.find(g => g.id === child.group_id)?.name || child.grade || ''} • {child.student_phone}
                       </p>
                     </div>
                   </div>
