@@ -456,8 +456,8 @@ const handleSaveStudent = async () => {
 
     if (result.success) {
       setChildren(prev => prev.map(s => 
-        s.id === editingStudent.id ? result.student : s
-      ));
+  s.id === editingStudent.id ? { ...s, ...result.student } : s
+));
       setShowEditStudent(false);
       setEditingStudent(null);
       alert('הפרטים עודכנו בהצלחה!');
