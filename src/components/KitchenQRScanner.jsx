@@ -16,25 +16,7 @@ const KitchenQRScanner = () => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
 
-  useEffect(() => {
-    if (scannedStudent) {
-
-      console.log('useEffect: scannedStudent changed:', scannedStudent.id);
-      fetch(`https://api.bonapp.dev/api/students/${scannedStudent.id}/last-payment-type`)
-
-
-      
-        .then(r => r.json())
-        .then(data => {
-          if (data.success) {
-            setStudentPaymentType(data.payment_type || 'daily');
-          }
-        })
-        .catch(() => setStudentPaymentType('daily'));
-    } else {
-      setStudentPaymentType('daily');
-    }
-  }, [scannedStudent]);
+  
 
 
   // דמה של תפריט יומי
@@ -55,6 +37,22 @@ const [schoolSettings, setSchoolSettings] = useState({
   monthly_meal_price: 0,
   daily_meal_price: 0
 });
+
+useEffect(() => {
+    if (scannedStudent) {
+      console.log('useEffect: scannedStudent changed:', scannedStudent.id);
+      fetch(`https://api.bonapp.dev/api/students/${scannedStudent.id}/last-payment-type`)
+        .then(r => r.json())
+        .then(data => {
+          if (data.success) {
+            setStudentPaymentType(data.payment_type || 'daily');
+          }
+        })
+        .catch(() => setStudentPaymentType('daily'));
+    } else {
+      setStudentPaymentType('daily');
+    }
+  }, [scannedStudent]);
 
 const [searchTerm, setSearchTerm] = useState('');
 const [searchResults, setSearchResults] = useState([]);
