@@ -214,8 +214,9 @@ if (transactionsResult.success) {
     timestamp: t.transaction_date ? new Date(t.transaction_date).toLocaleString('he-IL') : new Date(t.created_at).toLocaleString('he-IL'),
     status: 'completed'
   }));
-  
+
   setRecentTransactions(formattedTransactions);
+  console.log('formattedTransactions:', formattedTransactions);
 }
 
     } catch (error) {
