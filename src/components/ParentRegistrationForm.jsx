@@ -179,7 +179,7 @@ const loadSchoolGroups = async (schoolId) => {
     return formData.children.every(child => 
       child.firstName && 
       child.lastName && 
-      child.grade && 
+      (child.grade || child.group_id) &&  
       child.phone && validatePhone(child.phone)
     );
   };
