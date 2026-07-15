@@ -206,7 +206,7 @@ if (transactionsResult.success) {
     },
     items: t.items || [],
     total: parseFloat(t.amount),
-    timestamp: new Date(t.created_at).toLocaleString('he-IL'),
+    timestamp: t.transaction_date ? new Date(t.transaction_date).toLocaleString('he-IL') : new Date(t.created_at).toLocaleString('he-IL'),
     status: 'completed'
   }));
   setRecentTransactions(formattedTransactions);
