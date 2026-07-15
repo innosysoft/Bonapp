@@ -3,9 +3,11 @@ import { getMenuItems, scanStudent, processMealPurchase, getSchools, searchStude
 import { QrCode, Camera, ShoppingCart, User, DollarSign, Clock, CheckCircle, XCircle, RefreshCw, Settings, LogOut, ChefHat } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Html5QrcodeScanner } from 'html5-qrcode';
+import { useNavigate, useLocation } from 'react-router-dom';
 
 const KitchenQRScanner = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isScanning, setIsScanning] = useState(false);
   const [scannedStudent, setScannedStudent] = useState(null);
   const [studentPaymentType, setStudentPaymentType] = useState('daily');
@@ -220,7 +222,7 @@ if (transactionsResult.success) {
   };
 
   loadData();
-}, []);
+}, [location]);
 
 
   // סטטיסטיקות יומיות
