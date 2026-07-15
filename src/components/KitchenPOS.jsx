@@ -27,6 +27,32 @@ const [scannerReady, setScannerReady] = useState(false);
   const [cart, setCart] = useState([]);
   const [showWarning, setShowWarning] = useState(false);
 const [warningData, setWarningData] = useState(null);
+const [studentPaymentType, setStudentPaymentType] = useState('daily');
+const [schoolSettings, setSchoolSettings] = useState({
+  monthly_meal_price: 0,
+  daily_meal_price: 0
+});
+
+useEffect(() => {
+  if (selectedStudent) {
+    fetch(`https://api.bonapp.dev/api/students/${selectedStudent.id}/last-payment-type`)
+      .then(r => r.json())
+      .then(data => {
+        if (data.success) {
+          setStudentPaymentType(data.payment_type || 'daily');
+        }
+      })
+      .catch(() => setStudentPaymentType('daily'));
+  } else {
+    setStudentPaymentType('daily');
+  }
+}, [selectedStudent]);
+
+const getMealPrice = () => {
+  return studentPaymentType === 'monthly'
+    ? schoolSettings?.monthly_meal_price || 0
+    : schoolSettings?.daily_meal_price || 0;
+};
 
 const onScanSuccess = async (decodedText) => {
   console.log('QR Code scanned:', decodedText);
@@ -98,6 +124,10 @@ useEffect(() => {
           if (school) {
             setSchoolName(school.name);
             setMenuType(school.menu_type || 'items');
+            setSchoolSettings({
+  monthly_meal_price: school.monthly_meal_price || 0,
+  daily_meal_price: school.daily_meal_price || 0
+});
             
             if (school.menu_type === 'daily') {
               const dailyResponse = await fetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
@@ -1019,13 +1049,13 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
                     color: '#667eea',
                     fontSize: '1.3rem'
                   }}>
-                    ₪{todayMenu.price.toFixed(2)}
+                    ₪{getMealPrice().toFixed(2)}
                   </span>
                   <button
                     onClick={() => onAddToCart({
                       id: `daily-${today}`,
                       name: 'ארוחת היום',
-                      price: todayMenu.price,
+                      price: getMealPrice(),
                       category: 'ארוחה',
                       available: todayMenu.active
                     })}
