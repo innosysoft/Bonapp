@@ -1430,7 +1430,7 @@ app.get('/api/transactions/:schoolId/recent', async (req, res) => {
         )
       `)
       .eq('school_id', schoolId)
-      .order('created_at', { ascending: false })
+      .order('transaction_date', { ascending: false, nullsFirst: false })
       .limit(limit);
 
     if (error) throw error;
