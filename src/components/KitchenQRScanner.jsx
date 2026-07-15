@@ -38,6 +38,12 @@ const [schoolSettings, setSchoolSettings] = useState({
   daily_meal_price: 0
 });
 
+const getMealPrice = () => {
+  return studentPaymentType === 'monthly' 
+    ? schoolSettings?.monthly_meal_price || 0
+    : schoolSettings?.daily_meal_price || 0;
+};
+
 useEffect(() => {
     if (scannedStudent) {
       console.log('useEffect: scannedStudent changed:', scannedStudent.id);
@@ -722,17 +728,15 @@ const selectStudent = (student) => {
             }}>
              
              {console.log('studentPaymentType in render:', studentPaymentType)}
-              ₪{studentPaymentType === 'monthly' 
-  ? (schoolSettings?.monthly_meal_price || 0).toFixed(2)
-  : (schoolSettings?.daily_meal_price || todayMenu.price).toFixed(2)}
+              ₪{getMealPrice().toFixed(2)}
+
             </span>
             <button
               onClick={() => addToCart({
                 id: `daily-${today}`,
                 name: 'ארוחת היום',
-                price: studentPaymentType === 'monthly' 
-  ? (schoolSettings?.monthly_meal_price || 0)
-  : (schoolSettings?.daily_meal_price || todayMenu.price),
+                price: getMealPrice(),
+                
                 category: 'ארוחה',
                 available: todayMenu.active
               })}
