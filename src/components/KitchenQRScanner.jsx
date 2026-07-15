@@ -222,6 +222,7 @@ if (transactionsResult.success) {
     }
   };
 
+  console.log('loadData called, location:', location.pathname);
   loadData();
 }, [location]);
 
