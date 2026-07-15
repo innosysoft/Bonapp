@@ -18,7 +18,12 @@ const KitchenQRScanner = () => {
 
   useEffect(() => {
     if (scannedStudent) {
+
+      console.log('useEffect: scannedStudent changed:', scannedStudent.id);
       fetch(`https://api.bonapp.dev/api/students/${scannedStudent.id}/last-payment-type`)
+
+
+      
         .then(r => r.json())
         .then(data => {
           if (data.success) {
