@@ -361,7 +361,7 @@ const selectStudent = (student) => {
 
   try {
     const result = await processMealPurchase(scannedStudent.id, cart, total);
-    
+    console.log('processPayment result:', result);
     if (result.success) {
       // עדכן יתרת התלמיד
       setScannedStudent(prev => ({ ...prev, balance: result.newBalance }));
