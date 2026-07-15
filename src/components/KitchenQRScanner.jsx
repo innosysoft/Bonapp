@@ -201,17 +201,20 @@ if (result.success) {
 const transactionsResult = await getRecentTransactions(user.school_id, 10);
 console.log('transactions:', transactionsResult);
 if (transactionsResult.success) {
-  const formattedTransactions = transactionsResult.transactions.map(t => ({
+  const formattedTransactions = transactionsResult.transactions
+  .filter(t => t.students)
+  .map(t => ({
     id: t.id,
     student: {
-      first_name: t.students.first_name,
-      last_name: t.students.last_name
+      first_name: t.students?.first_name || '',
+      last_name: t.students?.last_name || ''
     },
     items: t.items || [],
     total: parseFloat(t.amount),
     timestamp: t.transaction_date ? new Date(t.transaction_date).toLocaleString('he-IL') : new Date(t.created_at).toLocaleString('he-IL'),
     status: 'completed'
   }));
+  
   setRecentTransactions(formattedTransactions);
 }
 
