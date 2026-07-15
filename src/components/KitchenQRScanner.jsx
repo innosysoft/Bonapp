@@ -145,6 +145,7 @@ const schoolData = await response.json();
 if (schoolData.success) {
   const school = schoolData.school;
   console.log('=== LOADED SCHOOL ===');
+  console.log('school object:', JSON.stringify(school));
   console.log('School ID:', school.id);
   console.log('School Name:', school.name);
   console.log('Kitchen hours:', school.kitchen_open_time, '-', school.kitchen_close_time);
@@ -718,17 +719,17 @@ const selectStudent = (student) => {
             }}>
              
              {console.log('studentPaymentType in render:', studentPaymentType)}
-              ₪{(studentPaymentType === 'monthly' 
-                ? schoolSettings?.monthly_meal_price 
-                : schoolSettings?.daily_meal_price || todayMenu.price).toFixed(2)}
+              ₪{studentPaymentType === 'monthly' 
+  ? (schoolSettings?.monthly_meal_price || 0).toFixed(2)
+  : (schoolSettings?.daily_meal_price || todayMenu.price).toFixed(2)}
             </span>
             <button
               onClick={() => addToCart({
                 id: `daily-${today}`,
                 name: 'ארוחת היום',
                 price: studentPaymentType === 'monthly' 
-                  ? schoolSettings?.monthly_meal_price 
-                  : schoolSettings?.daily_meal_price || todayMenu.price,
+  ? (schoolSettings?.monthly_meal_price || 0)
+  : (schoolSettings?.daily_meal_price || todayMenu.price),
                 category: 'ארוחה',
                 available: todayMenu.active
               })}
