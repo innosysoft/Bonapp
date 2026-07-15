@@ -39,6 +39,9 @@ const [schoolSettings, setSchoolSettings] = useState({
 });
 
 const getMealPrice = () => {
+
+console.log('getMealPrice called, studentPaymentType:', studentPaymentType);
+
   return studentPaymentType === 'monthly' 
     ? schoolSettings?.monthly_meal_price || 0
     : schoolSettings?.daily_meal_price || 0;
@@ -736,7 +739,7 @@ const selectStudent = (student) => {
                 id: `daily-${today}`,
                 name: 'ארוחת היום',
                 price: getMealPrice(),
-                
+
                 category: 'ארוחה',
                 available: todayMenu.active
               })}
