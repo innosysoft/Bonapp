@@ -418,6 +418,7 @@ const stopScanning = () => {
             onCalculateTotal={calculateTotal}
             onProcessPayment={processPayment}
             onCancel={cancelStudent}
+            getMealPrice={getMealPrice}
           />
         )}
       </div>
@@ -905,7 +906,7 @@ const WarningModal = ({ warningData, onConfirm, onCancel }) => (
 );
 
 
-const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddToCart, onUpdateQuantity, onCalculateTotal, onProcessPayment, onCancel }) => {
+const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddToCart, onUpdateQuantity, onCalculateTotal, onProcessPayment, onCancel, getMealPrice }) => {
   const today = new Date().getDay();
   const todayMenu = dailyMenuData.find(d => d.day_of_week === today);
 
