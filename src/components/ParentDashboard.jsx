@@ -2353,7 +2353,7 @@ setTimeout(() => setIsPolling(false), 600000);
                       }}>
 
                         
-                       {child.group_name || child.grade || ''} {child.student_phone}
+                       {child.group_name || child.grade || ''} • {child.student_phone}
                       </p>
                     </div>
                   </div>
