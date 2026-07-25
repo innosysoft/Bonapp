@@ -206,8 +206,8 @@ if (data.children && data.children.length > 0) {
   const groupsData = await groupsResponse.json();
   if (groupsData.success) {
     setSchoolGroups(groupsData.groups);
-    console.log('schoolGroups loaded:', groupsData.groups);
     
+
   }
 }
 
@@ -2352,8 +2352,8 @@ setTimeout(() => setIsPolling(false), 600000);
                         margin: 0
                       }}>
 
-                        {console.log('schoolGroups in render:', schoolGroups, 'child group_id:', child.group_id)}
-                       {schoolGroups.find(g => g.id === child.group_id)?.name || child.grade || ''} • {child.student_phone}
+                        
+                       {child.group_name || child.grade || ''} {child.student_phone}
                       </p>
                     </div>
                   </div>
