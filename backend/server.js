@@ -1179,11 +1179,21 @@ app.get('/api/parent/:userId', async (req, res) => {
       console.error('Error fetching children:', childrenError);
     }
 
+    // טען קבוצות לבית הספר
+    const { data: groups } = await supabase
+      .from('grade_groups')
+      .select('id, name')
+      .eq('school_id', parent.school_id);
+
+console.log('parent school_id:', parent.school_id);
+    console.log('groups found:', groups);
+
     const enrichedChildren = (children || []).map(child => ({
       ...child,
       canBuyToday: child.status === 'active',
       lastMeal: child.last_meal_date || 'אין מידע',
-      photo: null
+      photo: null,
+      group_name: groups?.find(g => g.id === child.group_id)?.name || child.grade || ''
     }));
 
     res.json({
