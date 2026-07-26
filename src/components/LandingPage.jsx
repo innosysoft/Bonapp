@@ -90,17 +90,17 @@ useEffect(() => {
       boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
       fontSize: isMobile ? '0.85rem' : '1rem'
     },
-    
+
     // Hero Section
-    hero: {
+   hero: {
   minHeight: '100vh',
   background: `url('/images/hero-banner.png')`,
-  backgroundSize: 'cover',
+  backgroundSize: isMobile ? 'contain' : 'cover',
   backgroundPosition: 'center',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
-  padding: '6rem 2rem 4rem',
+  padding: isMobile ? '5rem 1rem 3rem' : '6rem 2rem 4rem',
   textAlign: 'center',
   color: '#4a6fa5'
 },
@@ -109,10 +109,10 @@ useEffect(() => {
     },
 
     heroTitle: {
-  fontSize: 'clamp(1.8rem, 5vw, 2.8rem)',
+  fontSize: isMobile ? '1.5rem' : 'clamp(1.8rem, 5vw, 2.8rem)',
   fontWeight: 'bold',
-  marginBottom: '1.5rem',
-  lineHeight: '1.2',
+  marginBottom: '1rem',
+  lineHeight: '1.3',
   color: '#7cb342'
 },
 
