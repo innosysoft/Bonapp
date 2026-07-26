@@ -44,6 +44,15 @@ const ParentDashboard = () => {
   const [notifications, setNotifications] = useState([]);
   const [parentData, setParentData] = useState(null);
 const [children, setChildren] = useState([]);
+
+const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+
 const [loading, setLoading] = useState(true);  
 const [transactions, setTransactions] = useState([]);
 const [schoolName, setSchoolName] = useState('');
@@ -808,7 +817,7 @@ const handleSendEmail = async () => {
     },
     mainGrid: {
       display: 'grid',
-      gridTemplateColumns: '2fr 1fr',
+      gridTemplateColumns: isMobile ? '1fr' : '2fr 1fr',
       gap: '2rem',
       maxWidth: '1400px',
       margin: '0 auto'
@@ -914,7 +923,7 @@ const handleSendEmail = async () => {
     },
     statsGrid: {
       display: 'grid',
-      gridTemplateColumns: '1fr 1fr 1fr',
+      gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr',
       gap: '1rem',
       marginBottom: '2rem'
     },
@@ -1846,7 +1855,7 @@ setTimeout(() => setIsPolling(false), 600000);
               
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: '1fr 1fr 1fr 1fr',
+                gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr',
                 gap: '0.5rem'
               }}>
                 <button
@@ -2490,7 +2499,7 @@ setTimeout(() => setIsPolling(false), 600000);
               פרטים אישיים
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <label style={{
                   display: 'block',
@@ -2546,7 +2555,7 @@ setTimeout(() => setIsPolling(false), 600000);
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
               <div>
                 <label style={{
                   display: 'block',
@@ -2717,7 +2726,7 @@ setTimeout(() => setIsPolling(false), 600000);
                 </label>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
                 <div>
                   <label style={{
                     display: 'block',
@@ -2876,7 +2885,7 @@ setTimeout(() => setIsPolling(false), 600000);
               פרטים אישיים
             </h3>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
               <div>
                 <label style={{
                   display: 'block',
@@ -2932,7 +2941,7 @@ setTimeout(() => setIsPolling(false), 600000);
               </div>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
               <div>
                 <label style={{
                   display: 'block',
@@ -3097,7 +3106,7 @@ setTimeout(() => setIsPolling(false), 600000);
                 </label>
               </div>
 
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginTop: '1.5rem' }}>
                 <div>
                   <label style={{
                     display: 'block',
