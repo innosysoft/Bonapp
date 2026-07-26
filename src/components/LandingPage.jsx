@@ -17,6 +17,15 @@ import {
 } from 'lucide-react';
 
 const LandingPage = () => {
+
+const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+
   const navigate = useNavigate();
 
   const styles = {
@@ -28,7 +37,7 @@ const LandingPage = () => {
       right: 0,
       background: 'rgba(255, 255, 255, 0.95)',
       backdropFilter: 'blur(10px)',
-      padding: '1rem 2rem',
+      padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
       display: 'flex',
       justifyContent: 'space-between',
       alignItems: 'center',
@@ -39,15 +48,15 @@ const LandingPage = () => {
       display: 'flex',
       alignItems: 'center',
       gap: '0.75rem',
-      fontSize: '1.5rem',
+      fontSize: isMobile ? '1.2rem' : '1.5rem',
       fontWeight: 'bold',
       background: 'linear-gradient(135deg, #667eea, #764ba2)',
       WebkitBackgroundClip: 'text',
       WebkitTextFillColor: 'transparent'
     },
     logoIcon: {
-      width: '40px',
-      height: '40px',
+      width: isMobile ? '32px' : '40px',
+      height: isMobile ? '32px' : '40px',
       background: 'linear-gradient(135deg, #667eea, #764ba2)',
       borderRadius: '10px',
       display: 'flex',
@@ -56,20 +65,21 @@ const LandingPage = () => {
     },
     headerButtons: {
       display: 'flex',
-      gap: '1rem'
+      gap: isMobile ? '0.5rem' : '1rem'
     },
     loginBtn: {
-      padding: '0.75rem 1.5rem',
+      padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1.5rem',
       background: 'transparent',
       border: '2px solid #667eea',
       borderRadius: '10px',
       color: '#667eea',
       fontWeight: '600',
       cursor: 'pointer',
-      transition: 'all 0.3s'
+      transition: 'all 0.3s',
+      fontSize: isMobile ? '0.85rem' : '1rem'
     },
     signupBtn: {
-      padding: '0.75rem 1.5rem',
+      padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1.5rem',
       background: 'linear-gradient(135deg, #667eea, #764ba2)',
       border: 'none',
       borderRadius: '10px',
@@ -77,9 +87,10 @@ const LandingPage = () => {
       fontWeight: '600',
       cursor: 'pointer',
       transition: 'all 0.3s',
-      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
+      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
+      fontSize: isMobile ? '0.85rem' : '1rem'
     },
-
+    
     // Hero Section
     hero: {
   minHeight: '100vh',
