@@ -95,8 +95,9 @@ useEffect(() => {
    hero: {
   minHeight: '100vh',
   background: `url('/images/hero-banner.png')`,
-  backgroundSize: isMobile ? 'contain' : 'cover',
-  backgroundPosition: 'center',
+  backgroundSize: 'cover',
+  backgroundPosition: isMobile ? 'right center' : 'center',
+  backgroundRepeat: 'no-repeat',
   display: 'flex',
   alignItems: 'center',
   justifyContent: 'center',
