@@ -109,7 +109,7 @@ router.post('/generate-parent-token', async (req, res) => {
     res.json({
       success: true,
       token: token,
-      url: `${req.protocol}://${req.get('host')}/mobile/parent/${token}`
+      url: `${process.env.APP_URL}/mobile/parent/${token}`
     });
   } catch (error) {
     console.error('Generate token error:', error);

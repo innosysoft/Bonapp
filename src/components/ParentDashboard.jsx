@@ -1071,18 +1071,7 @@ const handleSendEmail = async () => {
             )}
           </button>
 
-{/* 👇 כפתור חדש - שלח לטלפון */}
-  <button 
-    style={{
-      ...styles.actionButton,
-      background: 'linear-gradient(135deg, #25D366, #128C7E)',
-      color: 'white'
-    }}
-    onClick={() => setShowSendToPhone(true)}
-    title="שלח אפליקציה לטלפון"
-  >
-    <Smartphone size={20} />
-  </button>
+
 
   {/* 👇 כפתור חדש - שלח לטלפון */}
   <button 
