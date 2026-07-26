@@ -576,11 +576,27 @@ useEffect(() => {
             fontSize: '0.9rem'
           }}>
             <p style={{ margin: 0 }}>
+
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+  <button onClick={() => navigate('/about')} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>
+    אודות
+  </button>
+  <button onClick={() => navigate('/support')} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>
+    תמיכה
+  </button>
+  <button onClick={() => navigate('/contact')} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>
+    צור קשר
+  </button>
+</div>
+
               © {new Date().getFullYear()} BonApp by Innosys. כל הזכויות שמורות.
             </p>
           </div>
         </div>
+
       </footer>
+
+      
     </div>
   );
 };

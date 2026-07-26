@@ -2,6 +2,61 @@ import React, { useState, useEffect } from 'react';
 import { School, Plus, Users, TrendingUp, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
+const VideoManager = () => {
+  const [videos, setVideos] = useState([]);
+  const [newVideo, setNewVideo] = useState({ title: '', youtube_url: '', category: 'general' });
+
+  useEffect(() => {
+    fetch('https://api.bonapp.dev/api/tutorial-videos')
+      .then(r => r.json())
+      .then(data => { if (data.success) setVideos(data.videos); });
+  }, []);
+
+  const addVideo = async () => {
+    if (!newVideo.title || !newVideo.youtube_url) { alert('נא למלא כותרת וקישור'); return; }
+    const res = await fetch('https://api.bonapp.dev/api/tutorial-videos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(newVideo)
+    });
+    const data = await res.json();
+    if (data.success) {
+      setVideos([...videos, data.video]);
+      setNewVideo({ title: '', youtube_url: '', category: 'general' });
+    }
+  };
+
+  const deleteVideo = async (id) => {
+    await fetch(`https://api.bonapp.dev/api/tutorial-videos/${id}`, { method: 'DELETE' });
+    setVideos(videos.filter(v => v.id !== id));
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', marginBottom: '2rem', alignItems: 'end' }}>
+        <input placeholder="כותרת הסרטון" value={newVideo.title} onChange={e => setNewVideo({...newVideo, title: e.target.value})}
+          style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px' }} />
+        <input placeholder="קישור YouTube" value={newVideo.youtube_url} onChange={e => setNewVideo({...newVideo, youtube_url: e.target.value})}
+          style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px' }} />
+        <button onClick={addVideo} style={{ padding: '0.75rem 1.5rem', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+          הוסף
+        </button>
+      </div>
+      {videos.map(v => (
+        <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: '#f8f9fa', borderRadius: '8px', marginBottom: '0.5rem' }}>
+          <div>
+            <div style={{ fontWeight: '600' }}>{v.title}</div>
+            <div style={{ fontSize: '0.85rem', color: '#666' }}>{v.youtube_url}</div>
+          </div>
+          <button onClick={() => deleteVideo(v.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
+            מחק
+          </button>
+        </div>
+      ))}
+    </div>
+  );
+};
+
 const SuperAdminPanel = () => {
   const navigate = useNavigate();
   const [schools, setSchools] = useState([]);
@@ -1424,8 +1479,19 @@ onClick={() => {
       )}
 
     </div>
+
+    
   );
 };
 
+{/* ניהול סרטונים */}
+      {isSuperAdmin && (
+        <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 2rem' }}>
+          <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
+            <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>🎬 ניהול סרטוני הסבר</h2>
+            <VideoManager />
+          </div>
+        </div>
+      )}
 
 export default SuperAdminPanel;

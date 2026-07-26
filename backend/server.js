@@ -2422,6 +2422,50 @@ app.post('/api/groups/:groupId/study-days/toggle', async (req, res) => {
   }
 });
 
+// ===== TUTORIAL VIDEOS =====
+
+app.get('/api/tutorial-videos', async (req, res) => {
+  try {
+    const { data, error } = await supabase
+      .from('tutorial_videos')
+      .select('*')
+      .order('order_num', { ascending: true });
+    if (error) throw error;
+    res.json({ success: true, videos: data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.post('/api/tutorial-videos', async (req, res) => {
+  try {
+    const { title, youtube_url, category, order_num } = req.body;
+    const { data, error } = await supabase
+      .from('tutorial_videos')
+      .insert({ title, youtube_url, category: category || 'general', order_num: order_num || 0 })
+      .select()
+      .single();
+    if (error) throw error;
+    res.json({ success: true, video: data });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+app.delete('/api/tutorial-videos/:id', async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { error } = await supabase
+      .from('tutorial_videos')
+      .delete()
+      .eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // ===== SCHOOL CONTACT FORM =====
 app.post('/api/school-contact', async (req, res) => {
   try {

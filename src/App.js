@@ -15,6 +15,9 @@ import PaymentSuccess from './components/PaymentSuccess';
 import MobileParentApp from './components/MobileParentApp';
 import MobileStudentApp from './components/MobileStudentApp';
 import SchoolContactForm from './components/SchoolContactForm';
+import SupportPage from './components/SupportPage';
+import ContactPage from './components/ContactPage';
+import AboutPage from './components/AboutPage';
 
 import './App.css';
 
@@ -42,7 +45,10 @@ function App() {
           <Route path="/mobile/parent/:token" element={<MobileParentApp />} />
 <Route path="/mobile/student/:token" element={<MobileStudentApp />} />
 <Route path="/school-contact" element={<SchoolContactForm />} />
- <Route path="/payment-success" element={<PaymentSuccess />} />         
+ <Route path="/payment-success" element={<PaymentSuccess />} />  
+ <Route path="/support" element={<SupportPage />} />
+<Route path="/contact" element={<ContactPage />} />
+<Route path="/about" element={<AboutPage />} />       
           
           {/* נתיבים ישנים (למקרה שיש קישורים קיימים) */}
           <Route path="/parent-login" element={<ParentLogin />} />
