@@ -692,7 +692,16 @@ app.put('/api/students/:studentId', async (req, res) => {
     if (can_order_for_friends !== undefined) updateData.can_order_for_friends = can_order_for_friends;
     if (max_daily_meals !== undefined) updateData.max_daily_meals = max_daily_meals;
     if (group_id !== undefined) updateData.group_id = group_id;
-
+    
+// עדכן grade לפי שם הקבוצה
+    if (group_id) {
+      const { data: group } = await supabase
+        .from('grade_groups')
+        .select('name')
+        .eq('id', group_id)
+        .single();
+      if (group) updateData.grade = group.name;
+    }
 
     const { data: student, error } = await supabase
       .from('students')
