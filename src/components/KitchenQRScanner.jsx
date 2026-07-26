@@ -31,6 +31,14 @@ const [menuType, setMenuType] = useState('items');
 const [dailyMenuData, setDailyMenuData] = useState([]);
 const [activeTab, setActiveTab] = useState('stats'); // 'stats' או 'settings'
 
+const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 768);
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
+
 const [schoolSettings, setSchoolSettings] = useState({
   allow_negative_balance: false,
   max_negative_balance: -50.00,
@@ -425,7 +433,7 @@ const selectStudent = (student) => {
 
       <div style={{
         background: 'rgba(255, 255, 255, 0.95)',
-        padding: '1.5rem 2rem',
+        padding: isMobile ? '1rem' : '1.5rem 2rem',
         boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
         backdropFilter: 'blur(20px)'
       }}>
@@ -434,8 +442,11 @@ const selectStudent = (student) => {
           justifyContent: 'space-between',
           alignItems: 'center',
           maxWidth: '1400px',
-          margin: '0 auto'
+          margin: '0 auto',
+          flexWrap: isMobile ? 'wrap' : 'nowrap',
+          gap: isMobile ? '0.5rem' : '0'
         }}>
+
           <div style={{
             display: 'flex',
             alignItems: 'center',
@@ -596,14 +607,15 @@ const selectStudent = (student) => {
         margin: '0 auto',
         padding: '2rem 2rem 0'
       }}>
-        <div style={{
+       <div style={{
           display: 'flex',
-          gap: '1rem',
+          gap: '0.5rem',
           background: 'rgba(255, 255, 255, 0.95)',
           padding: '0.5rem',
           borderRadius: '16px',
           marginBottom: '2rem',
-          boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
+          boxShadow: '0 4px 20px rgba(0,0,0,0.1)',
+          flexWrap: isMobile ? 'wrap' : 'nowrap'
         }}>
           <button
             onClick={() => setActiveTab('stats')}
@@ -648,9 +660,9 @@ const selectStudent = (student) => {
       {activeTab === 'stats' ? (
       <div style={{
         display: 'grid',
-        gridTemplateColumns: '1fr 1fr 1fr',
+        gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr',
         gap: '2rem',
-        padding: '2rem',
+        padding: isMobile ? '1rem' : '2rem',
         maxWidth: '1400px',
         margin: '0 auto',
         minHeight: 'calc(100vh - 120px)'
@@ -1207,7 +1219,7 @@ const selectStudent = (student) => {
             ⏰ שעות פעילות המטבח
           </h3>
           
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem' }}>
             <div>
               <label style={{
                 display: 'block',
