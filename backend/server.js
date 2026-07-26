@@ -1499,24 +1499,7 @@ app.post('/api/process-meal-purchase', async (req, res) => {
       });
     }
 
-    // בדוק מגבלת הוצאה יומית
-    if (student.spending_limit) {
-      const { data: monthlyTransactions } = await supabase
-        .from('transactions')
-        .select('amount')
-        .eq('student_id', studentId)
-        .eq('type', 'meal')
-        .gte('transaction_date', `${today}T00:00:00`);
-      
-      const spentToday = monthlyTransactions?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0;
-      
-      if (spentToday + chargeAmount > student.spending_limit) {
-        return res.status(400).json({
-          success: false,
-          message: `חריגה ממגבלת ההוצאה היומית (₪${student.spending_limit})`
-        });
-      }
-    }
+    
 
     // קבע סכום לחיוב לפי סוג התשלום האחרון
     const { data: lastPayment } = await supabase
@@ -1539,6 +1522,26 @@ app.post('/api/process-meal-purchase', async (req, res) => {
       chargeAmount = parseFloat(school.daily_meal_price) || 0;
     }
     console.log('chargeAmount:', chargeAmount);
+
+
+    // בדוק מגבלת הוצאה יומית
+    if (student.spending_limit) {
+      const { data: monthlyTransactions } = await supabase
+        .from('transactions')
+        .select('amount')
+        .eq('student_id', studentId)
+        .eq('type', 'meal')
+        .gte('transaction_date', `${today}T00:00:00`);
+      
+      const spentToday = monthlyTransactions?.reduce((sum, t) => sum + parseFloat(t.amount), 0) || 0;
+      
+      if (spentToday + chargeAmount > student.spending_limit) {
+        return res.status(400).json({
+          success: false,
+          message: `חריגה ממגבלת ההוצאה היומית (₪${student.spending_limit})`
+        });
+      }
+    }
 
     const newBalance = student.balance - chargeAmount;
 
