@@ -116,6 +116,20 @@ const SupportPage = () => {
           </div>
         ))}
       </div>
+
+{/* לא מצאתם תשובה */}
+        <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: 'white', marginTop: '2rem' }}>
+          <h2 style={{ margin: '0 0 1rem 0' }}>🤔 לא מצאתם תשובה?</h2>
+          <p style={{ opacity: 0.9, marginBottom: '1.5rem' }}>
+            אנחנו כאן בשבילכם! פתחו קריאת שירות ונחזור אליכם בהקדם.
+          </p>
+          <button 
+            onClick={() => navigate('/contact')}
+            style={{ padding: '1rem 2rem', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+            פתח קריאת שירות 📨
+          </button>
+        </div>
+
     </div>
   );
 };
