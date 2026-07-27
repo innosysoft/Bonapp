@@ -6,6 +6,34 @@ const SupportPage = () => {
   const [videos, setVideos] = useState([]);
   const [openFaq, setOpenFaq] = useState(null);
 
+const handleTicketSubmit = async () => {
+    if (!ticket.name || !ticket.phone || !ticket.email || !ticket.message) {
+      alert('נא למלא את כל השדות');
+      return;
+    }
+    try {
+      await fetch('https://api.bonapp.dev/api/school-contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          organizationName: 'קריאת שירות',
+          type: 'support',
+          fullName: ticket.name,
+          email: ticket.email,
+          phone: ticket.phone,
+          message: ticket.message
+        })
+      });
+      setSentTicket(true);
+    } catch (e) {
+      alert('שגיאה בשליחה');
+    }
+  };
+
+  const [showTicket, setShowTicket] = useState(false);
+const [sentTicket, setSentTicket] = useState(false);
+const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: '' });
+
   useEffect(() => {
     fetch('https://api.bonapp.dev/api/tutorial-videos')
       .then(r => r.json())
@@ -121,13 +149,41 @@ const SupportPage = () => {
         <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', borderRadius: '16px', padding: '2rem', textAlign: 'center', color: 'white', marginTop: '2rem' }}>
           <h2 style={{ margin: '0 0 1rem 0' }}>🤔 לא מצאתם תשובה?</h2>
           <p style={{ opacity: 0.9, marginBottom: '1.5rem' }}>
-            אנחנו כאן בשבילכם! פתחו קריאת שירות ונחזור אליכם בהקדם.
+            פתחו קריאת שירות ונחזור אליכם בהקדם.
           </p>
-          <button 
-            onClick={() => navigate('/contact')}
-            style={{ padding: '1rem 2rem', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
-            פתח קריאת שירות 📨
-          </button>
+          
+          {!showTicket ? (
+            <button onClick={() => setShowTicket(true)}
+              style={{ padding: '1rem 2rem', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+              פתח קריאת שירות 📨
+            </button>
+          ) : sentTicket ? (
+            <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '2rem' }}>
+              <div style={{ fontSize: '3rem' }}>✅</div>
+              <h3>הקריאה נפתחה בהצלחה!</h3>
+              <p>נחזור אליך בהקדם.</p>
+            </div>
+          ) : (
+            <div style={{ display: 'grid', gap: '1rem', textAlign: 'right' }}>
+              <input type="text" placeholder="שמך *" value={ticket.name}
+                onChange={e => setTicket({...ticket, name: e.target.value})}
+                style={{ padding: '0.75rem', border: 'none', borderRadius: '8px', fontSize: '1rem' }} />
+              <input type="tel" placeholder="טלפון *" value={ticket.phone}
+                onChange={e => setTicket({...ticket, phone: e.target.value})}
+                style={{ padding: '0.75rem', border: 'none', borderRadius: '8px', fontSize: '1rem' }} />
+              <input type="email" placeholder="מייל *" value={ticket.email}
+                onChange={e => setTicket({...ticket, email: e.target.value})}
+                style={{ padding: '0.75rem', border: 'none', borderRadius: '8px', fontSize: '1rem' }} />
+              <textarea placeholder="תארו את הבעיה *" value={ticket.message}
+                onChange={e => setTicket({...ticket, message: e.target.value})}
+                rows={4}
+                style={{ padding: '0.75rem', border: 'none', borderRadius: '8px', fontSize: '1rem', resize: 'vertical' }} />
+              <button onClick={handleTicketSubmit}
+                style={{ padding: '1rem', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+                שלח קריאת שירות 🚀
+              </button>
+            </div>
+          )}
         </div>
 
     </div>

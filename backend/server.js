@@ -2483,7 +2483,7 @@ const subject = type === 'suggestion'
     await transporter.sendMail({
       from: EMAIL_FROM,
       to: process.env.ADMIN_EMAIL || 'netproil@gmail.com',
-      subject: type === 'suggestion' ? `💡 הצעה לשיפור - BonApp` : `📞 פנייה חדשה - ${fullName}`,
+      subject: type === 'suggestion' ? `💡 הצעה לשיפור - BonApp` : type === 'support' ? `🔧 קריאת שירות - ${fullName}` : `📞 פנייה חדשה - ${fullName}`,
       html: `
         <div dir="rtl" style="font-family: Arial; text-align: right;">
           <h2>📋 בקשת הרשמה חדשה למערכת BonApp</h2>
