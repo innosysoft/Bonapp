@@ -2469,8 +2469,12 @@ app.delete('/api/tutorial-videos/:id', async (req, res) => {
 // ===== SCHOOL CONTACT FORM =====
 app.post('/api/school-contact', async (req, res) => {
   try {
-    const { organizationName, fullName, phone, email } = req.body;
+    const { organizationName, fullName, phone, email, message, type } = req.body;
 
+const subject = type === 'suggestion' 
+  ? `💡 הצעה לשיפור - BonApp`
+  : `📞 פנייה חדשה - BonApp`;
+  
     if (!organizationName || !fullName || !phone || !email) {
       return res.status(400).json({ success: false, message: 'נא למלא את כל השדות' });
     }
@@ -2489,6 +2493,12 @@ app.post('/api/school-contact', async (req, res) => {
             <p><strong>טלפון:</strong> ${phone}</p>
             <p><strong>אימייל:</strong> ${email}</p>
           </div>
+
+${message ? `<div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
+            <p><strong>הודעה:</strong></p>
+            <p>${message}</p>
+          </div>` : ''}
+
           <p>יש ליצור קשר עם הארגון ולהוסיף אותו למערכת.</p>
         </div>
       `

@@ -14,13 +14,14 @@ const ContactPage = () => {
       alert('נא למלא את כל השדות: שם, טלפון, מייל והודעה');
       return;
     }
-    
+
     try {
       await fetch('https://api.bonapp.dev/api/school-contact', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizationName: 'פנייה מדף צור קשר',
+          type: 'contact',
           fullName: form.name,
           email: form.email || 'לא צוין',
           phone: form.phone || 'לא צוין',
@@ -44,6 +45,7 @@ const ContactPage = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           organizationName: 'הצעה לשיפור',
+          type: 'suggestion',
           fullName: suggestion.name || 'אנונימי',
           email: suggestion.email || 'לא צוין',
           phone: 'לא צוין',
