@@ -341,7 +341,17 @@ useEffect(() => {
   />
 </div>
         <div style={styles.headerButtons}>
+          {!isMobile && (
+            <>
+              <button onClick={() => navigate('/about')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>אודות</button>
+              <button onClick={() => navigate('/support')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>תמיכה</button>
+              <button onClick={() => navigate('/contact')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>צור קשר</button>
+            </>
+          )}
           <button 
+
+
+
             style={styles.loginBtn}
             onClick={() => navigate('/login')}
             onMouseEnter={(e) => {
