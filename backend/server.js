@@ -2474,7 +2474,7 @@ app.post('/api/school-contact', async (req, res) => {
 const subject = type === 'suggestion' 
   ? `💡 הצעה לשיפור - BonApp`
   : `📞 פנייה חדשה - BonApp`;
-  
+
     if (!organizationName || !fullName || !phone || !email) {
       return res.status(400).json({ success: false, message: 'נא למלא את כל השדות' });
     }
@@ -2483,7 +2483,7 @@ const subject = type === 'suggestion'
     await transporter.sendMail({
       from: EMAIL_FROM,
       to: process.env.ADMIN_EMAIL || 'netproil@gmail.com',
-      subject: `🏫 בקשת הרשמה חדשה - ${organizationName}`,
+      subject: type === 'suggestion' ? `💡 הצעה לשיפור - BonApp` : `📞 פנייה חדשה - ${fullName}`,
       html: `
         <div dir="rtl" style="font-family: Arial; text-align: right;">
           <h2>📋 בקשת הרשמה חדשה למערכת BonApp</h2>
