@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { 
+import { authFetch } from '../auth';
+import {
   X, 
   Mail, 
   MessageSquare, 
@@ -31,7 +32,7 @@ const SendToPhoneModal = ({ show, onClose, userType, userId, userName, userEmail
         '/api/mobile/generate-parent-token' : 
         '/api/mobile/generate-student-token';
       
-      const response = await fetch(`https://api.bonapp.dev${endpoint}`, {
+      const response = await authFetch(`https://api.bonapp.dev${endpoint}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -100,7 +101,7 @@ ${mobileUrl}
 
   const handleSendSMS = async () => {
     try {
-      const response = await fetch('https://api.bonapp.dev/api/mobile/send-link-sms', {
+      const response = await authFetch('https://api.bonapp.dev/api/mobile/send-link-sms', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -123,7 +124,7 @@ ${mobileUrl}
 
   const handleSendEmail = async () => {
     try {
-      const response = await fetch('https://api.bonapp.dev/api/mobile/send-link-email', {
+      const response = await authFetch('https://api.bonapp.dev/api/mobile/send-link-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

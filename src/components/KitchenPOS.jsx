@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchStudents, getMenuItems, processMealPurchase, getSchools, scanStudent } from '../api';
+import { authFetch } from '../auth';
 import { QrCode, Search, ShoppingCart, DollarSign, X, Plus, Minus, Settings, ChefHat } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
@@ -35,7 +36,7 @@ const [schoolSettings, setSchoolSettings] = useState({
 
 useEffect(() => {
   if (selectedStudent) {
-    fetch(`https://api.bonapp.dev/api/students/${selectedStudent.id}/last-payment-type`)
+    authFetch(`https://api.bonapp.dev/api/students/${selectedStudent.id}/last-payment-type`)
       .then(r => r.json())
       .then(data => {
         if (data.success) {
@@ -60,7 +61,7 @@ const onScanSuccess = async (decodedText) => {
   setScannerReady(false);
   
   try {
-    const response = await fetch('https://api.bonapp.dev/api/scan-student', {
+    const response = await authFetch('https://api.bonapp.dev/api/scan-student', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ qrCode: decodedText })
@@ -130,7 +131,7 @@ useEffect(() => {
 });
             
             if (school.menu_type === 'daily') {
-              const dailyResponse = await fetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
+              const dailyResponse = await authFetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
               const dailyData = await dailyResponse.json();
               if (dailyData.success) {
                 setDailyMenuData(dailyData.dailyMenu);

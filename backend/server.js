@@ -5,6 +5,13 @@ const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
 const QRCode = require('qrcode');
 require('dotenv').config();
+const {
+  generateToken,
+  authenticateToken,
+  requireRole,
+  requireSchoolAccess,
+  requireSelfOrStaff
+} = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -173,7 +180,8 @@ app.post('/api/admin/auth', async (req, res) => {
   const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
   
   if (password === adminPassword) {
-    res.json({ success: true, message: 'Admin authenticated' });
+    const token = generateToken({ id: 'super_admin', role: 'super_admin', school_id: null });
+    res.json({ success: true, message: 'Admin authenticated', token });
   } else {
     res.status(401).json({ success: false, message: 'Wrong password' });
   }
@@ -187,7 +195,6 @@ app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
 
     console.log('Username:', username);
-    console.log('Password length:', password?.length);
     
     if (!username || !password) {
       return res.status(400).json({ success: false, message: 'חסרים שם משתמש או סיסמה' });
@@ -206,10 +213,8 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
     }
 
-    console.log('Password hash from DB:', user.password_hash);
     
     const validPassword = await bcrypt.compare(password, user.password_hash);
-    console.log('Password valid?', validPassword);
 
     if (!validPassword) {
       console.log('INVALID PASSWORD - returning 401');
@@ -217,16 +222,19 @@ app.post('/api/login', async (req, res) => {
     }
 
     console.log('LOGIN SUCCESS!');
-    
+
+    const token = generateToken({ id: user.id, role: user.role, school_id: user.school_id });
+
     res.json({
       success: true,
+      token,
       user: {
         id: user.id,
         name: `${user.first_name} ${user.last_name}`,
         type: user.role,
         email: user.email,
         phone: user.phone,
-        school_id: user.school_id  
+        school_id: user.school_id
       }
     });
     
@@ -278,7 +286,7 @@ app.get('/api/schools/:schoolId', async (req, res) => {
   }
 });
 
-app.get('/api/admin/schools', async (req, res) => {
+app.get('/api/admin/schools', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
     const { data: schools, error } = await supabase
       .from('schools')
@@ -294,7 +302,7 @@ app.get('/api/admin/schools', async (req, res) => {
   }
 });
 
-app.post('/api/admin/schools', async (req, res) => {
+app.post('/api/admin/schools', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
     const { name, address, contact_person, contact_phone, contact_email } = req.body;
 
@@ -327,7 +335,7 @@ app.post('/api/admin/schools', async (req, res) => {
   }
 });
 
-app.put('/api/schools/:schoolId/menu-type', async (req, res) => {
+app.put('/api/schools/:schoolId/menu-type', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { menu_type } = req.body;
@@ -358,7 +366,7 @@ app.put('/api/schools/:schoolId/menu-type', async (req, res) => {
   }
 });
 
-app.put('/api/schools/:schoolId/settings', async (req, res) => {
+app.put('/api/schools/:schoolId/settings', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { 
@@ -451,7 +459,7 @@ console.log('updateData:', JSON.stringify(updateData));
   }
 });
 
-app.get('/api/school-students/:schoolId', async (req, res) => {
+app.get('/api/school-students/:schoolId', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -481,7 +489,7 @@ app.get('/api/school-students/:schoolId', async (req, res) => {
 
 // ===== USERS =====
 
-app.get('/api/schools/:schoolId/users', async (req, res) => {
+app.get('/api/schools/:schoolId/users', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -501,7 +509,7 @@ app.get('/api/schools/:schoolId/users', async (req, res) => {
   }
 });
 
-app.post('/api/schools/:schoolId/users', async (req, res) => {
+app.post('/api/schools/:schoolId/users', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { email, password, firstName, lastName, role, phone } = req.body;
@@ -541,7 +549,7 @@ app.post('/api/schools/:schoolId/users', async (req, res) => {
   }
 });
 
-app.put('/api/users/:userId', async (req, res) => {
+app.put('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { userId } = req.params;
     const { firstName, lastName, email, phone, role, password } = req.body;
@@ -577,7 +585,7 @@ app.put('/api/users/:userId', async (req, res) => {
   }
 });
 
-app.delete('/api/users/:userId', async (req, res) => {
+app.delete('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -597,7 +605,7 @@ app.delete('/api/users/:userId', async (req, res) => {
 
 // ===== STUDENTS =====
 
-app.post('/api/students', async (req, res) => {
+app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { parent_id, school_id, first_name, last_name, grade, student_phone, student_id_number, system_access, can_edit_profile, spending_limit, parent_notifications, can_order_for_friends, max_daily_meals, group_id } = req.body;
 
@@ -661,11 +669,20 @@ app.post('/api/students', async (req, res) => {
   }
 });
 
-app.put('/api/students/:studentId', async (req, res) => {
+const getStudentParentId = async (req) => {
+  const { data } = await supabase
+    .from('students')
+    .select('parent_id')
+    .eq('id', req.params.studentId)
+    .single();
+  return data?.parent_id;
+};
+
+app.put('/api/students/:studentId', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
   try {
     const { studentId } = req.params;
-    const { 
-      first_name, 
+    const {
+      first_name,
       last_name, 
       grade, 
       student_phone,
@@ -727,7 +744,7 @@ app.put('/api/students/:studentId', async (req, res) => {
   }
 });
 
-app.delete('/api/students/:studentId', async (req, res) => {
+app.delete('/api/students/:studentId', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -772,7 +789,7 @@ app.delete('/api/students/:studentId', async (req, res) => {
   }
 });
 
-app.post('/api/students/search', async (req, res) => {
+app.post('/api/students/search', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { school_id, search_term } = req.body;
 
@@ -800,7 +817,7 @@ app.post('/api/students/search', async (req, res) => {
   }
 });
 
-app.post('/api/students/:studentId/photo', async (req, res) => {
+app.post('/api/students/:studentId/photo', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
   try {
     const { studentId } = req.params;
     const { photoData } = req.body;
@@ -921,7 +938,7 @@ app.post('/api/students/:studentId/generate-qr', async (req, res) => {
   }
 });
 
-app.post('/api/students/:studentId/send-qr-email', async (req, res) => {
+app.post('/api/students/:studentId/send-qr-email', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
   try {
     const { studentId } = req.params;
     const { parentEmail, parentName, studentName, schoolName } = req.body;
@@ -997,7 +1014,7 @@ app.post('/api/students/:studentId/send-qr-email', async (req, res) => {
   }
 });
 
-app.post('/api/scan-student', async (req, res) => {
+app.post('/api/scan-student', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { qrCode } = req.body;
 
@@ -1033,7 +1050,7 @@ app.post('/api/scan-student', async (req, res) => {
   }
 });
 
-app.post('/api/generate-qr/:studentId', async (req, res) => {
+app.post('/api/generate-qr/:studentId', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -1159,7 +1176,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.get('/api/parent/:userId', async (req, res) => {
+app.get('/api/parent/:userId', authenticateToken, requireSelfOrStaff(req => req.params.userId), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -1222,7 +1239,7 @@ console.log('parent school_id:', parent.school_id);
   }
 });
 
-app.get('/api/student/:studentId/parent', async (req, res) => {
+app.get('/api/student/:studentId/parent', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -1293,7 +1310,7 @@ app.get('/api/student/:studentId/parent', async (req, res) => {
 
 // ===== TRANSACTIONS =====
 
-app.post('/api/add-money', async (req, res) => {
+app.post('/api/add-money', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
   try {
     const { studentId, amount, paymentMethod } = req.body;
     
@@ -1351,7 +1368,7 @@ app.post('/api/add-money', async (req, res) => {
   }
 });
 
-app.get('/api/transactions/:userId', async (req, res) => {
+app.get('/api/transactions/:userId', authenticateToken, requireSelfOrStaff(req => req.params.userId), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -1393,7 +1410,7 @@ app.get('/api/transactions/:userId', async (req, res) => {
   }
 });
 
-app.get('/api/school-transactions/:schoolId', async (req, res) => {
+app.get('/api/school-transactions/:schoolId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -1431,7 +1448,7 @@ app.get('/api/school-transactions/:schoolId', async (req, res) => {
   }
 });
 
-app.get('/api/transactions/:schoolId/recent', async (req, res) => {
+app.get('/api/transactions/:schoolId/recent', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const limit = req.query.limit || 10;
@@ -1464,7 +1481,7 @@ app.get('/api/transactions/:schoolId/recent', async (req, res) => {
     res.status(500).json({ success: false, message: 'שגיאה בטעינת עסקאות' });
   }
 });
-app.post('/api/process-meal-purchase', async (req, res) => {
+app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { studentId, items, total, forceOverride } = req.body;
 
@@ -1609,7 +1626,7 @@ app.post('/api/process-meal-purchase', async (req, res) => {
 
 // ===== REGISTRATIONS =====
 
-app.get('/api/pending-registrations/:schoolId', async (req, res) => {
+app.get('/api/pending-registrations/:schoolId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -1686,7 +1703,7 @@ app.post('/api/pending-registrations', async (req, res) => {
   }
 });
 
-app.post('/api/pending-registrations/:registrationId/action', async (req, res) => {
+app.post('/api/pending-registrations/:registrationId/action', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { registrationId } = req.params;
     const { action, reason } = req.body;
@@ -1834,7 +1851,7 @@ app.post('/api/pending-registrations/:registrationId/action', async (req, res) =
 
 // ===== MENU =====
 
-app.get('/api/menu-items/:schoolId', async (req, res) => {
+app.get('/api/menu-items/:schoolId', authenticateToken, async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -1858,7 +1875,7 @@ app.get('/api/menu-items/:schoolId', async (req, res) => {
   }
 });
 
-app.post('/api/menu-items', async (req, res) => {
+app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { school_id, name, category, price, description, available } = req.body;
 
@@ -1884,7 +1901,7 @@ app.post('/api/menu-items', async (req, res) => {
   }
 });
 
-app.put('/api/menu-items/:itemId', async (req, res) => {
+app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { itemId } = req.params;
     const { name, category, price, description, available } = req.body;
@@ -1905,7 +1922,7 @@ app.put('/api/menu-items/:itemId', async (req, res) => {
   }
 });
 
-app.delete('/api/menu-items/:itemId', async (req, res) => {
+app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { itemId } = req.params;
 
@@ -1923,7 +1940,7 @@ app.delete('/api/menu-items/:itemId', async (req, res) => {
   }
 });
 
-app.get('/api/daily-menu/:schoolId', async (req, res) => {
+app.get('/api/daily-menu/:schoolId', authenticateToken, async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -1946,7 +1963,7 @@ app.get('/api/daily-menu/:schoolId', async (req, res) => {
   }
 });
 
-app.post('/api/daily-menu', async (req, res) => {
+app.post('/api/daily-menu', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { school_id, day_of_week, menu_description, price, active } = req.body;
 
@@ -2006,7 +2023,7 @@ app.get('/api/schools/:schoolId/groups', async (req, res) => {
 });
 
 // צור שכבה חדשה
-app.post('/api/schools/:schoolId/groups', async (req, res) => {
+app.post('/api/schools/:schoolId/groups', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { name, description } = req.body;
@@ -2023,7 +2040,7 @@ app.post('/api/schools/:schoolId/groups', async (req, res) => {
 });
 
 // מחק שכבה
-app.delete('/api/groups/:groupId', async (req, res) => {
+app.delete('/api/groups/:groupId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { error } = await supabase
@@ -2038,7 +2055,7 @@ app.delete('/api/groups/:groupId', async (req, res) => {
 });
 
 // קבל/עדכן לוח ארוחות לשכבה לחודש
-app.post('/api/groups/:groupId/schedule', async (req, res) => {
+app.post('/api/groups/:groupId/schedule', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { school_id, month, year, days_count, meal_price } = req.body;
@@ -2056,7 +2073,7 @@ app.post('/api/groups/:groupId/schedule', async (req, res) => {
 });
 
 // קבל לוח ארוחות לשכבה לחודש
-app.get('/api/groups/:groupId/schedule', async (req, res) => {
+app.get('/api/groups/:groupId/schedule', authenticateToken, async (req, res) => {
   try {
     const { groupId } = req.params;
     const { month, year } = req.query;
@@ -2075,7 +2092,7 @@ app.get('/api/groups/:groupId/schedule', async (req, res) => {
 });
 
 // עדכן הגדרות תשלום לבית ספר
-app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
+app.put('/api/schools/:schoolId/payment-method', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { payment_method, daily_meal_price, monthly_meal_price } = req.body;
@@ -2097,7 +2114,7 @@ app.put('/api/schools/:schoolId/payment-method', async (req, res) => {
 });
 
 // קבל סוג תשלום אחרון של תלמיד
-app.get('/api/students/:studentId/last-payment-type', async (req, res) => {
+app.get('/api/students/:studentId/last-payment-type', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { studentId } = req.params;
     const { data: lastPayment } = await supabase
@@ -2310,7 +2327,7 @@ app.post('/api/grow-payment-link', async (req, res) => {
 });
 
 // יצירת קישור תשלום דרך Make
-app.post('/api/create-grow-payment', async (req, res) => {
+app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
   try {
     const { parent_name, parent_phone, amount, student_name, description, student_id } = req.body;
     
@@ -2365,7 +2382,7 @@ app.post('/api/create-grow-payment', async (req, res) => {
 // ===== STUDY DAYS =====
 
 // קבל ימי לימוד לשכבה לפי חודש
-app.get('/api/groups/:groupId/study-days', async (req, res) => {
+app.get('/api/groups/:groupId/study-days', authenticateToken, async (req, res) => {
   try {
     const { groupId } = req.params;
     const { month, year } = req.query;
@@ -2390,7 +2407,7 @@ app.get('/api/groups/:groupId/study-days', async (req, res) => {
 });
 
 // הוסף/הסר יום לימוד
-app.post('/api/groups/:groupId/study-days/toggle', async (req, res) => {
+app.post('/api/groups/:groupId/study-days/toggle', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { date, school_id } = req.body;
@@ -2437,7 +2454,7 @@ app.get('/api/tutorial-videos', async (req, res) => {
   }
 });
 
-app.post('/api/tutorial-videos', async (req, res) => {
+app.post('/api/tutorial-videos', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
     const { title, youtube_url, category, order_num } = req.body;
     const { data, error } = await supabase
@@ -2452,7 +2469,7 @@ app.post('/api/tutorial-videos', async (req, res) => {
   }
 });
 
-app.delete('/api/tutorial-videos/:id', async (req, res) => {
+app.delete('/api/tutorial-videos/:id', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
     const { id } = req.params;
     const { error } = await supabase
@@ -2532,7 +2549,7 @@ ${message ? `<div style="background: #fff3cd; padding: 15px; border-radius: 8px;
 // ===== EMAIL =====
 
 // 🧪 Test endpoint - /api/test-email?to=your@email.com
-app.get('/api/test-email', async (req, res) => {
+app.get('/api/test-email', authenticateToken, requireRole('super_admin'), async (req, res) => {
   const testEmail = req.query.to || process.env.EMAIL_USER;
   try {
     console.log('🧪 Testing email config:', {
@@ -2560,7 +2577,7 @@ app.get('/api/test-email', async (req, res) => {
 
 
 
-app.post('/api/send-login-email', async (req, res) => {
+app.post('/api/send-login-email', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { parentEmail, parentName, password } = req.body;
     
@@ -2606,7 +2623,7 @@ app.post('/api/send-login-email', async (req, res) => {
   }
 });
 
-app.post('/api/send-user-email', async (req, res) => {
+app.post('/api/send-user-email', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { userEmail, userName, password, role, schoolName } = req.body;
     
@@ -2667,7 +2684,7 @@ app.listen(PORT, () => {
 // ===== PAYBOX PAYMENT =====
 
 // יצירת תשלום Paybox
-app.post('/api/create-paybox-payment', async (req, res) => {
+app.post('/api/create-paybox-payment', authenticateToken, async (req, res) => {
   try {
     const { studentId, amount, parentId } = req.body;
     

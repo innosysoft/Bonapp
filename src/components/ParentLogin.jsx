@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Eye, EyeOff, Phone, Lock, School, LogIn } from 'lucide-react';
 import { loginUser } from '../api';
+import { setToken } from '../auth';
 import { useNavigate } from 'react-router-dom';
 
 const ParentLogin = () => {
@@ -41,9 +42,10 @@ const ParentLogin = () => {
       return;
     }
     
-    // שמירת פרטי המשתמש
+    // שמירת פרטי המשתמש וה-token
     localStorage.setItem('currentUser', JSON.stringify(result.user));
-    
+    setToken(result.token);
+
     // מעבר לדשבורד הורים
     navigate('/parent-dashboard');
     

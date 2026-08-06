@@ -1,20 +1,21 @@
 import React, { useState, useEffect } from 'react';
 import { School, Plus, Users, TrendingUp, Settings, LogOut } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { authFetch } from '../auth';
 
 const VideoManager = () => {
   const [videos, setVideos] = useState([]);
   const [newVideo, setNewVideo] = useState({ title: '', youtube_url: '', category: 'general' });
 
   useEffect(() => {
-    fetch('https://api.bonapp.dev/api/tutorial-videos')
+    authFetch('https://api.bonapp.dev/api/tutorial-videos')
       .then(r => r.json())
       .then(data => { if (data.success) setVideos(data.videos); });
   }, []);
 
   const addVideo = async () => {
     if (!newVideo.title || !newVideo.youtube_url) { alert('נא למלא כותרת וקישור'); return; }
-    const res = await fetch('https://api.bonapp.dev/api/tutorial-videos', {
+    const res = await authFetch('https://api.bonapp.dev/api/tutorial-videos', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newVideo)
@@ -27,7 +28,7 @@ const VideoManager = () => {
   };
 
   const deleteVideo = async (id) => {
-    await fetch(`https://api.bonapp.dev/api/tutorial-videos/${id}`, { method: 'DELETE' });
+    await authFetch(`https://api.bonapp.dev/api/tutorial-videos/${id}`, { method: 'DELETE' });
     setVideos(videos.filter(v => v.id !== id));
   };
 
@@ -120,7 +121,7 @@ useEffect(() => {
   try {
     // אם Super Admin - טען את כל בתי הספר
     if (!user || !user.school_id) {
-      const response = await fetch(`https://api.bonapp.dev/api/admin/schools?t=${Date.now()}`);
+      const response = await authFetch(`https://api.bonapp.dev/api/admin/schools?t=${Date.now()}`);
       const data = await response.json();
       
       if (Array.isArray(data)) {
@@ -133,7 +134,7 @@ useEffect(() => {
     } 
     // אם מנהל בית ספר - טען רק את בית הספר שלו
     else {
-      const response = await fetch(`https://api.bonapp.dev/api/schools/${user.school_id}`);
+      const response = await authFetch(`https://api.bonapp.dev/api/schools/${user.school_id}`);
       const result = await response.json();
       
       if (result.success) {
@@ -151,7 +152,7 @@ useEffect(() => {
 
   const createSchool = async () => {
   try {
-    const response = await fetch('https://api.bonapp.dev/api/admin/schools', {
+    const response = await authFetch('https://api.bonapp.dev/api/admin/schools', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newSchool)
@@ -171,7 +172,7 @@ useEffect(() => {
       
 const fetchSchoolUsers = async (schoolId) => {
     try {
-      const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}/users`);
+      const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolId}/users`);
       const data = await response.json();
       if (data.success) {
         setSchoolUsers(data.users);
@@ -203,7 +204,7 @@ const fetchSchoolUsers = async (schoolId) => {
   }
 
   try {
-    const response = await fetch(`https://api.bonapp.dev/api/schools/${selectedSchool.id}/users`, {
+    const response = await authFetch(`https://api.bonapp.dev/api/schools/${selectedSchool.id}/users`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(newUser)
@@ -213,7 +214,7 @@ const fetchSchoolUsers = async (schoolId) => {
     if (result.success) {
       // שלח אימייל למשתמש החדש
       try {
-        await fetch('https://api.bonapp.dev/api/send-user-email', {
+        await authFetch('https://api.bonapp.dev/api/send-user-email', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -261,7 +262,7 @@ const updateUser = async () => {
   }
 
   try {
-    const response = await fetch(`https://api.bonapp.dev/api/users/${editingUser.id}`, {
+    const response = await authFetch(`https://api.bonapp.dev/api/users/${editingUser.id}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -293,7 +294,7 @@ const updateUser = async () => {
     if (!window.confirm('האם אתה בטוח שברצונך למחוק משתמש זה?')) return;
 
     try {
-      const response = await fetch(`https://api.bonapp.dev/api/users/${userId}`, {
+      const response = await authFetch(`https://api.bonapp.dev/api/users/${userId}`, {
         method: 'DELETE'
       });
       
@@ -309,7 +310,7 @@ const updateUser = async () => {
 
 const saveSchoolSettings = async () => {
   try {
-    const response = await fetch(`https://api.bonapp.dev/api/schools/${editingSchool.id}/settings`, {
+    const response = await authFetch(`https://api.bonapp.dev/api/schools/${editingSchool.id}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -511,7 +512,7 @@ onClick={() => {
                   onClick={async () => {
   try {
     // טען את כל פרטי בית הספר
-    const response = await fetch(`https://api.bonapp.dev/api/schools/${school.id}`);
+    const response = await authFetch(`https://api.bonapp.dev/api/schools/${school.id}`);
     const result = await response.json();
     
     if (result.success) {

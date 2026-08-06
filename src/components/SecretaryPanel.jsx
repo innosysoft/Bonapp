@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getParentData, getTransactions, generateQRCode } from '../api';
 import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools } from '../api';
+import { setToken, authFetch } from '../auth';
 import * as XLSX from 'xlsx';
 import GradeGroupsTab from './GradeGroupsTab';
 import { 
@@ -154,7 +155,7 @@ const loadStudentSchedule = async (studentId) => {
   try {
     const currentMonth = new Date().getMonth() + 1;
     const currentYear = new Date().getFullYear();
-    const response = await fetch(
+    const response = await authFetch(
       `https://api.bonapp.dev/api/groups/${student.group_id}/schedule?month=${currentMonth}&year=${currentYear}`
     );
     const data = await response.json();
@@ -288,7 +289,7 @@ document.body.appendChild(detailsDiv);
     // שלח אימייל רק אם יש סיסמה חדשה (הורה חדש)
 // שלח אימייל
     try {
-      await fetch(`https://api.bonapp.dev/api/send-login-email`, {
+      await authFetch(`https://api.bonapp.dev/api/send-login-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -1838,7 +1839,7 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
             onChange={async (e) => {
               const newPrice = parseFloat(e.target.value) || 0;
               try {
-                const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolData.id}/payment-method`, {
+                const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolData.id}/payment-method`, {
                   method: 'PUT',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ daily_meal_price: newPrice })
@@ -2542,8 +2543,9 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
                     body: JSON.stringify({ password: adminPassword })
                   });
                   const result = await response.json();
-                  
+
                   if (result.success) {
+                    setToken(result.token);
                     setIsAdminAuthenticated(true);
                     setAdminPassword('');
                   } else {

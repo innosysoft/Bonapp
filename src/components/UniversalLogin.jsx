@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { loginUser } from '../api';
+import { setToken } from '../auth';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, 
@@ -63,8 +64,9 @@ const UniversalLogin = () => {
     // הצלחה - הודעה ומעבר
     setSuccess(`ברוך הבא ${result.user.name}! מעביר אותך למערכת...`);
     
-    // שמירת פרטי המשתמש
+    // שמירת פרטי המשתמש וה-token
     localStorage.setItem('currentUser', JSON.stringify(result.user));
+    setToken(result.token);
 
     // מעבר לדף המתאים
     setTimeout(() => {

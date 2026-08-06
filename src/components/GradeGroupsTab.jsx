@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Plus, Trash2, Save, Calendar } from 'lucide-react';
+import { authFetch } from '../auth';
 
 const GradeGroupsTab = ({ schoolId }) => {
   const [groups, setGroups] = useState([]);
@@ -23,7 +24,7 @@ const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
     const loadGroups = async () => {
     try {
       console.log('Loading groups for schoolId:', schoolId);
-      const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}/groups`);
+      const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolId}/groups`);
       const data = await response.json();
       console.log('Groups data:', data);
       if (data.success) setGroups(data.groups);
@@ -43,7 +44,7 @@ const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const addGroup = async () => {
     if (!newGroupName.trim()) return;
     try {
-      const response = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}/groups`, {
+      const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolId}/groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: newGroupName, description: newGroupDesc })
@@ -64,7 +65,7 @@ const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
   const deleteGroup = async (groupId) => {
     if (!window.confirm('האם למחוק את השכבה?')) return;
     try {
-      const response = await fetch(`https://api.bonapp.dev/api/groups/${groupId}`, {
+      const response = await authFetch(`https://api.bonapp.dev/api/groups/${groupId}`, {
         method: 'DELETE'
       });
       const data = await response.json();
@@ -84,7 +85,7 @@ const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
     loadStudyDays(group.id, calendarMonth, calendarYear);
     try {
       // טען מחיר ממנהל מטבח
-      const schoolResponse = await fetch(`https://api.bonapp.dev/api/schools/${schoolId}`);
+      const schoolResponse = await authFetch(`https://api.bonapp.dev/api/schools/${schoolId}`);
       const schoolData = await schoolResponse.json();
       if (schoolData.success) {
         setSchedule({
@@ -99,7 +100,7 @@ const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
 const loadStudyDays = async (groupId, month = calendarMonth, year = calendarYear) => {
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `https://api.bonapp.dev/api/groups/${groupId}/study-days?month=${month}&year=${year}`
     );
     const data = await response.json();
@@ -114,7 +115,7 @@ const loadStudyDays = async (groupId, month = calendarMonth, year = calendarYear
 const toggleStudyDay = async (date) => {
   if (!selectedGroup) return;
   try {
-    const response = await fetch(
+    const response = await authFetch(
       `https://api.bonapp.dev/api/groups/${selectedGroup.id}/study-days/toggle`,
       {
         method: 'POST',
@@ -145,7 +146,7 @@ console.log('action:', data.action);
       d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)
     ).length;
     try {
-      const response = await fetch(`https://api.bonapp.dev/api/groups/${selectedGroup.id}/schedule`, {
+      const response = await authFetch(`https://api.bonapp.dev/api/groups/${selectedGroup.id}/schedule`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getMenuItems, scanStudent, processMealPurchase, getSchools, searchStudents, getRecentTransactions } from '../api';
+import { authFetch } from '../auth';
 import { QrCode, Camera, ShoppingCart, User, DollarSign, Clock, CheckCircle, XCircle, RefreshCw, Settings, LogOut, ChefHat } from 'lucide-react';
 
 import { Html5QrcodeScanner } from 'html5-qrcode';
@@ -61,7 +62,7 @@ console.log('getMealPrice called, studentPaymentType:', studentPaymentType);
 useEffect(() => {
     if (scannedStudent) {
       console.log('useEffect: scannedStudent changed:', scannedStudent.id);
-      fetch(`https://api.bonapp.dev/api/students/${scannedStudent.id}/last-payment-type`)
+      authFetch(`https://api.bonapp.dev/api/students/${scannedStudent.id}/last-payment-type`)
         .then(r => r.json())
         .then(data => {
           if (data.success) {
@@ -111,7 +112,7 @@ const onScanSuccess = async (decodedText) => {
   setScannerReady(false);
   
   try {
-    const response = await fetch('https://api.bonapp.dev/api/scan-student', {
+    const response = await authFetch('https://api.bonapp.dev/api/scan-student', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ qrCode: decodedText })
@@ -125,7 +126,7 @@ const onScanSuccess = async (decodedText) => {
       
       // שלוף סוג התשלום האחרון של התלמיד
       try {
-        const paymentResponse = await fetch(
+        const paymentResponse = await authFetch(
           `https://api.bonapp.dev/api/students/${result.student.id}/last-payment-type`
         );
         const paymentData = await paymentResponse.json();
@@ -164,7 +165,7 @@ useEffect(() => {
       setCurrentUser(user);
       
      // טען שם בית ספר וסוג תפריט
-const response = await fetch(`https://api.bonapp.dev/api/schools/${user.school_id}`);
+const response = await authFetch(`https://api.bonapp.dev/api/schools/${user.school_id}`);
 const schoolData = await response.json();
 
 if (schoolData.success) {
@@ -190,7 +191,7 @@ if (schoolData.success) {
     
     // טען תפריט לפי סוג
     if (school.menu_type === 'daily') {
-      const dailyResponse = await fetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
+      const dailyResponse = await authFetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
       const dailyData = await dailyResponse.json();
       if (dailyData.success) {
         setDailyMenuData(dailyData.dailyMenu);
@@ -250,7 +251,7 @@ if (transactionsResult.success) {
 
 const saveSchoolSettings = async () => {
   try {
-    const response = await fetch(`https://api.bonapp.dev/api/schools/${currentUser.school_id}/settings`, {
+    const response = await authFetch(`https://api.bonapp.dev/api/schools/${currentUser.school_id}/settings`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(schoolSettings)

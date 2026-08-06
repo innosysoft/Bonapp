@@ -1,5 +1,6 @@
 // src/api.js
 import config from './config';
+import { authFetch } from './auth';
 
 const API_URL = `${config.API_URL}/api`;
 
@@ -34,7 +35,7 @@ export const checkHealth = async () => {
 
 export const getParentData = async (userId) => {
   try {
-    const response = await fetch(`${API_URL}/parent/${userId}`, {
+    const response = await authFetch(`${API_URL}/parent/${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -51,7 +52,7 @@ export const getParentData = async (userId) => {
 
 export const addMoney = async (studentId, amount, paymentMethod) => {
   try {
-    const response = await fetch(`${API_URL}/add-money`, {
+    const response = await authFetch(`${API_URL}/add-money`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -69,7 +70,7 @@ export const addMoney = async (studentId, amount, paymentMethod) => {
 
 export const getTransactions = async (userId) => {
   try {
-    const response = await fetch(`${API_URL}/transactions/${userId}`, {
+    const response = await authFetch(`${API_URL}/transactions/${userId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -86,7 +87,7 @@ export const getTransactions = async (userId) => {
 
 export const getSchoolStudents = async (schoolId) => {
   try {
-    const response = await fetch(`${API_URL}/school-students/${schoolId}`, {
+    const response = await authFetch(`${API_URL}/school-students/${schoolId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -103,7 +104,7 @@ export const getSchoolStudents = async (schoolId) => {
 
 export const getSchoolTransactions = async (schoolId) => {
   try {
-    const response = await fetch(`${API_URL}/school-transactions/${schoolId}`, {
+    const response = await authFetch(`${API_URL}/school-transactions/${schoolId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -120,7 +121,7 @@ export const getSchoolTransactions = async (schoolId) => {
 
 export const getPendingRegistrations = async (schoolId) => {
   try {
-    const response = await fetch(`${API_URL}/pending-registrations/${schoolId}`, {
+    const response = await authFetch(`${API_URL}/pending-registrations/${schoolId}`, {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -137,7 +138,7 @@ export const getPendingRegistrations = async (schoolId) => {
 
 export const handleRegistrationAction = async (registrationId, action, reason = '') => {
   try {
-    const response = await fetch(`${API_URL}/pending-registrations/${registrationId}/action`, {
+    const response = await authFetch(`${API_URL}/pending-registrations/${registrationId}/action`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -173,7 +174,7 @@ export const getSchools = async () => {
 // Get menu items
 export const getMenuItems = async (schoolId) => {
   try {
-    const response = await fetch(`${API_URL}/menu-items/${schoolId}`);
+    const response = await authFetch(`${API_URL}/menu-items/${schoolId}`);
     const data = await response.json();
     return data;
   } catch (error) {
@@ -185,7 +186,7 @@ export const getMenuItems = async (schoolId) => {
 // Scan student
 export const scanStudent = async (qrCode) => {
   try {
-    const response = await fetch(`${API_URL}/scan-student`, {
+    const response = await authFetch(`${API_URL}/scan-student`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ qrCode })
@@ -201,7 +202,7 @@ export const scanStudent = async (qrCode) => {
 // Process meal purchase
 export const processMealPurchase = async (studentId, items, total, forceOverride = false) => {
   try {
-    const response = await fetch(`${API_URL}/process-meal-purchase`, {
+    const response = await authFetch(`${API_URL}/process-meal-purchase`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ studentId, items, total, forceOverride })
@@ -216,7 +217,7 @@ export const processMealPurchase = async (studentId, items, total, forceOverride
 // Generate QR code for student
 export const generateQRCode = async (studentId) => {
   try {
-    const response = await fetch(`${API_URL}/generate-qr/${studentId}`, {
+    const response = await authFetch(`${API_URL}/generate-qr/${studentId}`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' }
     });
@@ -231,7 +232,7 @@ export const generateQRCode = async (studentId) => {
 // Get parent details
 export const getParentDetails = async (studentId) => {
   try {
-    const response = await fetch(`${API_URL}/student/${studentId}/parent`);
+    const response = await authFetch(`${API_URL}/student/${studentId}/parent`);
     const data = await response.json();
     return data;
   } catch (error) {
@@ -242,7 +243,7 @@ export const getParentDetails = async (studentId) => {
 
 export const uploadStudentPhoto = async (studentId, photoData) => {
   try {
-    const response = await fetch(`${API_URL}/students/${studentId}/photo`, {
+    const response = await authFetch(`${API_URL}/students/${studentId}/photo`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -261,7 +262,7 @@ export const uploadStudentPhoto = async (studentId, photoData) => {
 // Menu Management
 export const addMenuItem = async (schoolId, itemData) => {
   try {
-    const response = await fetch(`${API_URL}/menu-items`, {
+    const response = await authFetch(`${API_URL}/menu-items`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ school_id: schoolId, ...itemData })
@@ -275,7 +276,7 @@ export const addMenuItem = async (schoolId, itemData) => {
 
 export const updateMenuItem = async (itemId, itemData) => {
   try {
-    const response = await fetch(`${API_URL}/menu-items/${itemId}`, {
+    const response = await authFetch(`${API_URL}/menu-items/${itemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(itemData)
@@ -289,7 +290,7 @@ export const updateMenuItem = async (itemId, itemData) => {
 
 export const deleteMenuItem = async (itemId) => {
   try {
-    const response = await fetch(`${API_URL}/menu-items/${itemId}`, {
+    const response = await authFetch(`${API_URL}/menu-items/${itemId}`, {
       method: 'DELETE'
     });
     return await response.json();
@@ -302,7 +303,7 @@ export const deleteMenuItem = async (itemId) => {
 // Search students
 export const searchStudents = async (schoolId, searchTerm) => {
   try {
-    const response = await fetch(`${API_URL}/students/search`, {
+    const response = await authFetch(`${API_URL}/students/search`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ school_id: schoolId, search_term: searchTerm })
@@ -317,7 +318,7 @@ export const searchStudents = async (schoolId, searchTerm) => {
 // Get recent transactions
 export const getRecentTransactions = async (schoolId, limit = 10) => {
   try {
-    const response = await fetch(`${API_URL}/transactions/${schoolId}/recent?limit=${limit}`);
+    const response = await authFetch(`${API_URL}/transactions/${schoolId}/recent?limit=${limit}`);
     return await response.json();
   } catch (error) {
     console.error('Get transactions error:', error);
@@ -328,7 +329,7 @@ export const getRecentTransactions = async (schoolId, limit = 10) => {
 // Update student details
 export const updateStudent = async (studentId, studentData) => {
   try {
-    const response = await fetch(`${API_URL}/students/${studentId}`, {
+    const response = await authFetch(`${API_URL}/students/${studentId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(studentData)
@@ -343,7 +344,7 @@ export const updateStudent = async (studentId, studentData) => {
 // Add new student
 export const addStudent = async (studentData) => {
   try {
-    const response = await fetch(`${API_URL}/students`, {
+    const response = await authFetch(`${API_URL}/students`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(studentData)
@@ -358,7 +359,7 @@ export const addStudent = async (studentData) => {
 // Delete student
 export const deleteStudent = async (studentId) => {
   try {
-    const response = await fetch(`${API_URL}/students/${studentId}`, {
+    const response = await authFetch(`${API_URL}/students/${studentId}`, {
       method: 'DELETE'
     });
     return await response.json();

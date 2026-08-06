@@ -3,6 +3,7 @@ const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const crypto = require('crypto');
+const { authenticateToken } = require('./middleware/auth');
 
 const nodemailer = require('nodemailer');
 
@@ -85,7 +86,7 @@ const supabase = createClient(
 );
 
 // **יצירת Token ייחודי להורה**
-router.post('/generate-parent-token', async (req, res) => {
+router.post('/generate-parent-token', authenticateToken, async (req, res) => {
   try {
     const { parentId } = req.body;
     
@@ -118,7 +119,7 @@ router.post('/generate-parent-token', async (req, res) => {
 });
 
 // **יצירת Token ייחודי לתלמיד**
-router.post('/generate-student-token', async (req, res) => {
+router.post('/generate-student-token', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.body;
     
@@ -303,7 +304,7 @@ router.get('/student/:token', async (req, res) => {
 });
 
 // **שליחת לינק מובייל ב-SMS**
-router.post('/send-link-sms', async (req, res) => {
+router.post('/send-link-sms', authenticateToken, async (req, res) => {
   try {
     const { phone, url, type } = req.body; // type: 'parent' או 'student'
     
@@ -328,7 +329,7 @@ router.post('/send-link-sms', async (req, res) => {
 });
 
 // **שליחת לינק מובייל במייל**
-router.post('/send-link-email', async (req, res) => {
+router.post('/send-link-email', authenticateToken, async (req, res) => {
   try {
     const { email, url, name, type } = req.body;
     

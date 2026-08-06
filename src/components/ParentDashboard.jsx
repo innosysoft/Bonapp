@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { getParentData, addMoney, getTransactions, getSchools, uploadStudentPhoto } from '../api';
 import { getParentStudents, addPayment, addStudent, updateStudent, deleteStudent } from '../api';
+import { authFetch } from '../auth';
 import { useNavigate } from 'react-router-dom';
 import { 
   User, 
@@ -162,7 +163,7 @@ console.log('enable_monthly_package:', school.enable_monthly_package);
         
         const currentMonth = new Date().getMonth() + 1;
         const currentYear = new Date().getFullYear();
-        const scheduleResponse = await fetch(
+        const scheduleResponse = await authFetch(
           `https://api.bonapp.dev/api/groups/${data.children[0].group_id}/schedule?month=${currentMonth}&year=${currentYear}`
         );
         const scheduleData = await scheduleResponse.json();
@@ -178,7 +179,7 @@ console.log('enable_monthly_package:', school.enable_monthly_package);
       
       // טען תפריט לפי סוג
       if (school.menu_type === 'daily') {
-        const dailyResponse = await fetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
+        const dailyResponse = await authFetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
         const dailyData = await dailyResponse.json();
 
         console.log('=== DAILY MENU DATA ===');
@@ -211,7 +212,7 @@ console.log('weeklyMenuData state:', weeklyMenuData);
 
 // טען שכבות בית ספר
 if (data.children && data.children.length > 0) {
-  const groupsResponse = await fetch(`https://api.bonapp.dev/api/schools/${data.children[0].school_id}/groups`);
+  const groupsResponse = await authFetch(`https://api.bonapp.dev/api/schools/${data.children[0].school_id}/groups`);
   const groupsData = await groupsResponse.json();
   if (groupsData.success) {
     setSchoolGroups(groupsData.groups);
@@ -263,7 +264,7 @@ useEffect(() => {
   try {
     // אם זה Paybox - נתהליך אחרת
     if (paymentMethod === 'paybox') {
-      const response = await fetch('https://api.bonapp.dev/api/create-paybox-payment', {
+      const response = await authFetch('https://api.bonapp.dev/api/create-paybox-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -548,7 +549,7 @@ const handleShowQR = async (studentId) => {
     setLoadingQR(true);
     
     // נסה ליצור/לטעון QR code
-    const createResponse = await fetch(`https://api.bonapp.dev/api/students/${studentId}/create-qr`, {
+    const createResponse = await authFetch(`https://api.bonapp.dev/api/students/${studentId}/create-qr`, {
       method: 'POST'
     });
     
@@ -560,7 +561,7 @@ const handleShowQR = async (studentId) => {
     }
     
     // עכשיו תצור תמונה
-    const imageResponse = await fetch(`https://api.bonapp.dev/api/students/${studentId}/generate-qr`, {
+    const imageResponse = await authFetch(`https://api.bonapp.dev/api/students/${studentId}/generate-qr`, {
       method: 'POST'
     });
     
@@ -665,7 +666,7 @@ const handleSendEmail = async () => {
     const confirmed = window.confirm(`האם לשלוח את ה-QR Code ל-${user.email}?`);
     if (!confirmed) return;
     
-    const response = await fetch(`https://api.bonapp.dev/api/students/${children[selectedChild]?.id}/send-qr-email`, {
+    const response = await authFetch(`https://api.bonapp.dev/api/students/${children[selectedChild]?.id}/send-qr-email`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -1717,7 +1718,7 @@ const handleSendEmail = async () => {
         const totalAmount = (monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2);
         
         try {
-          const response = await fetch('https://api.bonapp.dev/api/create-grow-payment', {
+          const response = await authFetch('https://api.bonapp.dev/api/create-grow-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -1775,7 +1776,7 @@ setTimeout(() => setIsPolling(false), 600000);
         const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
         const child = children[selectedChild];
         try {
-          const response = await fetch('https://api.bonapp.dev/api/create-grow-payment', {
+          const response = await authFetch('https://api.bonapp.dev/api/create-grow-payment', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
