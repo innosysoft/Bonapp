@@ -1,5 +1,6 @@
 const express = require('express');
 const cors = require('cors');
+const rateLimit = require('express-rate-limit');
 const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
@@ -16,10 +17,33 @@ const {
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Trust the nginx reverse proxy in front of this app so req.ip / express-rate-limit
+// see the real client IP (from X-Forwarded-For) instead of nginx's own address.
+app.set('trust proxy', 1);
+
 // Middleware
-app.use(cors());
+const ALLOWED_ORIGINS = ['https://bonapp.dev', 'https://api.bonapp.dev'];
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no Origin header (server-to-server, curl, mobile apps, webhooks)
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) {
+      return callback(null, true);
+    }
+    return callback(new Error('Not allowed by CORS'));
+  },
+  credentials: true
+}));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ limit: '50mb', extended: true }));
+
+// Rate limiting for authentication endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'יותר מדי ניסיונות התחברות, נסה שוב מאוחר יותר' }
+});
 
 
 
@@ -32,12 +56,6 @@ const transporter = nodemailer.createTransport({
     user: process.env.EMAIL_USER,
     pass: process.env.EMAIL_PASS
   }
-});
-
-console.log('📧 Email config:', {
-  host: process.env.EMAIL_HOST,
-  port: process.env.EMAIL_PORT,
-  user: process.env.EMAIL_USER
 });
 
 const EMAIL_FROM = `"BonApp - מערכת ארוחות" <${process.env.EMAIL_FROM || 'bon-app@innosys.co.il'}>`;
@@ -144,7 +162,6 @@ const sendMobileLink = async (toEmail, userName, url) => {
 
   try {
     const info = await transporter.sendMail(mailOptions);
-    console.log('✅ Mobile link email sent:', info.messageId);
     return { success: true, messageId: info.messageId };
   } catch (error) {
     console.error('❌ Mobile link email error:', error);
@@ -153,10 +170,17 @@ const sendMobileLink = async (toEmail, userName, url) => {
 };
 
 // Supabase client
+// Prefers the service_role key (bypasses RLS) once it's configured; falls back
+// to the anon key so the app keeps working before that migration runs.
+// See backend/sql/enable_rls.sql for the RLS rollout this pairs with.
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
+
+// Safely embed a value inside a PostgREST .or()/.filter() string (prevents filter injection).
+// PostgREST treats , . ( ) as syntax; wrapping in double quotes and escaping \ and " neutralizes them.
+const escapePostgrestValue = (val) => `"${String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
 // ===== HEALTH & AUTH =====
 
@@ -175,10 +199,10 @@ app.get('/api/health', async (req, res) => {
 
 
 
-app.post('/api/admin/auth', async (req, res) => {
+app.post('/api/admin/auth', authLimiter, async (req, res) => {
   const { password } = req.body;
   const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
-  
+
   if (password === adminPassword) {
     const token = generateToken({ id: 'super_admin', role: 'super_admin', school_id: null });
     res.json({ success: true, message: 'Admin authenticated', token });
@@ -187,41 +211,32 @@ app.post('/api/admin/auth', async (req, res) => {
   }
 });
 
-app.post('/api/login', async (req, res) => {
-  console.log('=== LOGIN REQUEST RECEIVED ===');
-  console.log('Body:', req.body);
-
+app.post('/api/login', authLimiter, async (req, res) => {
   try {
     const { username, password } = req.body;
 
-    console.log('Username:', username);
-    
     if (!username || !password) {
       return res.status(400).json({ success: false, message: 'חסרים שם משתמש או סיסמה' });
     }
-    
+
+    const escapedUsername = escapePostgrestValue(username);
+
     const { data: user, error } = await supabase
       .from('users')
       .select('*')
-      .or(`email.ilike.${username},phone.eq.${username}`)
-      .single();
-    
-    console.log('User found:', user ? 'YES' : 'NO');
+      .or(`email.ilike.${escapedUsername},phone.eq.${escapedUsername}`)
+      .maybeSingle();
 
     if (error || !user) {
-      console.log('USER NOT FOUND - returning 401');
       return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
     }
 
-    
+
     const validPassword = await bcrypt.compare(password, user.password_hash);
 
     if (!validPassword) {
-      console.log('INVALID PASSWORD - returning 401');
       return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
     }
-
-    console.log('LOGIN SUCCESS!');
 
     const token = generateToken({ id: user.id, role: user.role, school_id: user.school_id });
 
@@ -435,7 +450,6 @@ if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.bod
 if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
 
 
-console.log('updateData:', JSON.stringify(updateData));
     const { data: school, error } = await supabase
       .from('schools')
       .update(updateData)
@@ -443,11 +457,9 @@ console.log('updateData:', JSON.stringify(updateData));
       .select()
       .single();
 
-    console.log('Supabase update result:', { school, error });
 
     if (error) throw error;
 
-    console.log('✅ Settings saved successfully!');
 
     res.json({ success: true, school });
   } catch (error) {
@@ -652,7 +664,6 @@ app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), 
         status: 'active'
       });
 
-    console.log('✅ Student created with QR:', qrCode);
 
     res.json({
       success: true,
@@ -797,11 +808,13 @@ app.post('/api/students/search', authenticateToken, requireRole('kitchen', 'secr
       return res.json({ success: true, students: [] });
     }
 
+    const escapedTerm = escapePostgrestValue(`%${search_term}%`);
+
     const { data: students, error } = await supabase
       .from('students')
       .select('*')
       .eq('school_id', school_id)
-      .or(`first_name.ilike.%${search_term}%,last_name.ilike.%${search_term}%,id_number.ilike.%${search_term}%,student_phone.ilike.%${search_term}%`)
+      .or(`first_name.ilike.${escapedTerm},last_name.ilike.${escapedTerm},id_number.ilike.${escapedTerm},student_phone.ilike.${escapedTerm}`)
       .limit(10);
 
     if (error) throw error;
@@ -860,8 +873,6 @@ app.post('/api/students/:studentId/create-qr', async (req, res) => {
   try {
     const { studentId } = req.params;
     
-    console.log('=== CREATE QR REQUEST ===');
-    console.log('Student ID:', studentId);
     
     const { data: existing, error: checkError } = await supabase
       .from('student_qr_codes')
@@ -870,12 +881,10 @@ app.post('/api/students/:studentId/create-qr', async (req, res) => {
       .maybeSingle();
     
     if (existing) {
-      console.log('QR already exists:', existing.qr_code);
       return res.json({ success: true, qrCode: existing.qr_code });
     }
     
     const qrCode = `STU_${studentId.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
-    console.log('Creating new QR:', qrCode);
     
     const { data: newQR, error } = await supabase
       .from('student_qr_codes')
@@ -889,7 +898,6 @@ app.post('/api/students/:studentId/create-qr', async (req, res) => {
     
     if (error) throw error;
     
-    console.log('✅ QR created successfully!');
     res.json({ success: true, qrCode: newQR.qr_code });
   } catch (error) {
     console.error('Create QR error:', error);
@@ -943,9 +951,6 @@ app.post('/api/students/:studentId/send-qr-email', authenticateToken, requireSel
     const { studentId } = req.params;
     const { parentEmail, parentName, studentName, schoolName } = req.body;
     
-    console.log('=== SENDING QR EMAIL ===');
-    console.log('Student ID:', studentId);
-    console.log('Email to:', parentEmail);
     
     const { data: qrRecord, error: qrError } = await supabase
       .from('student_qr_codes')
@@ -1096,7 +1101,6 @@ app.post('/api/generate-qr/:studentId', authenticateToken, async (req, res) => {
 // ===== PARENT =====
 
 app.post('/api/register', async (req, res) => {
-  console.log('Received registration data:', req.body);
   
   try {
     const { 
@@ -1196,10 +1200,6 @@ app.get('/api/parent/:userId', authenticateToken, requireSelfOrStaff(req => req.
       .select('*')
       .eq('parent_id', parent.id);
 
-    console.log('=== CHILDREN FROM DB ===');
-    console.log('First child:', children?.[0]);
-    console.log('Has system_access?', children?.[0]?.system_access);
-    console.log('Has spending_limit?', children?.[0]?.spending_limit);
 
     if (childrenError) {
       console.error('Error fetching children:', childrenError);
@@ -1211,8 +1211,6 @@ app.get('/api/parent/:userId', authenticateToken, requireSelfOrStaff(req => req.
       .select('id, name')
       .eq('school_id', parent.school_id);
 
-console.log('parent school_id:', parent.school_id);
-    console.log('groups found:', groups);
 
     const enrichedChildren = (children || []).map(child => ({
       ...child,
@@ -1530,7 +1528,6 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
       .single();
 
     const paymentType = lastPayment?.payment_type || 'daily';
-    console.log('paymentType:', paymentType);
 
     let chargeAmount;
     if (paymentType === 'monthly') {
@@ -1538,7 +1535,6 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
     } else {
       chargeAmount = parseFloat(school.daily_meal_price) || 0;
     }
-    console.log('chargeAmount:', chargeAmount);
 
 
     // בדוק מגבלת הוצאה יומית
@@ -1732,7 +1728,6 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
       let generatedPassword;
 
       if (existingParent) {
-        console.log('Parent already exists:', existingParent.email);
         parentId = existingParent.id;
         generatedPassword = null;
       } else {
@@ -1762,7 +1757,6 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
           throw userError;
         }
 
-        console.log('New parent created with ID:', newParent.id);
         parentId = newParent.id;
       }
 
@@ -1818,8 +1812,6 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
       }
       
     } else if (action === 'reject') {
-      console.log('Rejecting registration:', registrationId);
-      console.log('Reason:', reason);
       
       const { data, error } = await supabase
         .from('pending_registrations')
@@ -1830,8 +1822,6 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
         .eq('id', registrationId)
         .select();
 
-      console.log('Update result:', data);
-      console.log('Update error:', error);
       
       if (error) {
         throw error;
@@ -2145,7 +2135,6 @@ const growPaymentLinks = {}; // זיכרון זמני
 // Webhook חדש מ-Grow דרך Make
 app.post('/api/grow-webhook-v2', async (req, res) => {
   try {
-    console.log('📥 Grow webhook v2 received:', req.body);
     
     const { payment_sum, payment_desc } = req.body;
     
@@ -2168,13 +2157,11 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
     }
     
     if (!studentId) {
-      console.log('⚠️ No student ID found in payment_desc:', payment_desc);
       return res.json({ success: true });
     }
     
     const amount = parseFloat(payment_sum) || 0;
     
-    console.log(`✅ Payment confirmed for student ${studentId}: ₪${amount}`);
     
     // קבל יתרה נוכחית
     const { data: student, error: studentError } = await supabase
@@ -2210,7 +2197,6 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
         transaction_date: new Date().toISOString()
       });
     
-    console.log(`✅ Balance updated: ₪${newBalance}`);
     
     res.json({ success: true });
     
@@ -2223,9 +2209,7 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
 // Webhook מ-Grow אחרי תשלום
 app.post('/api/grow-webhook', async (req, res) => {
   try {
-    console.log('📥 Grow webhook received:', req.body);
     
-    console.log('Grow webhook body:', JSON.stringify(req.body));
     
     if (!req.body) {
       return res.json({ success: true });
@@ -2248,12 +2232,10 @@ app.post('/api/grow-webhook', async (req, res) => {
           .single();
         
         if (existing) {
-          console.log('⚠️ Transaction already processed:', transactionId);
           return res.json({ success: true });
         }
       }
       
-      console.log(`✅ Payment confirmed for student ${studentId}: ₪${amount}`);
       
       if (studentId) {
         // קבל יתרה נוכחית
@@ -2291,7 +2273,6 @@ await supabase
     transaction_date: new Date().toISOString()
   });
           
-          console.log(`✅ Balance updated: ₪${newBalance}`);
         }
       }
     }
@@ -2308,7 +2289,6 @@ await supabase
 app.post('/api/grow-payment-link', async (req, res) => {
   try {
     const { payment_url, parent_name, amount } = req.body;
-    console.log('📥 Grow payment link received:', { payment_url, parent_name, amount });
     
     // שמור את הקישור עם מזהה ייחודי
     const linkId = Date.now().toString();
@@ -2342,7 +2322,6 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
       || process.env.MAKE_WEBHOOK_URL 
       || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
     
-    console.log('Using webhook URL:', makeWebhookUrl, 'for school:', student?.school_id);
     
     
     const response = await fetch(makeWebhookUrl, {
@@ -2359,7 +2338,6 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
     });
     
     const text = await response.text();
-    console.log('Make webhook response:', text);
     
     let paymentUrl;
     try {
@@ -2419,7 +2397,6 @@ app.post('/api/groups/:groupId/study-days/toggle', authenticateToken, requireRol
       .eq('group_id', groupId)
       .eq('date', date);
     
-    console.log('Toggle study day:', { groupId, date, existing, error });
     
     if (existing && existing.length > 0) {
       // מחק
@@ -2430,7 +2407,6 @@ app.post('/api/groups/:groupId/study-days/toggle', authenticateToken, requireRol
       const { data: inserted, error: insertError } = await supabase
         .from('study_days')
         .insert({ group_id: groupId, school_id, date });
-      console.log('Insert result:', { inserted, insertError });
       res.json({ success: true, action: 'added' });
     }
   } catch (error) {
@@ -2548,42 +2524,12 @@ ${message ? `<div style="background: #fff3cd; padding: 15px; border-radius: 8px;
 
 // ===== EMAIL =====
 
-// 🧪 Test endpoint - /api/test-email?to=your@email.com
-app.get('/api/test-email', authenticateToken, requireRole('super_admin'), async (req, res) => {
-  const testEmail = req.query.to || process.env.EMAIL_USER;
-  try {
-    console.log('🧪 Testing email config:', {
-      host: process.env.EMAIL_HOST,
-      port: process.env.EMAIL_PORT,
-      user: process.env.EMAIL_USER
-    });
-    
-    await transporter.verify();
-    console.log('✅ SMTP connection verified!');
-    
-    const info = await transporter.sendMail({
-      from: EMAIL_FROM,
-      to: testEmail,
-      subject: '✅ BonApp - בדיקת מייל',
-      html: `<div dir="rtl"><h2>🎉 מייל בדיקה עבד!</h2><p>אם קיבלת את זה - המייל עובד תקין.</p><p>זמן: ${new Date().toLocaleString('he-IL')}</p></div>`
-    });
-    
-    res.json({ success: true, message: 'מייל בדיקה נשלח!', to: testEmail, messageId: info.messageId });
-  } catch (error) {
-    console.error('❌ Email test failed:', error);
-    res.status(500).json({ success: false, error: error.message, code: error.code, command: error.command });
-  }
-});
-
 
 
 app.post('/api/send-login-email', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
   try {
     const { parentEmail, parentName, password } = req.body;
     
-    console.log('=== Starting email send ===');
-    console.log('To:', parentEmail);
-    console.log('From:', 'bon-app@innosys.co.il');
     
     const mailOptions = {
       from: EMAIL_FROM,
@@ -2607,9 +2553,7 @@ app.post('/api/send-login-email', authenticateToken, requireRole('secretary', 'a
       `
     };
 
-    console.log('Sending email...');
     const info = await transporter.sendMail(mailOptions);
-    console.log('Email sent successfully!', info.messageId);
     
     res.json({
       success: true,
@@ -2673,6 +2617,15 @@ app.post('/api/send-user-email', authenticateToken, requireRole('secretary', 'ad
 
 app.use('/api/mobile', require('./mobileRoutes'));
 
+// Catch CORS rejections (and other errors) without leaking stack traces to clients
+app.use((err, req, res, next) => {
+  if (err && err.message === 'Not allowed by CORS') {
+    return res.status(403).json({ success: false, message: 'Origin not allowed' });
+  }
+  console.error('Unhandled error:', err);
+  res.status(500).json({ success: false, message: 'שגיאת שרת' });
+});
+
 // ===== START SERVER =====
 
 app.listen(PORT, () => {
@@ -2688,9 +2641,6 @@ app.post('/api/create-paybox-payment', authenticateToken, async (req, res) => {
   try {
     const { studentId, amount, parentId } = req.body;
     
-    console.log('=== PAYBOX PAYMENT REQUEST ===');
-    console.log('Student:', studentId);
-    console.log('Amount:', amount);
     
     // קבל פרטי תלמיד ובית ספר
     const { data: student, error: studentError } = await supabase
@@ -2739,8 +2689,6 @@ app.post('/api/create-paybox-payment', authenticateToken, async (req, res) => {
     // יצירת transaction ID ייחודי
     const transactionId = `BonApp_${Date.now()}_${studentId.substring(0, 8)}`;
     
-    console.log('Transaction ID:', transactionId);
-    console.log('School Merchant ID:', school.paybox_merchant_id);
     
     // שמירה בטבלה
     const { data: payment, error: paymentError } = await supabase
@@ -2762,7 +2710,6 @@ app.post('/api/create-paybox-payment', authenticateToken, async (req, res) => {
       throw paymentError;
     }
     
-    console.log('Payment record created:', payment.id);
     
     // TODO: כאן תהיה קריאה אמיתית ל-Paybox API
     // לעת עתה נחזיר URL דמה
@@ -2820,9 +2767,6 @@ app.post('/api/paybox-callback', async (req, res) => {
   try {
     const { transaction_id, status, amount } = req.body;
     
-    console.log('=== PAYBOX CALLBACK ===');
-    console.log('Transaction:', transaction_id);
-    console.log('Status:', status);
     
     // מצא את התשלום
     const { data: payment } = await supabase
@@ -2873,7 +2817,6 @@ app.post('/api/paybox-callback', async (req, res) => {
           transaction_date: new Date().toISOString()
         });
       
-      console.log('✅ Payment completed! Balance updated.');
     }
     
     res.json({ success: true });
