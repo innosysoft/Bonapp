@@ -271,8 +271,8 @@ console.log('action:', data.action);
           )}
         </div>
 
-        {/* לוח ארוחות לחודש */}
-        <div style={{
+       {/* לוח ארוחות לחודש */}
+        {selectedGroup && <div style={{
           background: 'white', padding: '1.5rem', borderRadius: '16px',
           boxShadow: '0 4px 16px rgba(0,0,0,0.05)'
         }}>
@@ -281,11 +281,7 @@ console.log('action:', data.action);
             ימי ארוחה - {monthNames[currentMonth]} {currentYear}
           </h3>
 
-          {!selectedGroup ? (
-            <p style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>
-              בחר שכבה מהרשימה
-            </p>
-          ) : (
+          
             <div>
               <p style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem' }}>
                 שכבה: {selectedGroup.name}
@@ -398,8 +394,8 @@ console.log('action:', data.action);
                 </button>
               </div>
             </div>
-          )}
-        </div>
+          
+        </div>}
       </div>
     </div>
   );
