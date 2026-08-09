@@ -229,7 +229,7 @@ console.log('action:', data.action);
         </div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: selectedGroup ? '1fr 1fr' : '1fr', gap: '2rem' }}>
         {/* רשימת שכבות */}
         <div style={{
           background: 'white', padding: '1.5rem', borderRadius: '16px',
