@@ -89,7 +89,26 @@ const supabase = createClient(
 router.post('/generate-parent-token', authenticateToken, async (req, res) => {
   try {
     const { parentId } = req.body;
-    
+
+    if (req.user.role !== 'super_admin') {
+      if (req.user.role === 'parent') {
+        if (String(req.user.id) !== String(parentId)) {
+          return res.status(403).json({ success: false, message: 'אין הרשאה ליצור טוקן עבור הורה זה' });
+        }
+      } else if (['secretary', 'admin', 'kitchen'].includes(req.user.role)) {
+        const { data: parentUser } = await supabase
+          .from('users')
+          .select('school_id')
+          .eq('id', parentId)
+          .single();
+        if (!parentUser || String(parentUser.school_id) !== String(req.user.school_id)) {
+          return res.status(403).json({ success: false, message: 'אין הרשאה ליצור טוקן עבור הורה זה' });
+        }
+      } else {
+        return res.status(403).json({ success: false, message: 'אין הרשאה' });
+      }
+    }
+
     // צור token ייחודי
     const token = crypto.randomBytes(32).toString('hex');
     
@@ -122,7 +141,27 @@ router.post('/generate-parent-token', authenticateToken, async (req, res) => {
 router.post('/generate-student-token', authenticateToken, async (req, res) => {
   try {
     const { studentId } = req.body;
-    
+
+    if (req.user.role !== 'super_admin') {
+      const { data: student } = await supabase
+        .from('students')
+        .select('school_id, parent_id')
+        .eq('id', studentId)
+        .single();
+
+      if (!student) {
+        return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+      }
+
+      const isOwnParent = req.user.role === 'parent' && String(req.user.id) === String(student.parent_id);
+      const isStaffOfSchool = ['secretary', 'admin', 'kitchen'].includes(req.user.role) &&
+        String(req.user.school_id) === String(student.school_id);
+
+      if (!isOwnParent && !isStaffOfSchool) {
+        return res.status(403).json({ success: false, message: 'אין הרשאה ליצור טוקן עבור תלמיד זה' });
+      }
+    }
+
     const token = crypto.randomBytes(32).toString('hex');
     
     const { data, error } = await supabase

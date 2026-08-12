@@ -54,12 +54,12 @@ const MobileParentApp = () => {
 
   const loadQR = async (studentId) => {
     try {
-      const createResponse = await fetch(`https://api.bonapp.dev/api/students/${studentId}/create-qr`, {
+      const createResponse = await fetch(`https://api.bonapp.dev/api/students/${studentId}/create-qr?mobileToken=${token}`, {
         method: 'POST'
       });
       await createResponse.json();
 
-      const imageResponse = await fetch(`https://api.bonapp.dev/api/students/${studentId}/generate-qr`, {
+      const imageResponse = await fetch(`https://api.bonapp.dev/api/students/${studentId}/generate-qr?mobileToken=${token}`, {
         method: 'POST'
       });
       const imageResult = await imageResponse.json();

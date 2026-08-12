@@ -54,13 +54,32 @@ const requireSchoolAccess = (getSchoolId) => async (req, res, next) => {
   }
 };
 
-// getUserId(req) resolves the target user id, sync or async, from params/body/DB lookup
-const requireSelfOrStaff = (getUserId) => async (req, res, next) => {
+// getUserId(req) resolves the target user id, sync or async, from params/body/DB lookup.
+// getSchoolId(req) resolves the target resource's school_id — required so staff are confined
+// to their own school instead of being waved through for any school's data.
+const requireSelfOrStaff = (getUserId, getSchoolId) => async (req, res, next) => {
   if (!req.user) {
     return res.status(401).json({ success: false, message: 'נדרשת התחברות' });
   }
-  if (STAFF_ROLES.includes(req.user.role) || req.user.role === 'kitchen') {
-    return next();
+  const isStaff = STAFF_ROLES.includes(req.user.role) || req.user.role === 'kitchen';
+  if (isStaff) {
+    if (req.user.role === 'super_admin') {
+      return next();
+    }
+    if (typeof getSchoolId !== 'function') {
+      console.error('requireSelfOrStaff: missing getSchoolId resolver for a staff-accessible route');
+      return res.status(500).json({ success: false, message: 'שגיאת הרשאות' });
+    }
+    try {
+      const schoolId = await getSchoolId(req);
+      if (schoolId && String(schoolId) === String(req.user.school_id)) {
+        return next();
+      }
+      return res.status(403).json({ success: false, message: 'אין הרשאה לבית ספר זה' });
+    } catch (error) {
+      console.error('requireSelfOrStaff school check error:', error);
+      return res.status(500).json({ success: false, message: 'שגיאת שרת בבדיקת הרשאות' });
+    }
   }
   try {
     const userId = await getUserId(req);

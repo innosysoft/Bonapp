@@ -5,6 +5,7 @@ const nodemailer = require('nodemailer');
 const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
 const QRCode = require('qrcode');
+const jwt = require('jsonwebtoken');
 require('dotenv').config();
 const {
   generateToken,
@@ -182,6 +183,38 @@ const supabase = createClient(
 // PostgREST treats , . ( ) as syntax; wrapping in double quotes and escaping \ and " neutralizes them.
 const escapePostgrestValue = (val) => `"${String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
+// Resolves the parent_id of a student, from either :studentId (params) or studentId (body).
+const getStudentParentId = async (req) => {
+  const studentId = req.params.studentId || (req.body && req.body.studentId);
+  const { data } = await supabase
+    .from('students')
+    .select('parent_id')
+    .eq('id', studentId)
+    .single();
+  return data?.parent_id;
+};
+
+// Resolves the school_id a student belongs to, from either :studentId (params) or studentId (body).
+const getStudentSchoolId = async (req) => {
+  const studentId = req.params.studentId || (req.body && req.body.studentId);
+  const { data } = await supabase
+    .from('students')
+    .select('school_id')
+    .eq('id', studentId)
+    .single();
+  return data?.school_id;
+};
+
+// Resolves the school_id of a users-table row, from :userId (params).
+const getUserSchoolId = async (req) => {
+  const { data } = await supabase
+    .from('users')
+    .select('school_id')
+    .eq('id', req.params.userId)
+    .single();
+  return data?.school_id;
+};
+
 // ===== HEALTH & AUTH =====
 
 app.get('/api/health', async (req, res) => {
@@ -279,7 +312,7 @@ app.get('/api/schools', async (req, res) => {
   }
 });
 
-app.get('/api/schools/:schoolId', async (req, res) => {
+app.get('/api/schools/:schoolId', authenticateToken, requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     
@@ -521,10 +554,16 @@ app.get('/api/schools/:schoolId/users', authenticateToken, requireRole('secretar
   }
 });
 
+const STAFF_ASSIGNABLE_ROLES = ['secretary', 'admin', 'kitchen'];
+
 app.post('/api/schools/:schoolId/users', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { email, password, firstName, lastName, role, phone } = req.body;
+
+    if (req.user.role !== 'super_admin' && !STAFF_ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה להעניק תפקיד זה' });
+    }
 
     const { data: existing } = await supabase
       .from('users')
@@ -561,10 +600,14 @@ app.post('/api/schools/:schoolId/users', authenticateToken, requireRole('secreta
   }
 });
 
-app.put('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.put('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getUserSchoolId), async (req, res) => {
   try {
     const { userId } = req.params;
     const { firstName, lastName, email, phone, role, password } = req.body;
+
+    if (role !== undefined && req.user.role !== 'super_admin' && !STAFF_ASSIGNABLE_ROLES.includes(role)) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה להעניק תפקיד זה' });
+    }
 
     const updateData = {
       first_name: firstName,
@@ -680,16 +723,7 @@ app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), 
   }
 });
 
-const getStudentParentId = async (req) => {
-  const { data } = await supabase
-    .from('students')
-    .select('parent_id')
-    .eq('id', req.params.studentId)
-    .single();
-  return data?.parent_id;
-};
-
-app.put('/api/students/:studentId', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
+app.put('/api/students/:studentId', authenticateToken, requireSelfOrStaff(getStudentParentId, getStudentSchoolId), async (req, res) => {
   try {
     const { studentId } = req.params;
     const {
@@ -755,7 +789,7 @@ app.put('/api/students/:studentId', authenticateToken, requireSelfOrStaff(getStu
   }
 });
 
-app.delete('/api/students/:studentId', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
+app.delete('/api/students/:studentId', authenticateToken, requireSelfOrStaff(getStudentParentId, getStudentSchoolId), async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -830,7 +864,7 @@ app.post('/api/students/search', authenticateToken, requireRole('kitchen', 'secr
   }
 });
 
-app.post('/api/students/:studentId/photo', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
+app.post('/api/students/:studentId/photo', authenticateToken, requireSelfOrStaff(getStudentParentId, getStudentSchoolId), async (req, res) => {
   try {
     const { studentId } = req.params;
     const { photoData } = req.body;
@@ -869,7 +903,76 @@ app.post('/api/students/:studentId/photo', authenticateToken, requireSelfOrStaff
 
 // ===== QR CODES =====
 
-app.post('/api/students/:studentId/create-qr', async (req, res) => {
+// A student's QR code is a standing credential for charging their account, so it can't be
+// handed out with no proof of identity. Two legitimate callers have no JWT session: the
+// mobile parent/student apps (accessed via a long-lived link token, not a login). So this
+// accepts EITHER a JWT (staff of the student's school, the student's own parent, or
+// super_admin) OR a valid parent/student mobile token that resolves to this student.
+const authorizeStudentQrAccess = async (req, res, next) => {
+  const { studentId } = req.params;
+  const authHeader = req.headers['authorization'];
+  const bearer = authHeader && authHeader.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (bearer) {
+    try {
+      const decoded = jwt.verify(bearer, process.env.JWT_SECRET);
+      if (decoded.role === 'super_admin') {
+        req.user = decoded;
+        return next();
+      }
+      const { data: student } = await supabase
+        .from('students')
+        .select('school_id, parent_id')
+        .eq('id', studentId)
+        .single();
+      if (student) {
+        const isStaffOfSchool = ['secretary', 'admin', 'kitchen'].includes(decoded.role) &&
+          String(student.school_id) === String(decoded.school_id);
+        const isOwnParent = decoded.role === 'parent' && String(student.parent_id) === String(decoded.id);
+        if (isStaffOfSchool || isOwnParent) {
+          req.user = decoded;
+          return next();
+        }
+      }
+    } catch (err) {
+      // invalid/expired JWT — fall through to mobile-token check
+    }
+  }
+
+  const mobileToken = req.query.mobileToken || (req.body && req.body.mobileToken);
+  if (mobileToken) {
+    const { data: studentToken } = await supabase
+      .from('student_mobile_tokens')
+      .select('student_id')
+      .eq('token', mobileToken)
+      .gte('expires_at', new Date().toISOString())
+      .maybeSingle();
+    if (studentToken && String(studentToken.student_id) === String(studentId)) {
+      return next();
+    }
+
+    const { data: parentToken } = await supabase
+      .from('parent_mobile_tokens')
+      .select('parent_id')
+      .eq('token', mobileToken)
+      .gte('expires_at', new Date().toISOString())
+      .maybeSingle();
+    if (parentToken) {
+      const { data: student } = await supabase
+        .from('students')
+        .select('parent_id')
+        .eq('id', studentId)
+        .single();
+      if (student && String(student.parent_id) === String(parentToken.parent_id)) {
+        return next();
+      }
+    }
+  }
+
+  return res.status(401).json({ success: false, message: 'נדרשת הרשאה לצפייה ב-QR' });
+};
+
+app.post('/api/students/:studentId/create-qr', authorizeStudentQrAccess, async (req, res) => {
   try {
     const { studentId } = req.params;
     
@@ -905,7 +1008,7 @@ app.post('/api/students/:studentId/create-qr', async (req, res) => {
   }
 });
 
-app.post('/api/students/:studentId/generate-qr', async (req, res) => {
+app.post('/api/students/:studentId/generate-qr', authorizeStudentQrAccess, async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -946,7 +1049,7 @@ app.post('/api/students/:studentId/generate-qr', async (req, res) => {
   }
 });
 
-app.post('/api/students/:studentId/send-qr-email', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
+app.post('/api/students/:studentId/send-qr-email', authenticateToken, requireSelfOrStaff(getStudentParentId, getStudentSchoolId), async (req, res) => {
   try {
     const { studentId } = req.params;
     const { parentEmail, parentName, studentName, schoolName } = req.body;
@@ -1042,6 +1145,10 @@ app.post('/api/scan-student', authenticateToken, requireRole('kitchen', 'secreta
 
     if (studentError || !student) {
       return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+
+    if (req.user.role !== 'super_admin' && String(student.school_id) !== String(req.user.school_id)) {
+      return res.status(403).json({ success: false, message: 'תלמיד זה אינו שייך לבית הספר שלך' });
     }
 
     res.json({
@@ -1180,7 +1287,7 @@ app.post('/api/register', async (req, res) => {
   }
 });
 
-app.get('/api/parent/:userId', authenticateToken, requireSelfOrStaff(req => req.params.userId), async (req, res) => {
+app.get('/api/parent/:userId', authenticateToken, requireSelfOrStaff(req => req.params.userId, getUserSchoolId), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -1308,7 +1415,7 @@ app.get('/api/student/:studentId/parent', authenticateToken, requireRole('secret
 
 // ===== TRANSACTIONS =====
 
-app.post('/api/add-money', authenticateToken, requireSelfOrStaff(getStudentParentId), async (req, res) => {
+app.post('/api/add-money', authenticateToken, requireSelfOrStaff(getStudentParentId, getStudentSchoolId), async (req, res) => {
   try {
     const { studentId, amount, paymentMethod } = req.body;
     
@@ -1366,7 +1473,7 @@ app.post('/api/add-money', authenticateToken, requireSelfOrStaff(getStudentParen
   }
 });
 
-app.get('/api/transactions/:userId', authenticateToken, requireSelfOrStaff(req => req.params.userId), async (req, res) => {
+app.get('/api/transactions/:userId', authenticateToken, requireSelfOrStaff(req => req.params.userId, getUserSchoolId), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -1491,6 +1598,10 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
 
     if (studentError || !student) {
       return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+
+    if (req.user.role !== 'super_admin' && String(student.school_id) !== String(req.user.school_id)) {
+      return res.status(403).json({ success: false, message: 'תלמיד זה אינו שייך לבית הספר שלך' });
     }
 
     const school = student.schools;
