@@ -18,6 +18,9 @@ import SchoolContactForm from './components/SchoolContactForm';
 import SupportPage from './components/SupportPage';
 import ContactPage from './components/ContactPage';
 import AboutPage from './components/AboutPage';
+import TermsOfUsePage from './components/TermsOfUsePage';
+import PrivacyPolicyPage from './components/PrivacyPolicyPage';
+import SchoolPolicyPage from './components/SchoolPolicyPage';
 import WhatsAppSupportButton from './components/WhatsAppSupportButton';
 
 import './App.css';
@@ -50,7 +53,10 @@ function App() {
  <Route path="/payment-success" element={<PaymentSuccess />} />  
  <Route path="/support" element={<SupportPage />} />
 <Route path="/contact" element={<ContactPage />} />
-<Route path="/about" element={<AboutPage />} />       
+<Route path="/about" element={<AboutPage />} />
+<Route path="/terms" element={<TermsOfUsePage />} />
+<Route path="/privacy" element={<PrivacyPolicyPage />} />
+<Route path="/school-policy" element={<SchoolPolicyPage />} />
           
           {/* נתיבים ישנים (למקרה שיש קישורים קיימים) */}
           <Route path="/parent-login" element={<ParentLogin />} />

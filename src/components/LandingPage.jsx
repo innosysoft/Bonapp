@@ -585,7 +585,7 @@ useEffect(() => {
             color: '#95a5a6',
             fontSize: '0.9rem'
           }}>
-            <p style={{ margin: 0 }}>
+            <div style={{ margin: 0 }}>
 
               <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
   <button onClick={() => navigate('/about')} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>
@@ -599,8 +599,20 @@ useEffect(() => {
   </button>
 </div>
 
+              <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+  <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
+    תנאי שימוש
+  </button>
+  <button onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
+    מדיניות פרטיות
+  </button>
+  <button onClick={() => navigate('/school-policy')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
+    מדיניות בית ספר
+  </button>
+</div>
+
               © {new Date().getFullYear()} BonApp by Innosys. כל הזכויות שמורות.
-            </p>
+            </div>
           </div>
         </div>
 

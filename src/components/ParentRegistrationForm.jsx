@@ -1112,7 +1112,7 @@ const loadSchoolGroups = async (schoolId) => {
                     />
                     <label htmlFor="terms" style={{ cursor: 'pointer', fontSize: '15px', lineHeight: '1.4' }}>
                       אני מסכים/ה ל
-                      <a href="#" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
+                      <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
                         תנאי השימוש
                       </a>
                       של המערכת *
@@ -1129,7 +1129,7 @@ const loadSchoolGroups = async (schoolId) => {
                     />
                     <label htmlFor="privacy" style={{ cursor: 'pointer', fontSize: '15px', lineHeight: '1.4' }}>
                       אני מסכים/ה ל
-                      <a href="#" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
+                      <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
                         מדיניות הפרטיות
                       </a>
                       ולשימוש בנתונים האישיים *
@@ -1145,7 +1145,11 @@ const loadSchoolGroups = async (schoolId) => {
                       style={{ width: '18px', height: '18px', cursor: 'pointer', marginTop: '2px' }}
                     />
                     <label htmlFor="schoolPolicy" style={{ cursor: 'pointer', fontSize: '15px', lineHeight: '1.4' }}>
-                      אני מסכים/ה למדיניות בית הספר בנוגע לארוחות ותשלומים *
+                      אני מסכים/ה ל
+                      <a href="/school-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
+                        מדיניות בית הספר
+                      </a>
+                      בנוגע לארוחות ותשלומים *
                     </label>
                   </div>
                 </div>
