@@ -1339,12 +1339,41 @@ app.get('/api/parent/:userId', authenticateToken, requireSelfOrStaff(req => req.
       .eq('school_id', parent.school_id);
 
 
-    const enrichedChildren = (children || []).map(child => ({
-      ...child,
-      canBuyToday: child.status === 'active',
-      lastMeal: child.last_meal_date || 'אין מידע',
-      photo: null,
-      group_name: groups?.find(g => g.id === child.group_id)?.name || child.grade || ''
+    const now = new Date();
+    const enrichedChildren = await Promise.all((children || []).map(async child => {
+      const { data: lastPayment } = await supabase
+        .from('transactions')
+        .select('payment_type')
+        .eq('student_id', child.id)
+        .eq('type', 'payment')
+        .not('transaction_date', 'is', null)
+        .order('transaction_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+
+      const paymentType = lastPayment?.payment_type || null;
+      let monthlyPaid = null;
+
+      if (paymentType === 'monthly') {
+        const { data: paidMonth } = await supabase
+          .from('monthly_payments')
+          .select('id')
+          .eq('student_id', child.id)
+          .eq('year', now.getFullYear())
+          .eq('month', now.getMonth() + 1)
+          .maybeSingle();
+        monthlyPaid = !!paidMonth;
+      }
+
+      return {
+        ...child,
+        canBuyToday: child.status === 'active',
+        lastMeal: child.last_meal_date || 'אין מידע',
+        photo: null,
+        group_name: groups?.find(g => g.id === child.group_id)?.name || child.grade || '',
+        payment_type: paymentType,
+        monthlyPaid
+      };
     }));
 
     res.json({
@@ -2334,8 +2363,18 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
         description: `תשלום Grow - ₪${amount}`,
         transaction_date: new Date().toISOString()
       });
-    
-    
+
+    // מנוי חודשי - סמן את החודש הנוכחי כשולם (ולא כ"יתרה" רגילה)
+    if (paymentType === 'monthly') {
+      const now = new Date();
+      await supabase
+        .from('monthly_payments')
+        .upsert(
+          { student_id: studentId, school_id: student.school_id, year: now.getFullYear(), month: now.getMonth() + 1 },
+          { onConflict: 'student_id,year,month', ignoreDuplicates: true }
+        );
+    }
+
     res.json({ success: true });
     
   } catch (error) {

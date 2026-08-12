@@ -34,6 +34,9 @@ import {
 import SendToPhoneModal from './SendToPhoneModal';
 import { Smartphone } from 'lucide-react';  // אם אין כבר
 
+const monthNamesHeb = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
+  'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
 const ParentDashboard = () => {
   const navigate = useNavigate();
   const [selectedChild, setSelectedChild] = useState(0);
@@ -1283,10 +1286,21 @@ const handleSendEmail = async () => {
     </div>
                 
                 <div style={styles.balanceSection}>
-                  <p style={styles.balanceAmount}>
-                    ₪{(children[selectedChild]?.balance || 0).toFixed(2)}
-                  </p>
-                  <p style={styles.balanceLabel}>יתרה נוכחית</p>
+                  {children[selectedChild]?.payment_type === 'monthly' ? (
+                    <>
+                      <p style={{ ...styles.balanceAmount, color: children[selectedChild]?.monthlyPaid ? '#2e7d32' : '#f44336' }}>
+                        {children[selectedChild]?.monthlyPaid ? '✅ שולם' : '❌ לא שולם'}
+                      </p>
+                      <p style={styles.balanceLabel}>מנוי חודשי - {monthNamesHeb[new Date().getMonth()]}</p>
+                    </>
+                  ) : (
+                    <>
+                      <p style={styles.balanceAmount}>
+                        ₪{(children[selectedChild]?.balance || 0).toFixed(2)}
+                      </p>
+                      <p style={styles.balanceLabel}>יתרה נוכחית</p>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -1562,17 +1576,17 @@ const handleSendEmail = async () => {
                   fontSize: '0.9rem',
                   color: '#2e7d32'
                 }}>
-                  {schoolSettings?.enable_monthly_package ? 'סטטוס תשלום חודשי' : 'סה״כ יתרות'}
+                  {children[selectedChild]?.payment_type === 'monthly' ? 'סטטוס תשלום חודשי' : 'סה״כ יתרות'}
                 </span>
                 <span style={{
                   fontSize: '1.1rem',
                   fontWeight: 'bold',
-                  color: schoolSettings?.enable_monthly_package 
-                    ? (children[selectedChild]?.balance > 0 ? '#2e7d32' : '#f44336')
+                  color: children[selectedChild]?.payment_type === 'monthly'
+                    ? (children[selectedChild]?.monthlyPaid ? '#2e7d32' : '#f44336')
                     : '#2e7d32'
                 }}>
-                  {schoolSettings?.enable_monthly_package 
-                    ? (children[selectedChild]?.balance > 0 ? '✅ שולם' : '❌ טרם שולם')
+                  {children[selectedChild]?.payment_type === 'monthly'
+                    ? (children[selectedChild]?.monthlyPaid ? '✅ שולם' : '❌ טרם שולם')
                     : `₪${children.reduce((sum, child) => sum + (child.balance || 0), 0).toFixed(2)}`
                   }
                 </span>
