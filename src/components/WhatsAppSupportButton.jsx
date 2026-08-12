@@ -2,7 +2,10 @@ import React from 'react';
 
 // עדכן כאן את מספר הוואטסאפ של התמיכה בפורמט בינלאומי (לדוגמה '972501234567').
 // כל עוד השדה ריק, הכפתור לא יוצג בכלל - כדי שאף אחד לא יכתוב למספר לא קיים.
-export const SUPPORT_WHATSAPP_NUMBER = '';
+export const SUPPORT_WHATSAPP_NUMBER = '972522494183';
+
+// נשלח כחלק מהודעת הפתיחה, כדי שבצד התמיכה (שהמספר משותף גם לאתרים אחרים) יידעו שהפנייה הגיעה מ-BonApp.
+export const SUPPORT_SOURCE_TAG = 'פנייה מאתר BonApp 🎓';
 
 export const buildWhatsAppUrl = (message) =>
   `https://wa.me/${SUPPORT_WHATSAPP_NUMBER}?text=${encodeURIComponent(message)}`;
@@ -12,7 +15,7 @@ const WhatsAppSupportButton = () => {
 
   return (
     <a
-      href={buildWhatsAppUrl('שלום, אני צריך/ה עזרה עם BonApp')}
+      href={buildWhatsAppUrl(`${SUPPORT_SOURCE_TAG}\nשלום, אני צריך/ה עזרה`)}
       target="_blank"
       rel="noopener noreferrer"
       title="תמיכה בוואטסאפ"

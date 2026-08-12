@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SUPPORT_WHATSAPP_NUMBER, buildWhatsAppUrl } from './WhatsAppSupportButton';
+import { SUPPORT_WHATSAPP_NUMBER, SUPPORT_SOURCE_TAG, buildWhatsAppUrl } from './WhatsAppSupportButton';
 
 const SupportPage = () => {
   const navigate = useNavigate();
@@ -161,7 +161,7 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
               </button>
               {SUPPORT_WHATSAPP_NUMBER && (
                 <a
-                  href={buildWhatsAppUrl('שלום, אני צריך/ה עזרה עם BonApp')}
+                  href={buildWhatsAppUrl(`${SUPPORT_SOURCE_TAG}\nשלום, אני צריך/ה עזרה`)}
                   target="_blank"
                   rel="noopener noreferrer"
                   style={{ padding: '1rem 2rem', background: '#25D366', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
