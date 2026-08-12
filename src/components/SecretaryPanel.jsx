@@ -1893,8 +1893,6 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
               </div>
             </>
           )}
-        </div>
-      </div>
 
 {/* טאב שכבות */}
 {activeTab === 'groups' && (
@@ -2031,6 +2029,8 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
     </div>
   </div>
 )}
+        </div>
+      </div>
 
       {/* מודל הוספת תשלום */}
       {showAddPayment && (
