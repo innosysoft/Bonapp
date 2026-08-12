@@ -36,3 +36,46 @@
     transform: rotate(360deg);
   }
 }
+
+/* ===== נגישות ===== */
+html.a11y-font-1 { font-size: 112.5%; }
+html.a11y-font-2 { font-size: 125%; }
+html.a11y-font-3 { font-size: 137.5%; }
+
+html.a11y-contrast,
+html.a11y-contrast body {
+  background: #000 !important;
+  color: #ffeb3b !important;
+}
+html.a11y-contrast * {
+  background-color: #000 !important;
+  color: #ffeb3b !important;
+  border-color: #ffeb3b !important;
+}
+html.a11y-contrast img,
+html.a11y-contrast svg {
+  filter: grayscale(100%) contrast(150%);
+}
+
+html.a11y-underline a {
+  text-decoration: underline !important;
+}
+
+html.a11y-no-motion *,
+html.a11y-no-motion *::before,
+html.a11y-no-motion *::after {
+  animation: none !important;
+  transition: none !important;
+}
+
+html.a11y-readable-font,
+html.a11y-readable-font * {
+  font-family: Arial, Helvetica, sans-serif !important;
+  line-height: 1.6 !important;
+  letter-spacing: 0.02em !important;
+}
+
+*:focus-visible {
+  outline: 3px solid #1a73e8 !important;
+  outline-offset: 2px !important;
+}

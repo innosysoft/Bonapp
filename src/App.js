@@ -22,6 +22,8 @@ import TermsOfUsePage from './components/TermsOfUsePage';
 import PrivacyPolicyPage from './components/PrivacyPolicyPage';
 import SchoolPolicyPage from './components/SchoolPolicyPage';
 import WhatsAppSupportButton from './components/WhatsAppSupportButton';
+import AccessibilityWidget from './components/AccessibilityWidget';
+import AccessibilityStatementPage from './components/AccessibilityStatementPage';
 
 import './App.css';
 
@@ -30,6 +32,7 @@ function App() {
     <Router>
       <div className="App">
         <WhatsAppSupportButton />
+        <AccessibilityWidget />
         <Routes>
           {/* דף הבית הראשי */}
           <Route path="/" element={<LandingPage />} />
@@ -57,6 +60,7 @@ function App() {
 <Route path="/terms" element={<TermsOfUsePage />} />
 <Route path="/privacy" element={<PrivacyPolicyPage />} />
 <Route path="/school-policy" element={<SchoolPolicyPage />} />
+<Route path="/accessibility" element={<AccessibilityStatementPage />} />
           
           {/* נתיבים ישנים (למקרה שיש קישורים קיימים) */}
           <Route path="/parent-login" element={<ParentLogin />} />

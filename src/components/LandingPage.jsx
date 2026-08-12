@@ -609,6 +609,9 @@ useEffect(() => {
   <button onClick={() => navigate('/school-policy')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
     מדיניות בית ספר
   </button>
+  <button onClick={() => navigate('/accessibility')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
+    הצהרת נגישות
+  </button>
 </div>
 
               © {new Date().getFullYear()} BonApp by Innosys. כל הזכויות שמורות.
