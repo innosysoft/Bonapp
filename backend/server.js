@@ -1435,7 +1435,10 @@ app.get('/api/student/:studentId/parent', authenticateToken, requireRole('secret
 
 // ===== TRANSACTIONS =====
 
-app.post('/api/add-money', authenticateToken, requireSelfOrStaff(getStudentParentId, getStudentSchoolId), async (req, res) => {
+// Staff-only: parents must never self-credit a balance directly. Real payments update
+// balance through their own gateway-confirmation code (grow-webhook-v2, paybox-callback);
+// this endpoint is for staff recording a cash payment (or other manual adjustment).
+app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getStudentSchoolId), async (req, res) => {
   try {
     const { studentId, amount, paymentMethod } = req.body;
     
@@ -2960,13 +2963,13 @@ app.post('/api/paybox-callback', async (req, res) => {
       await supabase
         .from('transactions')
         .insert({
-          student_id: studentId,
+          student_id: payment.student_id,
           school_id: student.school_id,
           amount: amount,
           type: 'payment',
-          payment_method: 'grow',
-          payment_type: paymentType,
-          description: `תשלום Grow - עסקה ${transactionId || Date.now()}`,
+          payment_method: 'paybox',
+          payment_type: payment.payment_type || 'balance',
+          description: `תשלום Paybox - עסקה ${transaction_id || Date.now()}`,
           transaction_date: new Date().toISOString()
         });
       

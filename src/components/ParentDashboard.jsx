@@ -40,7 +40,7 @@ const ParentDashboard = () => {
   const [showAddMoney, setShowAddMoney] = useState(false);
   
   const [amount, setAmount] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState('bit');
+  const [paymentMethod, setPaymentMethod] = useState('gateway');
   const [isLoading, setIsLoading] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [parentData, setParentData] = useState(null);
@@ -262,8 +262,13 @@ useEffect(() => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
 
   try {
-    // אם זה Paybox - נתהליך אחרת
-    if (paymentMethod === 'paybox') {
+    if (paymentMethod === 'cash') {
+      // מזומן - רק הנחיות, לא הוספה אוטומטית! היתרה תתעדכן רק אחרי שהמזכירה מאשרת שקיבלה את הכסף.
+      alert(`💵 הנחיות תשלום במזומן:\n\n1. קח ₪${amount} במזומן\n2. פנה למזכירת בית הספר\n3. תן לה את קוד המשפחה: ${parentData.uniqueCode}\n4. המזכירה תוסיף את הכסף ליתרה\n\n⏳ היתרה תתעדכן לאחר שהמזכירה תאשר את התשלום`);
+      setShowAddMoney(false);
+      setAmount('');
+    } else if (schoolSettings?.enable_paybox) {
+      // בית הספר מחובר ל-Paybox - התשלום עובר דרך חברת הסליקה
       const response = await authFetch('https://api.bonapp.dev/api/create-paybox-payment', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -273,56 +278,52 @@ useEffect(() => {
           parentId: currentUser.id
         })
       });
-      
+
       const result = await response.json();
-      
+
       if (result.success) {
-        // פתח חלון חדש לתשלום Paybox
         if (result.paymentUrl.includes('#paybox-demo')) {
           // סביבת פיתוח
           alert(`🔧 סביבת פיתוח\n\nכשיהיה Paybox אמיתי:\n- יפתח חלון תשלום\n- הורה ישלם\n- יתרה תתעדכן אוטומטית\n\nסכום: ₪${amount}\nעסקה: ${result.transactionId}`);
-          setShowAddMoney(false);
-          setAmount('');
         } else {
-          // Paybox אמיתי
           window.open(result.paymentUrl, '_blank', 'width=600,height=700');
           alert('חלון התשלום נפתח!\nלאחר התשלום היתרה תתעדכן אוטומטית.');
-          setShowAddMoney(false);
-          setAmount('');
         }
+        setShowAddMoney(false);
+        setAmount('');
       } else {
-        alert(result.message || 'שגיאה ביצירת תשלום Paybox');
+        alert(result.message || 'שגיאה ביצירת תשלום');
       }
-    } else if (paymentMethod === 'cash') {
-  // מזומן - רק הנחיות, לא הוספה אוטומטית!
-  alert(`💵 הנחיות תשלום במזומן:\n\n1. קח ₪${amount} במזומן\n2. פנה למזכירת בית הספר\n3. תן לה את קוד המשפחה: ${parentData.uniqueCode}\n4. המזכירה תוסיף את הכסף ליתרה\n\n⏳ היתרה תתעדכן לאחר שהמזכירה תאשר את התשלום`);
-  setShowAddMoney(false);
-  setAmount('');
-} else {
-  // שיטות תשלום אחרות (ביט, אשראי)
-  const result = await addMoney(selectedChildData.id, parseFloat(amount), paymentMethod);
-  
-  if (result.success) {
-    // עדכן את יתרת הילד במקומי
-    const updatedChildren = [...children];
-    updatedChildren[selectedChild] = {
-      ...updatedChildren[selectedChild],
-      balance: result.newBalance
-    };
-    setChildren(updatedChildren);
-    
-    alert(`תשלום ${paymentMethod} בוצע בהצלחה!\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}\n\n(בסביבה אמיתית - זה יעבור דרך שירות תשלומים חיצוני)`);
-    setShowAddMoney(false);
-    setAmount('');
-  } else {
-    alert(result.message || 'שגיאה בהוספת כסף');
-  }
-}
+    } else {
+      // ברירת מחדל: התשלום עובר דרך חברת הסליקה של בית הספר (Grow)
+      const response = await authFetch('https://api.bonapp.dev/api/create-grow-payment', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          parent_name: currentUser.name || `${currentUser.first_name || ''} ${currentUser.last_name || ''}`.trim(),
+          parent_phone: (currentUser.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
+          amount: parseFloat(amount).toFixed(2),
+          student_name: `${selectedChildData.first_name} ${selectedChildData.last_name}`,
+          description: `BonApp-${selectedChildData.id}`,
+          student_id: selectedChildData.id
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success && result.paymentUrl) {
+        setIsPolling(true);
+        setTimeout(() => setIsPolling(false), 600000);
+        window.location.href = result.paymentUrl;
+      } else {
+        alert('שגיאה ביצירת קישור תשלום');
+      }
+    }
   } catch (error) {
     console.error('Add money error:', error);
-    alert('שגיאה בהוספת כסף. נסה שוב.');
+    alert('שגיאה בביצוע התשלום. נסה שוב.');
   }
-  
+
   setIsLoading(false);
 };
 
@@ -1856,19 +1857,19 @@ setTimeout(() => setIsPolling(false), 600000);
               
               <div style={{
                 display: 'grid',
-                gridTemplateColumns: isMobile ? '1fr 1fr' : '1fr 1fr 1fr 1fr',
+                gridTemplateColumns: '1fr 1fr',
                 gap: '0.5rem'
               }}>
                 <button
                   type="button"
-                  onClick={() => setPaymentMethod('bit')}
+                  onClick={() => setPaymentMethod('gateway')}
                   style={{
                     padding: '1rem',
                     border: '2px solid',
                     borderRadius: '12px',
-                    background: paymentMethod === 'bit' ? '#e3f2fd' : 'white',
-                    borderColor: paymentMethod === 'bit' ? '#2196f3' : '#e0e0e0',
-                    color: paymentMethod === 'bit' ? '#2196f3' : '#666',
+                    background: paymentMethod === 'gateway' ? '#e3f2fd' : 'white',
+                    borderColor: paymentMethod === 'gateway' ? '#2196f3' : '#e0e0e0',
+                    color: paymentMethod === 'gateway' ? '#2196f3' : '#666',
                     cursor: 'pointer',
                     transition: 'all 0.3s',
                     textAlign: 'center',
@@ -1876,50 +1877,9 @@ setTimeout(() => setIsPolling(false), 600000);
                     fontWeight: '600'
                   }}
                 >
-                  📱<br />ביט
+                  💳<br />תשלום מאובטח
                 </button>
-                
-<button
-  type="button"
-  onClick={() => setPaymentMethod('paybox')}
-  style={{
-    padding: '1rem',
-    border: '2px solid',
-    borderRadius: '12px',
-    background: paymentMethod === 'paybox' ? '#e3f2fd' : 'white',
-    borderColor: paymentMethod === 'paybox' ? '#2196f3' : '#e0e0e0',
-    color: paymentMethod === 'paybox' ? '#2196f3' : '#666',
-    cursor: 'pointer',
-    transition: 'all 0.3s',
-    textAlign: 'center',
-    fontSize: '0.9rem',
-    fontWeight: '600'
-  }}
->
-  💳<br />Paybox
-</button>
 
-
-                <button
-                  type="button"
-                  onClick={() => setPaymentMethod('credit')}
-                  style={{
-                    padding: '1rem',
-                    border: '2px solid',
-                    borderRadius: '12px',
-                    background: paymentMethod === 'credit' ? '#e3f2fd' : 'white',
-                    borderColor: paymentMethod === 'credit' ? '#2196f3' : '#e0e0e0',
-                    color: paymentMethod === 'credit' ? '#2196f3' : '#666',
-                    cursor: 'pointer',
-                    transition: 'all 0.3s',
-                    textAlign: 'center',
-                    fontSize: '0.9rem',
-                    fontWeight: '600'
-                  }}
-                >
-                  💳<br />אשראי
-                </button>
-                
                 <button
                   type="button"
                   onClick={() => setPaymentMethod('cash')}
@@ -1953,9 +1913,7 @@ setTimeout(() => setIsPolling(false), 600000);
               lineHeight: 1.4
             }}>
               <strong>קוד משפחה:</strong> {parentData.uniqueCode}<br />
-              {paymentMethod === 'bit' && 'העברה מהירה דרך אפליקציית ביט'}
-{paymentMethod === 'paybox' && 'תשלום מאובטח דרך Paybox'}
-{paymentMethod === 'credit' && 'תשלום מאובטח בכרטיס אשראי'}
+              {paymentMethod === 'gateway' && 'תשלום מאובטח דרך חברת הסליקה של בית הספר'}
 {paymentMethod === 'cash' && 'פנה למזכירה עם המזומן וקוד המשפחה'}
             </div>
             
@@ -2017,9 +1975,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   </>
                 ) : (
                   <>
-                    {paymentMethod === 'bit' && '📱 שלם בביט'}
-                    {paymentMethod === 'paybox' && '💳 שלם ב-Paybox'}
-                    {paymentMethod === 'credit' && '💳 שלם בכרטיס'}
+                    {paymentMethod === 'gateway' && '💳 שלם עכשיו'}
                     {paymentMethod === 'cash' && '💵 הנחיות מזומן'}
                     <ArrowRight size={16} />
                   </>
