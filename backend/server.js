@@ -691,6 +691,12 @@ app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), 
       });
     }
 
+    let resolvedGrade = grade;
+    if (group_id) {
+      const { data: group } = await supabase.from('grade_groups').select('name').eq('id', group_id).single();
+      if (group) resolvedGrade = group.name;
+    }
+
     const { data: student, error } = await supabase
       .from('students')
       .insert({
@@ -698,7 +704,7 @@ app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), 
         school_id,
         first_name,
         last_name: last_name || '',
-        grade,
+        grade: resolvedGrade,
         student_phone: student_phone || '',
         student_id_number: student_id_number || null,
         system_access: system_access || false,
@@ -1927,12 +1933,20 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
         parentId = newParent.id;
       }
 
+      // ה"כיתה" חייבת לשקף את השם של השכבה (group_id) שנבחרה בפועל - היא הבסיס
+      // לחישוב ימי הארוחות והחיוב, לא שדה חופשי שההורה מילא בנפרד.
+      const { data: registrationGroups } = await supabase
+        .from('grade_groups')
+        .select('id, name')
+        .eq('school_id', registration.school_id);
+      const groupNameById = new Map((registrationGroups || []).map(g => [g.id, g.name]));
+
       const studentsToCreate = children.map(child => ({
         school_id: registration.school_id,
         parent_id: parentId,
         first_name: child.firstName,
         last_name: child.lastName,
-        grade: child.grade,
+        grade: (child.group_id && groupNameById.get(child.group_id)) || child.grade || '',
         group_id: child.group_id || null,
         balance: 0.0,
         student_phone: child.phone,
