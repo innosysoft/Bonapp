@@ -14,6 +14,12 @@ const [studyDays, setStudyDays] = useState([]);
 const [calendarMonth, setCalendarMonth] = useState(new Date().getMonth() + 1);
 const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
 
+// העלאת שנה
+const [showPromoteModal, setShowPromoteModal] = useState(false);
+const [promoteMapping, setPromoteMapping] = useState({});
+const [groupStudentCounts, setGroupStudentCounts] = useState({});
+const [promoting, setPromoting] = useState(false);
+
 
   const currentMonth = new Date().getMonth() + 1;
   const currentYear = new Date().getFullYear();
@@ -77,6 +83,71 @@ const [calendarYear, setCalendarYear] = useState(new Date().getFullYear());
       }
     } catch (error) {
       console.error('Error deleting group:', error);
+    }
+  };
+
+  const openPromoteModal = async () => {
+    try {
+      const response = await authFetch(`https://api.bonapp.dev/api/school-students/${schoolId}`);
+      const data = await response.json();
+      if (data.success) {
+        const counts = {};
+        data.students.forEach(s => {
+          if (s.status !== 'active') return;
+          counts[s.group_id] = (counts[s.group_id] || 0) + 1;
+        });
+        setGroupStudentCounts(counts);
+      }
+    } catch (error) {
+      console.error('Error loading student counts:', error);
+    }
+    setPromoteMapping({});
+    setShowPromoteModal(true);
+  };
+
+  const executePromotion = async () => {
+    const mappings = Object.entries(promoteMapping)
+      .filter(([, target]) => target !== '' && target !== undefined)
+      .map(([fromGroupId, target]) => ({
+        fromGroupId,
+        toGroupId: target === 'GRADUATE' ? null : target
+      }));
+
+    if (mappings.length === 0) {
+      alert('לא נבחרו מעברים');
+      return;
+    }
+
+    const summary = mappings.map(m => {
+      const fromName = groups.find(g => g.id === m.fromGroupId)?.name || '?';
+      const toName = m.toGroupId ? (groups.find(g => g.id === m.toGroupId)?.name || '?') : 'בוגרים (לא פעיל)';
+      const count = groupStudentCounts[m.fromGroupId] || 0;
+      return `${fromName} ← ${toName} (${count} תלמידים)`;
+    }).join('\n');
+
+    if (!window.confirm(`לבצע את המעברים הבאים?\n\n${summary}\n\nפעולה זו לא ניתנת לביטול.`)) return;
+
+    setPromoting(true);
+    try {
+      const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolId}/promote-groups`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mappings })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setMessage('✅ העלאת השנה בוצעה בהצלחה');
+        setTimeout(() => setMessage(''), 4000);
+        setShowPromoteModal(false);
+        if (selectedGroup) loadSchedule(selectedGroup);
+      } else {
+        alert(data.message || 'שגיאה בביצוע העלאת שנה');
+      }
+    } catch (error) {
+      console.error('Error promoting groups:', error);
+      alert('שגיאה בביצוע העלאת שנה');
+    } finally {
+      setPromoting(false);
     }
   };
 
@@ -174,9 +245,23 @@ console.log('action:', data.action);
 
   return (
     <div style={{ direction: 'rtl' }}>
-      <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333', marginBottom: '2rem' }}>
-        ניהול שכבות
-      </h2>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
+        <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333', margin: 0 }}>
+          ניהול שכבות
+        </h2>
+        {groups.length > 0 && (
+          <button
+            onClick={openPromoteModal}
+            style={{
+              background: 'linear-gradient(135deg, #FF9800, #F57C00)', color: 'white', border: 'none',
+              padding: '0.75rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600',
+              display: 'flex', alignItems: 'center', gap: '0.5rem'
+            }}
+          >
+            🎓 העלאת שנה
+          </button>
+        )}
+      </div>
 
       {message && (
         <div style={{
@@ -397,6 +482,75 @@ console.log('action:', data.action);
           
         </div>}
       </div>
+
+      {showPromoteModal && (
+        <div style={{
+          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+          background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center',
+          justifyContent: 'center', zIndex: 2000, padding: '1rem'
+        }}>
+          <div style={{
+            background: 'white', borderRadius: '20px', padding: '2rem',
+            maxWidth: '550px', width: '100%', maxHeight: '85vh', overflowY: 'auto',
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
+          }}>
+            <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>🎓 העלאת שנה</h3>
+            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+              עבור כל שכבה, בחרו לאן עוברים התלמידים שבה. שכבות שלא נבחר להן יעד יישארו ללא שינוי.
+            </p>
+
+            <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
+              {groups.map(group => (
+                <div key={group.id} style={{
+                  display: 'flex', alignItems: 'center', gap: '1rem',
+                  padding: '0.75rem', background: '#f8f9fa', borderRadius: '10px'
+                }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: '600', color: '#333' }}>{group.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: '#999' }}>{groupStudentCounts[group.id] || 0} תלמידים</div>
+                  </div>
+                  <div style={{ fontSize: '1.2rem', color: '#999' }}>←</div>
+                  <select
+                    value={promoteMapping[group.id] || ''}
+                    onChange={(e) => setPromoteMapping(prev => ({ ...prev, [group.id]: e.target.value }))}
+                    style={{ flex: 1, padding: '0.6rem', borderRadius: '8px', border: '2px solid #e0e0e0', fontSize: '0.9rem' }}
+                  >
+                    <option value="">-- ללא שינוי --</option>
+                    {groups.filter(g => g.id !== group.id).map(g => (
+                      <option key={g.id} value={g.id}>{g.name}</option>
+                    ))}
+                    <option value="GRADUATE">בוגרים (הוצא מרשימה פעילה)</option>
+                  </select>
+                </div>
+              ))}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={() => setShowPromoteModal(false)}
+                disabled={promoting}
+                style={{
+                  flex: 1, padding: '1rem', borderRadius: '12px', border: '2px solid #e0e0e0',
+                  background: 'white', color: '#666', fontWeight: '600', cursor: promoting ? 'not-allowed' : 'pointer'
+                }}
+              >
+                ביטול
+              </button>
+              <button
+                onClick={executePromotion}
+                disabled={promoting}
+                style={{
+                  flex: 1, padding: '1rem', borderRadius: '12px', border: 'none',
+                  background: promoting ? '#ccc' : 'linear-gradient(135deg, #FF9800, #F57C00)',
+                  color: 'white', fontWeight: '600', cursor: promoting ? 'not-allowed' : 'pointer'
+                }}
+              >
+                {promoting ? 'מבצע...' : 'בצע העלאת שנה'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

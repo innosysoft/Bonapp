@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getParentData, getTransactions, generateQRCode } from '../api';
+import { getParentData, getTransactions, generateQRCode, deleteStudent } from '../api';
 import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools } from '../api';
 import { setToken, authFetch } from '../auth';
 import * as XLSX from 'xlsx';
 import GradeGroupsTab from './GradeGroupsTab';
-import { 
-  Search, Plus, DollarSign, Receipt, Edit, Eye, CreditCard, Banknote, Clock, 
+import {
+  Search, Plus, DollarSign, Receipt, Edit, Eye, CreditCard, Banknote, Clock,
   CheckCircle, User, Phone, Mail, FileText, Download, Filter, Settings, LogOut,
   AlertCircle, XCircle, Calendar, TrendingUp, Users, Home, Bell, RefreshCw,
-  Printer, Check, X, UserCheck, UserX, Wallet, PiggyBank, QrCode
+  Printer, Check, X, UserCheck, UserX, Wallet, PiggyBank, QrCode, Trash2
 } from 'lucide-react';
 
 const SecretaryPanel = () => {
@@ -79,6 +79,7 @@ if (schoolsData.success) {
   if (school) {
     setSchoolName(school.name);
     setSchoolData(school);
+    loadStaffUsers(school.id);
   }
 }
 
@@ -143,8 +144,13 @@ const [loading, setLoading] = useState(true);
 
   // הרשמות ממתינות לאישור
 const [pendingRegistrations, setPendingRegistrations] = useState([
-  
+
   ]);
+
+  // ניהול צוות
+  const [staffUsers, setStaffUsers] = useState([]);
+  const [showAddStaffForm, setShowAddStaffForm] = useState(false);
+  const [newStaff, setNewStaff] = useState({ email: '', password: '', firstName: '', lastName: '', role: 'secretary', phone: '' });
 
 const loadStudentSchedule = async (studentId) => {
   const student = students.find(s => String(s.id) === String(studentId));
@@ -169,6 +175,60 @@ const loadStudentSchedule = async (studentId) => {
     setSelectedStudentSchedule(null);
   }
 };
+
+  const loadStaffUsers = async (schoolId) => {
+    try {
+      const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolId}/users`);
+      const data = await response.json();
+      if (data.success) setStaffUsers(data.users);
+    } catch (error) {
+      console.error('Error loading staff users:', error);
+    }
+  };
+
+  const addStaffUser = async () => {
+    if (!newStaff.email || !newStaff.password || !newStaff.firstName || !newStaff.lastName) {
+      alert('נא למלא את כל השדות החובה');
+      return;
+    }
+    if (newStaff.password.length < 6) {
+      alert('הסיסמה חייבת להכיל לפחות 6 תווים');
+      return;
+    }
+    try {
+      const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolData.id}/users`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newStaff)
+      });
+      const result = await response.json();
+      if (result.success) {
+        alert('איש הצוות נוסף בהצלחה!');
+        loadStaffUsers(schoolData.id);
+        setShowAddStaffForm(false);
+        setNewStaff({ email: '', password: '', firstName: '', lastName: '', role: 'secretary', phone: '' });
+      } else {
+        alert(result.message || 'שגיאה בהוספת איש צוות');
+      }
+    } catch (error) {
+      alert('שגיאה בהוספת איש צוות');
+    }
+  };
+
+  const deleteStaffUser = async (userId) => {
+    if (!window.confirm('האם למחוק את איש הצוות הזה?')) return;
+    try {
+      const response = await authFetch(`https://api.bonapp.dev/api/users/${userId}`, { method: 'DELETE' });
+      const result = await response.json();
+      if (result.success) {
+        setStaffUsers(prev => prev.filter(u => u.id !== userId));
+      } else {
+        alert(result.message || 'שגיאה במחיקת איש צוות');
+      }
+    } catch (error) {
+      alert('שגיאה במחיקת איש צוות');
+    }
+  };
 
   const handleAddPayment = async () => {
   if (paymentForm.studentId && paymentForm.amount && parseFloat(paymentForm.amount) > 0) {
@@ -397,7 +457,22 @@ const downloadReport = () => {
     
   
 
-  const filteredStudents = students.filter(student => 
+  const handleDeleteStudent = async (e, student) => {
+    e.stopPropagation();
+    if (!window.confirm(`למחוק את ${student.first_name} ${student.last_name || ''}? פעולה זו לא ניתנת לביטול.`)) return;
+    try {
+      const result = await deleteStudent(student.id);
+      if (result.success) {
+        setStudents(prev => prev.filter(s => s.id !== student.id));
+      } else {
+        alert(result.message || 'שגיאה במחיקת תלמיד');
+      }
+    } catch (error) {
+      alert('שגיאה במחיקת תלמיד');
+    }
+  };
+
+  const filteredStudents = students.filter(student =>
   student && student.first_name && 
   (`${student.first_name} ${student?.last_name || ''}`.includes(searchQuery) ||
    student.users?.phone?.includes(searchQuery) ||
@@ -1368,6 +1443,17 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
                             >
                               <Wallet size={16} />
                             </button>
+                            <button style={{
+                              background: 'none', border: 'none', cursor: 'pointer',
+                              color: '#f44336', padding: '0.25rem',
+                              borderRadius: '4px',
+                              transition: 'background 0.3s'
+                            }}
+                            onClick={(e) => handleDeleteStudent(e, student)}
+                            title="מחק תלמיד"
+                            >
+                              <Trash2 size={16} />
+                            </button>
                           </div>
                         </td>
                         <td style={{
@@ -1864,6 +1950,84 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
       <p style={{ color: '#999', fontSize: '0.9rem' }}>
         הגדרות נוספות מנוהלות ע"י מנהל המערכת
       </p>
+    </div>
+
+    {/* ניהול צוות */}
+    <div style={{
+      background: 'white', padding: '2rem', borderRadius: '16px',
+      boxShadow: '0 4px 16px rgba(0,0,0,0.05)', maxWidth: '600px', marginTop: '2rem'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h3 style={{ margin: 0, color: '#555' }}>👥 צוות בית הספר</h3>
+        <button
+          onClick={() => setShowAddStaffForm(!showAddStaffForm)}
+          style={{
+            background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none',
+            padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600',
+            display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem'
+          }}
+        >
+          <Plus size={16} />
+          הוסף איש צוות
+        </button>
+      </div>
+
+      {showAddStaffForm && (
+        <div style={{ background: '#f8f9fa', padding: '1.25rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'grid', gap: '0.75rem' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+            <input type="text" placeholder="שם פרטי *" value={newStaff.firstName}
+              onChange={e => setNewStaff({ ...newStaff, firstName: e.target.value })}
+              style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
+            <input type="text" placeholder="שם משפחה *" value={newStaff.lastName}
+              onChange={e => setNewStaff({ ...newStaff, lastName: e.target.value })}
+              style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
+          </div>
+          <input type="email" placeholder="אימייל *" value={newStaff.email}
+            onChange={e => setNewStaff({ ...newStaff, email: e.target.value })}
+            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
+          <input type="tel" placeholder="טלפון" value={newStaff.phone}
+            onChange={e => setNewStaff({ ...newStaff, phone: e.target.value })}
+            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
+          <input type="password" placeholder="סיסמה זמנית *" value={newStaff.password}
+            onChange={e => setNewStaff({ ...newStaff, password: e.target.value })}
+            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
+          <select value={newStaff.role} onChange={e => setNewStaff({ ...newStaff, role: e.target.value })}
+            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }}>
+            <option value="secretary">מזכירה</option>
+            <option value="kitchen">מנהל מטבח</option>
+            <option value="admin">מנהל בית ספר</option>
+          </select>
+          <button onClick={addStaffUser}
+            style={{ padding: '0.75rem', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
+            שמור
+          </button>
+        </div>
+      )}
+
+      {staffUsers.length === 0 ? (
+        <p style={{ color: '#999', textAlign: 'center', padding: '1rem' }}>אין אנשי צוות נוספים</p>
+      ) : (
+        staffUsers.map(user => (
+          <div key={user.id} style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: '1rem', borderRadius: '8px', marginBottom: '0.5rem', background: '#f8f9fa'
+          }}>
+            <div>
+              <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{user.first_name} {user.last_name}</p>
+              <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
+                {user.email} · {user.role === 'secretary' ? 'מזכירה' : user.role === 'kitchen' ? 'מנהל מטבח' : user.role === 'admin' ? 'מנהל בית ספר' : user.role}
+              </p>
+            </div>
+            <button
+              onClick={() => deleteStaffUser(user.id)}
+              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f44336', padding: '0.25rem' }}
+              title="מחק איש צוות"
+            >
+              <Trash2 size={18} />
+            </button>
+          </div>
+        ))
+      )}
     </div>
   </div>
 )}

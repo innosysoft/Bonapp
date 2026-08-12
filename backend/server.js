@@ -2564,6 +2564,82 @@ app.post('/api/groups/:groupId/study-days/toggle', authenticateToken, requireRol
   }
 });
 
+// העלאת שנה: מזיז תלמידים משכבה לשכבה בכמות גדולה, לפי מיפוי שנבחר ידנית
+// (fromGroupId -> toGroupId), או מסמן כלא-פעילים (בוגרים) כש-toGroupId הוא null.
+app.post('/api/schools/:schoolId/promote-groups', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const { mappings } = req.body;
+
+    if (!Array.isArray(mappings) || mappings.length === 0) {
+      return res.status(400).json({ success: false, message: 'לא נבחרו מעברים' });
+    }
+
+    const results = [];
+
+    for (const { fromGroupId, toGroupId } of mappings) {
+      if (!fromGroupId) continue;
+
+      // ודא ששתי השכבות (אם נבחרה יעד) שייכות לבית הספר הזה
+      const { data: fromGroup } = await supabase
+        .from('grade_groups')
+        .select('id, name, school_id')
+        .eq('id', fromGroupId)
+        .single();
+
+      if (!fromGroup || String(fromGroup.school_id) !== String(schoolId)) {
+        results.push({ fromGroupId, success: false, message: 'שכבת מקור לא נמצאה' });
+        continue;
+      }
+
+      if (toGroupId) {
+        const { data: toGroup } = await supabase
+          .from('grade_groups')
+          .select('id, name, school_id')
+          .eq('id', toGroupId)
+          .single();
+
+        if (!toGroup || String(toGroup.school_id) !== String(schoolId)) {
+          results.push({ fromGroupId, success: false, message: 'שכבת יעד לא נמצאה' });
+          continue;
+        }
+
+        const { data: updated, error } = await supabase
+          .from('students')
+          .update({ group_id: toGroupId, grade: toGroup.name })
+          .eq('group_id', fromGroupId)
+          .eq('school_id', schoolId)
+          .select('id');
+
+        if (error) {
+          results.push({ fromGroupId, success: false, message: error.message });
+        } else {
+          results.push({ fromGroupId, toGroupId, success: true, count: updated?.length || 0 });
+        }
+      } else {
+        // בוגרים / אין שכבת יעד - הוצא מהרשימה הפעילה
+        const { data: updated, error } = await supabase
+          .from('students')
+          .update({ status: 'inactive' })
+          .eq('group_id', fromGroupId)
+          .eq('school_id', schoolId)
+          .select('id');
+
+        if (error) {
+          results.push({ fromGroupId, success: false, message: error.message });
+        } else {
+          results.push({ fromGroupId, graduated: true, success: true, count: updated?.length || 0 });
+        }
+      }
+    }
+
+    res.json({ success: true, results });
+  } catch (error) {
+    console.error('Promote groups error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בהעלאת שנה' });
+  }
+});
+
 // ===== TUTORIAL VIDEOS =====
 
 app.get('/api/tutorial-videos', async (req, res) => {
