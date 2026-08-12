@@ -83,25 +83,42 @@ const [scannerReady, setScannerReady] = useState(false);
 
 
 
+const scannerInstanceRef = useRef(null);
+const scannerClearingRef = useRef(Promise.resolve());
+
 useEffect(() => {
   if (scanning && !scannerReady) {
-    const scanner = new Html5QrcodeScanner(
-      "qr-reader",
-      { 
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
-      },
-      false
-    );
+    let cancelled = false;
 
-    scanner.render(onScanSuccess, onScanError);
-    setScannerReady(true);
+    // scanner.clear() is async and releases the camera; if a new scanner is created into
+    // the same DOM node before the previous clear() finishes, the camera can fail to
+    // restart. Wait for any pending clear() before rendering the next scanner.
+    scannerClearingRef.current.then(() => {
+      if (cancelled) return;
+      const scanner = new Html5QrcodeScanner(
+        "qr-reader",
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        },
+        false
+      );
+
+      scannerInstanceRef.current = scanner;
+      scanner.render(onScanSuccess, onScanError);
+      setScannerReady(true);
+    });
 
     return () => {
-      scanner.clear().catch(error => {
-        console.error("Failed to clear scanner:", error);
-      });
+      cancelled = true;
+      const instance = scannerInstanceRef.current;
+      scannerInstanceRef.current = null;
+      if (instance) {
+        scannerClearingRef.current = instance.clear().catch(error => {
+          console.error("Failed to clear scanner:", error);
+        });
+      }
     };
   }
 }, [scanning]);

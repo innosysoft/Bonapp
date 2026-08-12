@@ -18,6 +18,7 @@ import SchoolContactForm from './components/SchoolContactForm';
 import SupportPage from './components/SupportPage';
 import ContactPage from './components/ContactPage';
 import AboutPage from './components/AboutPage';
+import WhatsAppSupportButton from './components/WhatsAppSupportButton';
 
 import './App.css';
 
@@ -25,6 +26,7 @@ function App() {
   return (
     <Router>
       <div className="App">
+        <WhatsAppSupportButton />
         <Routes>
           {/* דף הבית הראשי */}
           <Route path="/" element={<LandingPage />} />

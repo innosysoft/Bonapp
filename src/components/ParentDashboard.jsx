@@ -633,24 +633,39 @@ const handlePrintQR = () => {
 };
 
 const handleShareWhatsApp = async () => {
-  // קודם הורד את התמונה
-  const link = document.createElement('a');
-  link.href = currentQR.qrImage;
-  link.download = `QR_${children[selectedChild]?.first_name}_${currentQR.qrCode}.png`;
-  link.click();
-  
-  // אחר כך פתח WhatsApp
-  setTimeout(() => {
-    const message = `🎓 QR Code - ${children[selectedChild]?.first_name} ${children[selectedChild]?.last_name}
+  const filename = `QR_${children[selectedChild]?.first_name}_${currentQR.qrCode}.png`;
+  const message = `🎓 QR Code - ${children[selectedChild]?.first_name} ${children[selectedChild]?.last_name}
 
 🏫 בית ספר: ${schoolName}
-🔑 קוד תלמיד: ${currentQR.qrCode}
+🔑 קוד תלמיד: ${currentQR.qrCode}`;
 
-התמונה הורדה למכשיר! שתף אותה יחד עם ההודעה הזו 📱`;
-    
-    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+  // בנייד (בעיקר iOS Safari) הורדת קובץ דרך <a download> לא ממש עובדת - במקום זה
+  // נשתמש ב-Web Share API כדי לשתף את תמונת ה-QR ישירות כקובץ, כולל אפשרות לבחור וואטסאפ.
+  try {
+    const response = await fetch(currentQR.qrImage);
+    const blob = await response.blob();
+    const file = new File([blob], filename, { type: blob.type || 'image/png' });
+
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      await navigator.share({ files: [file], text: message, title: 'QR Code' });
+      return;
+    }
+  } catch (error) {
+    if (error?.name === 'AbortError') return; // המשתמש ביטל את השיתוף
+    console.error('Web Share error:', error);
+  }
+
+  // נפילה חזרה (בעיקר דסקטופ): הורדת התמונה ופתיחת וואטסאפ עם הודעת טקסט בלבד
+  const link = document.createElement('a');
+  link.href = currentQR.qrImage;
+  link.download = filename;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+
+  setTimeout(() => {
+    const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message + '\n\nהתמונה הורדה למכשיר! שתף אותה יחד עם ההודעה הזו 📱')}`;
     window.open(whatsappUrl, '_blank');
-    
     alert('✅ התמונה הורדה!\n\n📱 עכשיו שתף אותה ב-WhatsApp ידנית יחד עם ההודעה');
   }, 500);
 };

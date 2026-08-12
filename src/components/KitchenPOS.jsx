@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchStudents, getMenuItems, processMealPurchase, getSchools, scanStudent } from '../api';
 import { authFetch } from '../auth';
@@ -20,6 +20,13 @@ const KitchenPOS = () => {
   const [searchMode, setSearchMode] = useState('scan'); // 'scan' או 'search'
 const [isScanning, setIsScanning] = useState(false);
 const [scannerReady, setScannerReady] = useState(false);
+const [isMobile, setIsMobile] = useState(window.innerWidth < 900);
+
+useEffect(() => {
+  const handleResize = () => setIsMobile(window.innerWidth < 900);
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, []);
 
   
   // תפריט ועגלה
@@ -72,6 +79,7 @@ const onScanSuccess = async (decodedText) => {
     if (result.success) {
       setSelectedStudent(result.student);
       setCart([]);
+      setShowConfirm(true);
     } else {
       alert('QR לא תקין או תלמיד לא נמצא');
     }
@@ -86,25 +94,42 @@ const onScanError = (error) => {
 };
 
 
+const scannerInstanceRef = useRef(null);
+const scannerClearingRef = useRef(Promise.resolve());
+
 useEffect(() => {
   if (isScanning && !scannerReady) {
-    const scanner = new Html5QrcodeScanner(
-      "qr-reader",
-      { 
-        fps: 10,
-        qrbox: { width: 250, height: 250 },
-        aspectRatio: 1.0
-      },
-      false
-    );
+    let cancelled = false;
 
-    scanner.render(onScanSuccess, onScanError);
-    setScannerReady(true);
+    // scanner.clear() is async and releases the camera; if a new scanner is created into
+    // the same DOM node before the previous clear() finishes, the camera can fail to
+    // restart. Wait for any pending clear() before rendering the next scanner.
+    scannerClearingRef.current.then(() => {
+      if (cancelled) return;
+      const scanner = new Html5QrcodeScanner(
+        "qr-reader",
+        {
+          fps: 10,
+          qrbox: { width: 250, height: 250 },
+          aspectRatio: 1.0
+        },
+        false
+      );
+
+      scannerInstanceRef.current = scanner;
+      scanner.render(onScanSuccess, onScanError);
+      setScannerReady(true);
+    });
 
     return () => {
-      scanner.clear().catch(error => {
-        console.error("Failed to clear scanner:", error);
-      });
+      cancelled = true;
+      const instance = scannerInstanceRef.current;
+      scannerInstanceRef.current = null;
+      if (instance) {
+        scannerClearingRef.current = instance.clear().catch(error => {
+          console.error("Failed to clear scanner:", error);
+        });
+      }
     };
   }
 }, [isScanning]);
@@ -261,15 +286,18 @@ const stopScanning = () => {
     
     if (result.success) {
   alert(`תשלום בוצע בהצלחה!\nסה"כ: ₪${total.toFixed(2)}\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}`);
-  
+
   // איפוס
   setSelectedStudent(null);
   setShowConfirm(false);
   setCart([]);
-  
-  // חזרה למצב סריקה עם מצלמה פתוחה
-  setSearchMode('scan');
-  setIsScanning(true);
+  setSearchTerm('');
+  setSearchResults([]);
+
+  // חזרה למסך הזיהוי הראשוני - באותו מצב (סריקה/חיפוש) שהיה פעיל
+  if (searchMode === 'scan') {
+    setIsScanning(true);
+  }
 
     } else {
       alert(result.message || 'שגיאה בעיבוד התשלום');
@@ -288,8 +316,10 @@ const stopScanning = () => {
     },
     header: {
       background: 'rgba(255, 255, 255, 0.95)',
-      padding: '1rem 2rem',
+      padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
       display: 'flex',
+      flexWrap: 'wrap',
+      gap: '0.75rem',
       justifyContent: 'space-between',
       alignItems: 'center',
       boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
@@ -332,7 +362,7 @@ const stopScanning = () => {
       transition: 'all 0.3s'
     },
     main: {
-      padding: '2rem',
+      padding: isMobile ? '1rem' : '2rem',
       maxWidth: '1400px',
       margin: '0 auto'
     }
@@ -398,6 +428,7 @@ const stopScanning = () => {
   onStopScanning={stopScanning}
   setIsScanning={setIsScanning}
   setScannerReady={setScannerReady}
+  isMobile={isMobile}
 />
         ) : showConfirm ? (
           // מסך אישור תלמיד
@@ -405,6 +436,7 @@ const stopScanning = () => {
             student={selectedStudent}
             onConfirm={confirmStudent}
             onCancel={cancelStudent}
+            isMobile={isMobile}
           />
         ) : (
           // מסך מכירה
@@ -419,6 +451,7 @@ const stopScanning = () => {
             onCalculateTotal={calculateTotal}
             onProcessPayment={processPayment}
             onCancel={cancelStudent}
+            isMobile={isMobile}
             getMealPrice={getMealPrice}
           />
         )}
@@ -444,7 +477,7 @@ const stopScanning = () => {
 };
 
 // קומפוננטות עזר - נוסיף בשלב הבא
-const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, searchMode, onSearchModeChange, isScanning, onStartScanning, onStopScanning, setIsScanning, setScannerReady }) => (
+const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, searchMode, onSearchModeChange, isScanning, onStartScanning, onStopScanning, setIsScanning, setScannerReady, isMobile }) => (
   <div style={{
     display: 'flex',
     justifyContent: 'center',
@@ -453,8 +486,8 @@ const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStude
   }}>
     <div style={{
       background: 'rgba(255, 255, 255, 0.95)',
-      borderRadius: '24px',
-      padding: '3rem',
+      borderRadius: isMobile ? '16px' : '24px',
+      padding: isMobile ? '1.5rem' : '3rem',
       maxWidth: '600px',
       width: '100%',
       boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
@@ -694,7 +727,7 @@ const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStude
   </div>
 );
 
-const ConfirmScreen = ({ student, onConfirm, onCancel }) => (
+const ConfirmScreen = ({ student, onConfirm, onCancel, isMobile }) => (
   <div style={{
     display: 'flex',
     justifyContent: 'center',
@@ -703,8 +736,8 @@ const ConfirmScreen = ({ student, onConfirm, onCancel }) => (
   }}>
     <div style={{
       background: 'rgba(255, 255, 255, 0.95)',
-      borderRadius: '24px',
-      padding: '3rem',
+      borderRadius: isMobile ? '16px' : '24px',
+      padding: isMobile ? '1.5rem' : '3rem',
       maxWidth: '500px',
       width: '100%',
       boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
@@ -907,26 +940,26 @@ const WarningModal = ({ warningData, onConfirm, onCancel }) => (
 );
 
 
-const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddToCart, onUpdateQuantity, onCalculateTotal, onProcessPayment, onCancel, getMealPrice }) => {
+const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddToCart, onUpdateQuantity, onCalculateTotal, onProcessPayment, onCancel, getMealPrice, isMobile }) => {
   const today = new Date().getDay();
   const todayMenu = dailyMenuData.find(d => d.day_of_week === today);
 
   return (
     <div style={{
       display: 'grid',
-      gridTemplateColumns: '300px 1fr 400px',
-      gap: '2rem',
+      gridTemplateColumns: isMobile ? '1fr' : '300px 1fr 400px',
+      gap: isMobile ? '1rem' : '2rem',
       maxWidth: '1400px',
       margin: '0 auto'
     }}>
       {/* עמודה שמאל - פרטי תלמיד */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: '20px',
-        padding: '2rem',
+        borderRadius: isMobile ? '14px' : '20px',
+        padding: isMobile ? '1.25rem' : '2rem',
         boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
         height: 'fit-content',
-        position: 'sticky',
+        position: isMobile ? 'static' : 'sticky',
         top: '2rem'
       }}>
         <img 
@@ -1002,8 +1035,8 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
       {/* עמודה אמצע - תפריט */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: '20px',
-        padding: '2rem',
+        borderRadius: isMobile ? '14px' : '20px',
+        padding: isMobile ? '1.25rem' : '2rem',
         boxShadow: '0 12px 40px rgba(0,0,0,0.1)'
       }}>
         <h3 style={{
@@ -1154,11 +1187,11 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
       {/* עמודה ימין - עגלה */}
       <div style={{
         background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: '20px',
-        padding: '2rem',
+        borderRadius: isMobile ? '14px' : '20px',
+        padding: isMobile ? '1.25rem' : '2rem',
         boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
         height: 'fit-content',
-        position: 'sticky',
+        position: isMobile ? 'static' : 'sticky',
         top: '2rem'
       }}>
         <h3 style={{

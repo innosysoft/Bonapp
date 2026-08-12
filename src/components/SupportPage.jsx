@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { SUPPORT_WHATSAPP_NUMBER, buildWhatsAppUrl } from './WhatsAppSupportButton';
 
 const SupportPage = () => {
   const navigate = useNavigate();
@@ -153,10 +154,22 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
           </p>
           
           {!showTicket ? (
-            <button onClick={() => setShowTicket(true)}
-              style={{ padding: '1rem 2rem', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
-              פתח קריאת שירות 📨
-            </button>
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+              <button onClick={() => setShowTicket(true)}
+                style={{ padding: '1rem 2rem', background: 'white', color: '#667eea', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer' }}>
+                פתח קריאת שירות 📨
+              </button>
+              {SUPPORT_WHATSAPP_NUMBER && (
+                <a
+                  href={buildWhatsAppUrl('שלום, אני צריך/ה עזרה עם BonApp')}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  style={{ padding: '1rem 2rem', background: '#25D366', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  💬 שלח הודעה בוואטסאפ
+                </a>
+              )}
+            </div>
           ) : sentTicket ? (
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '2rem' }}>
               <div style={{ fontSize: '3rem' }}>✅</div>
