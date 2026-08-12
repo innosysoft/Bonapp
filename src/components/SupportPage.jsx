@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { SUPPORT_WHATSAPP_NUMBER, SUPPORT_SOURCE_TAG, buildWhatsAppUrl } from './WhatsAppSupportButton';
+import { SUPPORT_WHATSAPP_NUMBER, WhatsAppChatPanel } from './WhatsAppSupportButton';
 
 const SupportPage = () => {
   const navigate = useNavigate();
   const [videos, setVideos] = useState([]);
   const [openFaq, setOpenFaq] = useState(null);
+  const [showWhatsAppChat, setShowWhatsAppChat] = useState(false);
 
 const handleTicketSubmit = async () => {
     if (!ticket.name || !ticket.phone || !ticket.email || !ticket.message) {
@@ -160,15 +161,14 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
                 פתח קריאת שירות 📨
               </button>
               {SUPPORT_WHATSAPP_NUMBER && (
-                <a
-                  href={buildWhatsAppUrl(`${SUPPORT_SOURCE_TAG}\nשלום, אני צריך/ה עזרה`)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  style={{ padding: '1rem 2rem', background: '#25D366', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                <button
+                  onClick={() => setShowWhatsAppChat(true)}
+                  style={{ padding: '1rem 2rem', background: '#25D366', color: 'white', border: 'none', borderRadius: '8px', fontSize: '1rem', fontWeight: '700', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
                 >
                   💬 שלח הודעה בוואטסאפ
-                </a>
+                </button>
               )}
+              {showWhatsAppChat && <WhatsAppChatPanel onClose={() => setShowWhatsAppChat(false)} />}
             </div>
           ) : sentTicket ? (
             <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: '12px', padding: '2rem' }}>
