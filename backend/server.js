@@ -215,6 +215,26 @@ const getUserSchoolId = async (req) => {
   return data?.school_id;
 };
 
+// Resolves the school_id of a grade_groups row, from :groupId (params).
+const getGroupSchoolId = async (req) => {
+  const { data } = await supabase
+    .from('grade_groups')
+    .select('school_id')
+    .eq('id', req.params.groupId)
+    .single();
+  return data?.school_id;
+};
+
+// Resolves the school_id of a menu_items row, from :itemId (params).
+const getMenuItemSchoolId = async (req) => {
+  const { data } = await supabase
+    .from('menu_items')
+    .select('school_id')
+    .eq('id', req.params.itemId)
+    .single();
+  return data?.school_id;
+};
+
 // ===== HEALTH & AUTH =====
 
 app.get('/api/health', async (req, res) => {
@@ -1825,6 +1845,10 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
       return res.status(404).json({ success: false, message: 'הרשמה לא נמצאה' });
     }
 
+    if (req.user.role !== 'super_admin' && String(registration.school_id) !== String(req.user.school_id)) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה להרשמה זו' });
+    }
+
     if (action === 'approve') {
       const children = JSON.parse(registration.children_data);
       
@@ -1952,7 +1976,7 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
 
 // ===== MENU =====
 
-app.get('/api/menu-items/:schoolId', authenticateToken, async (req, res) => {
+app.get('/api/menu-items/:schoolId', authenticateToken, requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -1976,7 +2000,7 @@ app.get('/api/menu-items/:schoolId', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { school_id, name, category, price, description, available } = req.body;
 
@@ -2002,7 +2026,7 @@ app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin')
   }
 });
 
-app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
   try {
     const { itemId } = req.params;
     const { name, category, price, description, available } = req.body;
@@ -2023,7 +2047,7 @@ app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', '
   }
 });
 
-app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
   try {
     const { itemId } = req.params;
 
@@ -2041,7 +2065,7 @@ app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary'
   }
 });
 
-app.get('/api/daily-menu/:schoolId', authenticateToken, async (req, res) => {
+app.get('/api/daily-menu/:schoolId', authenticateToken, requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
 
@@ -2064,7 +2088,7 @@ app.get('/api/daily-menu/:schoolId', authenticateToken, async (req, res) => {
   }
 });
 
-app.post('/api/daily-menu', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.post('/api/daily-menu', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { school_id, day_of_week, menu_description, price, active } = req.body;
 
@@ -2141,7 +2165,7 @@ app.post('/api/schools/:schoolId/groups', authenticateToken, requireRole('secret
 });
 
 // מחק שכבה
-app.delete('/api/groups/:groupId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.delete('/api/groups/:groupId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getGroupSchoolId), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { error } = await supabase
@@ -2156,7 +2180,7 @@ app.delete('/api/groups/:groupId', authenticateToken, requireRole('secretary', '
 });
 
 // קבל/עדכן לוח ארוחות לשכבה לחודש
-app.post('/api/groups/:groupId/schedule', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.post('/api/groups/:groupId/schedule', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { school_id, month, year, days_count, meal_price } = req.body;
@@ -2174,7 +2198,7 @@ app.post('/api/groups/:groupId/schedule', authenticateToken, requireRole('secret
 });
 
 // קבל לוח ארוחות לשכבה לחודש
-app.get('/api/groups/:groupId/schedule', authenticateToken, async (req, res) => {
+app.get('/api/groups/:groupId/schedule', authenticateToken, requireSchoolAccess(getGroupSchoolId), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { month, year } = req.query;
@@ -2215,7 +2239,7 @@ app.put('/api/schools/:schoolId/payment-method', authenticateToken, requireRole(
 });
 
 // קבל סוג תשלום אחרון של תלמיד
-app.get('/api/students/:studentId/last-payment-type', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
+app.get('/api/students/:studentId/last-payment-type', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(getStudentSchoolId), async (req, res) => {
   try {
     const { studentId } = req.params;
     const { data: lastPayment } = await supabase
@@ -2425,11 +2449,22 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
     // קבל את ה-webhook URL של בית הספר של התלמיד
     const { data: student } = await supabase
       .from('students')
-      .select('school_id, schools(gateway_webhook_url, payment_gateway)')
+      .select('school_id, parent_id, schools(gateway_webhook_url, payment_gateway)')
       .eq('id', student_id)
       .single();
-    
-    const makeWebhookUrl = student?.schools?.gateway_webhook_url 
+
+    if (!student) {
+      return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+
+    const isOwnParent = req.user.role === 'parent' && String(req.user.id) === String(student.parent_id);
+    const isStaffOfSchool = ['secretary', 'admin', 'kitchen'].includes(req.user.role) &&
+      String(req.user.school_id) === String(student.school_id);
+    if (req.user.role !== 'super_admin' && !isOwnParent && !isStaffOfSchool) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה ליצור תשלום עבור תלמיד זה' });
+    }
+
+    const makeWebhookUrl = student?.schools?.gateway_webhook_url
       || process.env.MAKE_WEBHOOK_URL 
       || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
     
@@ -2471,7 +2506,7 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
 // ===== STUDY DAYS =====
 
 // קבל ימי לימוד לשכבה לפי חודש
-app.get('/api/groups/:groupId/study-days', authenticateToken, async (req, res) => {
+app.get('/api/groups/:groupId/study-days', authenticateToken, requireSchoolAccess(getGroupSchoolId), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { month, year } = req.query;
@@ -2496,7 +2531,7 @@ app.get('/api/groups/:groupId/study-days', authenticateToken, async (req, res) =
 });
 
 // הוסף/הסר יום לימוד
-app.post('/api/groups/:groupId/study-days/toggle', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.post('/api/groups/:groupId/study-days/toggle', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getGroupSchoolId), async (req, res) => {
   try {
     const { groupId } = req.params;
     const { date, school_id } = req.body;
@@ -2756,17 +2791,24 @@ app.post('/api/create-paybox-payment', authenticateToken, async (req, res) => {
     // קבל פרטי תלמיד ובית ספר
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('school_id, first_name, last_name')
+      .select('school_id, parent_id, first_name, last_name')
       .eq('id', studentId)
       .single();
-    
+
     if (studentError || !student) {
-      return res.status(404).json({ 
-        success: false, 
-        message: 'תלמיד לא נמצא' 
+      return res.status(404).json({
+        success: false,
+        message: 'תלמיד לא נמצא'
       });
     }
-    
+
+    const isOwnParent = req.user.role === 'parent' && String(req.user.id) === String(student.parent_id);
+    const isStaffOfSchool = ['secretary', 'admin', 'kitchen'].includes(req.user.role) &&
+      String(req.user.school_id) === String(student.school_id);
+    if (req.user.role !== 'super_admin' && !isOwnParent && !isStaffOfSchool) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה ליצור תשלום עבור תלמיד זה' });
+    }
+
     // קבל פרטי Paybox של בית הספר
     const { data: school, error: schoolError } = await supabase
       .from('schools')
