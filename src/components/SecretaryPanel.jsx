@@ -1911,40 +1911,24 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
       boxShadow: '0 4px 16px rgba(0,0,0,0.05)', maxWidth: '500px'
     }}>
       <h3 style={{ margin: '0 0 1.5rem 0', color: '#555' }}>💰 תמחור</h3>
-      
+
       {schoolData?.enable_daily_payment && (
         <div style={{ marginBottom: '1.5rem' }}>
           <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#333' }}>
             מחיר ארוחה יומית (₪)
           </label>
-          <input
-            type="number"
-            value={schoolData?.daily_meal_price || ''}
-            onChange={async (e) => {
-              const newPrice = parseFloat(e.target.value) || 0;
-              try {
-                const response = await authFetch(`https://api.bonapp.dev/api/schools/${schoolData.id}/payment-method`, {
-                  method: 'PUT',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ daily_meal_price: newPrice })
-                });
-                const data = await response.json();
-                if (data.success) {
-                  setSchoolData({ ...schoolData, daily_meal_price: newPrice });
-                }
-              } catch (error) {
-                console.error('Error updating price:', error);
-              }
-            }}
-            placeholder="25"
-            style={{
-              width: '150px', padding: '0.75rem', border: '2px solid #e0e0e0',
-              borderRadius: '8px', fontSize: '1rem'
-            }}
-          />
+          <div style={{
+            padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px',
+            fontSize: '1rem', color: '#666', background: '#f8f9fa', width: '150px', boxSizing: 'border-box'
+          }}>
+            {schoolData?.daily_meal_price || 0} ₪
+          </div>
+          <p style={{ color: '#999', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+            מחיר הארוחה נקבע בפאנל ניהול המטבח, כדי למנוע התנגשות בין שני מקומות עריכה.
+          </p>
         </div>
       )}
-      
+
       <p style={{ color: '#999', fontSize: '0.9rem' }}>
         הגדרות נוספות מנוהלות ע"י מנהל המערכת
       </p>

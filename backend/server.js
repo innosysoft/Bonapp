@@ -2263,7 +2263,7 @@ app.get('/api/groups/:groupId/schedule', authenticateToken, requireSchoolAccess(
 });
 
 // עדכן הגדרות תשלום לבית ספר
-app.put('/api/schools/:schoolId/payment-method', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+app.put('/api/schools/:schoolId/payment-method', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { payment_method, daily_meal_price, monthly_meal_price } = req.body;
