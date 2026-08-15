@@ -110,7 +110,10 @@ useEffect(() => {
         "qr-reader",
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 },
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
+            return { width: edge, height: edge };
+          },
           aspectRatio: 1.0
         },
         false

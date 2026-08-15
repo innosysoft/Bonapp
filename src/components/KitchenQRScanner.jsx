@@ -99,7 +99,10 @@ useEffect(() => {
         "qr-reader",
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 },
+          qrbox: (viewfinderWidth, viewfinderHeight) => {
+            const edge = Math.floor(Math.min(viewfinderWidth, viewfinderHeight) * 0.9);
+            return { width: edge, height: edge };
+          },
           aspectRatio: 1.0
         },
         false
@@ -419,11 +422,12 @@ const selectStudent = (student) => {
         topItem: prev.topItem
       }));
 
-      // נקה עגלה
-      setCart([]);
-      
       alert(`תשלום בוצע בהצלחה!\nסה"כ: ₪${total.toFixed(2)}\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}`);
-      
+
+      // איפוס וחזרה אוטומטית למצב סריקה, מוכן לתלמיד הבא
+      clearStudent();
+      setScanning(true);
+
     } else {
       alert(result.message || 'שגיאה בעיבוד התשלום');
     }
