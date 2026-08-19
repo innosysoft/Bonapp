@@ -183,6 +183,48 @@ const supabase = createClient(
 // PostgREST treats , . ( ) as syntax; wrapping in double quotes and escaping \ and " neutralizes them.
 const escapePostgrestValue = (val) => `"${String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
+// רב מסר (Responder) - סנכרון הורים שאושרו לרשימת תפוצה. אותו חשבון Innosys שכבר
+// משמש את In-Desk (ראו supabase/functions/ravmesser-sync בפרויקט In-Desk) - רק list_id שונה.
+// כשל כאן לא אמור לחסום אישור הרשמה בפועל - זה רק סנכרון לרשימת דיוור, לא חלק מהזרימה הקריטית.
+const RAVMESSER_BASE_URL = 'https://graph.responder.live/v2';
+const RAVMESSER_LIST_ID_PARENTS = 115047; // "רשימת Bonapp מתעניינים באתר" - לא סוד, רק מזהה רשימה
+
+async function getRavMesserToken() {
+  const res = await fetch(`${RAVMESSER_BASE_URL}/oauth/token`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      grant_type: 'client_credentials',
+      scope: '*',
+      client_id: process.env.RAVMESSER_CLIENT_ID,
+      client_secret: process.env.RAVMESSER_CLIENT_SECRET,
+      user_token: process.env.RAVMESSER_USER_TOKEN
+    })
+  });
+  const data = await res.json();
+  // ה-API מחזיר את הטוקן תחת "token" (לא "access_token"), ולא בהכרח עם קוד 2xx
+  // גם כשההתחברות הצליחה בפועל - לכן בודקים לפי נוכחות הטוקן, לא לפי res.ok.
+  const token = data?.token ?? data?.access_token;
+  if (!token) {
+    throw new Error(`ravmesser_auth_failed (status ${res.status}): ${JSON.stringify(data)}`);
+  }
+  return token;
+}
+
+async function ravMesserAddSubscriber(email, name, phone, listId) {
+  const token = await getRavMesserToken();
+  const res = await fetch(`${RAVMESSER_BASE_URL}/subscribers`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify({ email, name, phone, list_ids: [listId], override: true, rejoin: true })
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    throw new Error(`ravmesser_subscribe_failed: ${JSON.stringify(data)}`);
+  }
+  return data;
+}
+
 // Resolves the parent_id of a student, from either :studentId (params) or studentId (body).
 const getStudentParentId = async (req) => {
   const studentId = req.params.studentId || (req.body && req.body.studentId);
@@ -1978,6 +2020,14 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
         .from('pending_registrations')
         .update({ status: 'approved' })
         .eq('id', registrationId);
+
+      // סנכרון לרשימת התפוצה ברב מסר - לא חוסם את האישור, כשל כאן רק נרשם ללוג.
+      ravMesserAddSubscriber(
+        registration.parent_email,
+        registration.parent_name,
+        registration.parent_phone,
+        RAVMESSER_LIST_ID_PARENTS
+      ).catch(err => console.error('RavMesser sync error:', err.message));
 
       if (generatedPassword) {
         res.json({
