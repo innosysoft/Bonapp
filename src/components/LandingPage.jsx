@@ -348,7 +348,21 @@ useEffect(() => {
               <button onClick={() => navigate('/contact')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>צור קשר</button>
             </>
           )}
-          <button 
+          <button
+            style={styles.loginBtn}
+            onClick={() => navigate('/school-contact')}
+            onMouseEnter={(e) => {
+              e.target.style.background = '#667eea';
+              e.target.style.color = 'white';
+            }}
+            onMouseLeave={(e) => {
+              e.target.style.background = 'transparent';
+              e.target.style.color = '#667eea';
+            }}
+          >
+            הצטרף לשירות
+          </button>
+          <button
 
 
 
@@ -363,7 +377,7 @@ useEffect(() => {
               e.target.style.color = '#667eea';
             }}
           >
-            התחברות
+            כניסה למערכת
           </button>
           <button 
             style={styles.signupBtn}
@@ -392,9 +406,9 @@ useEffect(() => {
   פתרון דיגיטלי מלא לניהול מזנון בית הספר<br />
   סריקת QR • תשלומים מקוונים • דוחות בזמן אמת
 </p>
-          <button 
+          <button
   style={styles.heroCTA}
-  onClick={() => navigate('/school-contact')}
+  onClick={() => navigate('/register')}
             onMouseEnter={(e) => {
               e.target.style.transform = 'scale(1.05)';
               e.target.style.boxShadow = '0 15px 40px rgba(0,0,0,0.3)';
@@ -404,7 +418,7 @@ useEffect(() => {
               e.target.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
             }}
           >
-            התחל עכשיו
+            רישום תלמידים
             <ArrowRight size={24} />
           </button>
         </div>

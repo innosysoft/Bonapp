@@ -1901,6 +1901,42 @@ app.post('/api/pending-registrations', async (req, res) => {
       registration: registration
     });
 
+    // מייל התראה אמיתי על הרשמת הורה בפועל - נפרד ומדויק, לא כמו מייל "צור קשר" הכללי.
+    (async () => {
+      try {
+        let schoolName = '';
+        const { data: school } = await supabase.from('schools').select('name').eq('id', school_id).single();
+        if (school) schoolName = school.name;
+
+        let childrenList = [];
+        try { childrenList = JSON.parse(children_data); } catch (e) { /* ignore */ }
+        const childrenHtml = childrenList.map(c =>
+          `<li>${c.firstName || ''} ${c.lastName || ''}${c.grade ? ' - כיתה ' + c.grade : ''}</li>`
+        ).join('');
+
+        await transporter.sendMail({
+          from: EMAIL_FROM,
+          to: process.env.ADMIN_EMAIL || 'netproil@gmail.com',
+          subject: `👨‍👩‍👧 הרשמת הורה חדשה - ${schoolName || 'BonApp'}`,
+          html: `
+            <div dir="rtl" style="font-family: Arial; text-align: right;">
+              <h2>👨‍👩‍👧 בקשת הרשמת תלמיד חדשה</h2>
+              <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>בית ספר:</strong> ${schoolName || '-'}</p>
+                <p><strong>שם הורה:</strong> ${parent_name}</p>
+                <p><strong>טלפון:</strong> ${parent_phone}</p>
+                <p><strong>אימייל:</strong> ${parent_email || '-'}</p>
+              </div>
+              ${childrenHtml ? `<p><strong>ילדים:</strong></p><ul>${childrenHtml}</ul>` : ''}
+              <p>יש לאשר או לדחות את ההרשמה בפאנל המזכירה.</p>
+            </div>
+          `
+        });
+      } catch (emailError) {
+        console.error('Registration notification email error:', emailError.message);
+      }
+    })();
+
   } catch (error) {
     console.error('Registration creation error:', error);
     res.status(500).json({
@@ -2807,7 +2843,8 @@ const subject = type === 'suggestion'
       subject: type === 'suggestion' ? `💡 הצעה לשיפור - BonApp` : type === 'support' ? `🔧 קריאת שירות - ${fullName}` : `📞 פנייה חדשה - ${fullName}`,
       html: `
         <div dir="rtl" style="font-family: Arial; text-align: right;">
-          <h2>📋 בקשת הרשמה חדשה למערכת BonApp</h2>
+          <h2>${type === 'suggestion' ? '💡 הצעה לשיפור' : type === 'support' ? '🔧 קריאת שירות' : '📞 פנייה חדשה מהאתר'}</h2>
+          <p style="color: #888; font-size: 0.85rem;">זו פנייה כללית מטופס "צור קשר" - לא הרשמת תלמיד. הרשמות תלמידים מגיעות במייל נפרד "הרשמת הורה חדשה".</p>
           <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
             <p><strong>שם הארגון:</strong> ${organizationName}</p>
             <p><strong>שם איש קשר:</strong> ${fullName}</p>
@@ -2820,7 +2857,7 @@ ${message ? `<div style="background: #fff3cd; padding: 15px; border-radius: 8px;
             <p>${message}</p>
           </div>` : ''}
 
-          <p>יש ליצור קשר עם הארגון ולהוסיף אותו למערכת.</p>
+          <p>יש ליצור קשר עם הפונה בהתאם.</p>
         </div>
       `
     });
