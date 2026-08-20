@@ -59,6 +59,7 @@ const ParentRegistrationForm = () => {
   
   
   const [currentStep, setCurrentStep] = useState(1);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState({});
 
   const [schools, setSchools] = useState([]);
@@ -202,10 +203,13 @@ const loadSchoolGroups = async (schoolId) => {
     }
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     // יצירת קוד זיהוי משפחה ייחודי
     const familyCode = `F${Date.now().toString().slice(-6)}${Math.random().toString(36).substr(2, 3).toUpperCase()}`;
-    
+
     // הכנת נתוני QR לילדים
     const childrenWithQR = formData.children.map((child, index) => ({
       ...child,
@@ -213,51 +217,35 @@ const loadSchoolGroups = async (schoolId) => {
       studentCode: `${formData.schoolId}-${familyCode}-${index + 1}`
     }));
 
-    const registrationData = {
-      ...formData,
-      children: childrenWithQR,
-      familyCode,
-      registrationDate: new Date().toISOString(),
-      status: 'pending_verification'
-    };
+    try {
+      const response = await fetch('https://api.bonapp.dev/api/pending-registrations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          school_id: formData.schoolId,
+          parent_name: formData.familyName + ' ' + formData.parentFirstName, // שלב שם משפחה ושם פרטי
+          parent_phone: formData.phone,
+          parent_email: formData.email,
+          children_data: JSON.stringify(childrenWithQR),
+          status: 'pending'
+        })
+      });
 
-    console.log('נתוני הרשמה מלאים:', registrationData);
+      const data = await response.json();
 
-    fetch('https://api.bonapp.dev/api/pending-registrations', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-  },
-  body: JSON.stringify({
-    school_id: formData.schoolId,
-    parent_name: formData.familyName + ' ' + formData.parentFirstName, // שלב שם משפחה ושם פרטי
-    parent_phone: formData.phone,
-    parent_email: formData.email,
-    children_data: JSON.stringify(childrenWithQR),
-    status: 'pending'
-  })
-})
-
-
-.then(response => response.json())
-.then(data => {
-  if (data.success) {
-    alert('ההרשמה נשלחה בהצלחה! תקבלו אישור בקרוב.');
-
-    
-    
-  } else {
-    alert('שגיאה בשליחת ההרשמה. נסו שוב.');
-  }
-})
-.catch((error) => {
-  console.error('שגיאה בשליחה:', error);
-  alert('שגיאה בשליחת ההרשמה. נסו שוב.');
-});
-
-
-
-    setCurrentStep(4); // מסך הצלחה
+      if (data.success) {
+        setCurrentStep(4); // מסך הצלחה - רק אחרי אישור אמיתי מהשרת
+      } else {
+        alert(data.message || 'שגיאה בשליחת ההרשמה. נסו שוב, ואם זה חוזר על עצמו פנו אלינו.');
+      }
+    } catch (error) {
+      console.error('שגיאה בשליחה:', error);
+      alert('שגיאה בשליחת ההרשמה. בדקו את החיבור לאינטרנט ונסו שוב.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -1527,20 +1515,20 @@ const loadSchoolGroups = async (schoolId) => {
             
             <button
               onClick={currentStep === 3 ? handleSubmit : handleNext}
-              
-              disabled={currentStep === 2 ? !isStep2Valid() : currentStep === 3 ? !isStep3Valid() : false}
+
+              disabled={currentStep === 2 ? !isStep2Valid() : currentStep === 3 ? (!isStep3Valid() || isSubmitting) : false}
 
 
 
               style={{
                 padding: '12px 30px',
-                backgroundColor: (currentStep === 2 ? isStep2Valid() : currentStep === 3 ? isStep3Valid() : true) ? '#2196f3' : '#ccc',
+                backgroundColor: (currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? '#2196f3' : '#ccc',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '16px',
                 fontWeight: '600',
-                cursor: (currentStep === 2 ? isStep2Valid() : currentStep === 3 ? isStep3Valid() : true) ? 'pointer' : 'not-allowed',
+                cursor: (currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -1548,17 +1536,17 @@ const loadSchoolGroups = async (schoolId) => {
                 transition: 'all 0.3s ease'
               }}
               onMouseOver={(e) => {
-                if ((currentStep === 2 ? isStep2Valid() : currentStep === 3 ? isStep3Valid() : true)) {
+                if ((currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
                   e.target.style.backgroundColor = '#1976d2';
                 }
               }}
               onMouseOut={(e) => {
-                if ((currentStep === 2 ? isStep2Valid() : currentStep === 3 ? isStep3Valid() : true)) {
+                if ((currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
                   e.target.style.backgroundColor = '#2196f3';
                 }
               }}
             >
-              <span>{currentStep === 3 ? 'שלח הרשמה' : 'המשך לשלב הבא'}</span>
+              <span>{currentStep === 3 ? (isSubmitting ? 'שולח...' : 'שלח הרשמה') : 'המשך לשלב הבא'}</span>
               <ArrowRight size={20} />
             </button>
           </div>
