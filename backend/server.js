@@ -445,7 +445,7 @@ app.post('/api/admin/schools', authenticateToken, requireRole('super_admin'), as
   }
 });
 
-app.put('/api/schools/:schoolId/menu-type', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+app.put('/api/schools/:schoolId/menu-type', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const { menu_type } = req.body;
@@ -2132,7 +2132,7 @@ app.get('/api/menu-items/:schoolId', authenticateToken, requireSchoolAccess(req 
   }
 });
 
-app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
+app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { school_id, name, category, price, description, available } = req.body;
 
@@ -2158,7 +2158,7 @@ app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin')
   }
 });
 
-app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
+app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
   try {
     const { itemId } = req.params;
     const { name, category, price, description, available } = req.body;
@@ -2179,7 +2179,7 @@ app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', '
   }
 });
 
-app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
+app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
   try {
     const { itemId } = req.params;
 
@@ -2220,7 +2220,7 @@ app.get('/api/daily-menu/:schoolId', authenticateToken, requireSchoolAccess(req 
   }
 });
 
-app.post('/api/daily-menu', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
+app.post('/api/daily-menu', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { school_id, day_of_week, menu_description, price, active } = req.body;
 
