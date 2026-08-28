@@ -904,7 +904,17 @@ const handleMenuTypeChange = async (newType) => {
       />
     </div>
 
-    
+    <div style={styles.formGroup}>
+      <label style={styles.label}>מחיר (₪) *</label>
+      <input
+        type="number"
+        step="0.1"
+        value={formData.price}
+        onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+        style={styles.input}
+        placeholder="0.00"
+      />
+    </div>
 
     <div style={styles.formGroup}>
       <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
