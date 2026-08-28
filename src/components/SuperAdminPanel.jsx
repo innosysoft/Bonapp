@@ -953,6 +953,14 @@ onClick={() => {
               </div>
             )}
 
+      {/* ניהול סרטוני הסבר */}
+      <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 2rem' }}>
+        <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
+          <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>🎬 ניהול סרטוני הסבר</h2>
+          <VideoManager />
+        </div>
+      </div>
+
       {/* מודל הגדרות בית ספר */}
       {showSettingsModal && editingSchool && (
         <div style={{
@@ -1490,14 +1498,5 @@ onClick={() => {
     
   );
 };
-
-{/* ניהול סרטונים */}
-      <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 2rem' }}>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
-            <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>🎬 ניהול סרטוני הסבר</h2>
-            <VideoManager />
-          </div>
-        </div>
-    
 
 export default SuperAdminPanel;
