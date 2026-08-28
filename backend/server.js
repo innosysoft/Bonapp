@@ -1692,7 +1692,7 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
 
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('*, schools(allow_negative_balance, max_negative_balance, daily_meal_price, monthly_meal_price, enable_monthly_package, enable_daily_payment)')
+      .select('*, schools(allow_negative_balance, max_negative_balance, daily_meal_price, monthly_meal_price, enable_monthly_package, enable_daily_payment, menu_type)')
       .eq('id', studentId)
       .single();
 
@@ -1741,10 +1741,28 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
     const paymentType = lastPayment?.payment_type || 'daily';
 
     let chargeAmount;
-    if (paymentType === 'monthly') {
-      chargeAmount = parseFloat(school.monthly_meal_price) || 0;
+    if (school.menu_type === 'items' && Array.isArray(items) && items.length > 0) {
+      // תפריט פריטים בודדים - החיוב מחושב מהעגלה בפועל, לא ממחיר קבוע. מחושב מחדש
+      // בשרת לפי המחירים האמיתיים של הפריטים (לא סומכים על total שנשלח מהלקוח).
+      const itemIds = [...new Set(items.map(i => i.id).filter(Boolean))];
+      const { data: realItems } = await supabase
+        .from('menu_items')
+        .select('id, price')
+        .in('id', itemIds)
+        .eq('school_id', student.school_id);
+      const priceById = new Map((realItems || []).map(mi => [mi.id, parseFloat(mi.price) || 0]));
+      chargeAmount = items.reduce((sum, cartItem) => {
+        const unitPrice = priceById.get(cartItem.id);
+        const qty = parseInt(cartItem.quantity, 10) || 1;
+        return sum + (unitPrice !== undefined ? unitPrice * qty : 0);
+      }, 0);
     } else {
-      chargeAmount = parseFloat(school.daily_meal_price) || 0;
+      // תפריט יומי / מנוי - נשאר בדיוק כמו היום: מחיר קבוע לפי בית הספר, לא לפי יום או פריט.
+      if (paymentType === 'monthly') {
+        chargeAmount = parseFloat(school.monthly_meal_price) || 0;
+      } else {
+        chargeAmount = parseFloat(school.daily_meal_price) || 0;
+      }
     }
 
 
