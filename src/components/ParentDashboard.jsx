@@ -82,7 +82,7 @@ const [showSendToPhone, setShowSendToPhone] = useState(false);
 const [schoolGroups, setSchoolGroups] = useState([]);
 const [isPolling, setIsPolling] = useState(false);
 const [schoolSettings, setSchoolSettings] = useState(null);
-const [monthlyPackageInfo, setMonthlyPackageInfo] = useState(null);
+const [payableMonths, setPayableMonths] = useState([]);
 const [newStudent, setNewStudent] = useState({
   first_name: '',
   last_name: '',
@@ -163,20 +163,15 @@ if (data.children && data.children.length > 0) {
 console.log('enable_monthly_package:', school.enable_monthly_package);
       
       if (school.enable_monthly_package && data.children[0].group_id) {
-        
-        const currentMonth = new Date().getMonth() + 1;
-        const currentYear = new Date().getFullYear();
-        const scheduleResponse = await authFetch(
-          `https://api.bonapp.dev/api/groups/${data.children[0].group_id}/schedule?month=${currentMonth}&year=${currentYear}`
+        const payableResponse = await authFetch(
+          `https://api.bonapp.dev/api/groups/${data.children[0].group_id}/payable-schedules?studentId=${data.children[0].id}`
         );
-        const scheduleData = await scheduleResponse.json();
-        console.log('scheduleData:', JSON.stringify(scheduleData));
-        if (scheduleData.success && scheduleData.schedule) {
-          console.log('school.monthly_meal_price:', school.monthly_meal_price);
-          setMonthlyPackageInfo({
-            ...scheduleData.schedule,
-            meal_price: school.monthly_meal_price || scheduleData.schedule.meal_price
-          });
+        const payableData = await payableResponse.json();
+        if (payableData.success) {
+          setPayableMonths(payableData.schedules.map(s => ({
+            ...s,
+            meal_price: school.monthly_meal_price || s.meal_price
+          })));
         }
       }
       
@@ -748,8 +743,6 @@ const handleSendEmail = async () => {
     );
   };
 
-  console.log('schoolSettings:', schoolSettings?.enable_monthly_package, 'monthlyPackageInfo:', monthlyPackageInfo);
-  
   const child = children[selectedChild];
 
   const styles = {
@@ -1733,63 +1726,62 @@ const handleSendEmail = async () => {
               </div>
             </div>
             
-  {/* כפתור תשלום */}
-{schoolSettings?.enable_monthly_package && monthlyPackageInfo && (
+  {/* כפתורי תשלום - חודש נוכחי וכל חודש עתידי שהמזכירה כבר מילאה לו לוח ימי לימוד */}
+{schoolSettings?.enable_monthly_package && payableMonths.length > 0 && (
   <div style={{
     background: '#e8f5e9', padding: '1rem', borderRadius: '12px',
-    marginBottom: '1rem', textAlign: 'center'
+    marginBottom: '1rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.75rem'
   }}>
-    <button
-      onClick={async () => {
-        const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
-        console.log('User for payment:', user);
+    {payableMonths.map(pm => (
+      <button
+        key={`${pm.year}-${pm.month}`}
+        onClick={async () => {
+          const user = JSON.parse(localStorage.getItem('currentUser') || '{}');
+          const child = children[selectedChild];
+          const totalAmount = (pm.days_count * pm.meal_price).toFixed(2);
 
-        const child = children[selectedChild];
-        const totalAmount = (monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2);
-        
-        try {
-          const response = await authFetch('https://api.bonapp.dev/api/create-grow-payment', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              parent_name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
-              parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
-              amount: totalAmount,
-              student_name: `${child.first_name} ${child.last_name}`,
-              description: `BonApp-${child.id}-monthly`,
-              student_id: child.id
-            })
-          });
-          const result = await response.json();
-          console.log('Grow payment result:', result);
-          if (result.success && result.paymentUrl) {
+          try {
+            const response = await authFetch('https://api.bonapp.dev/api/create-grow-payment', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                parent_name: user.name || `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+                parent_phone: (user.phone || '').replace(/-/g, '').replace(/\+972/, '0'),
+                amount: totalAmount,
+                student_name: `${child.first_name} ${child.last_name}`,
+                description: `BonApp-${child.id}-monthly-${pm.year}-${pm.month}`,
+                student_id: child.id
+              })
+            });
+            const result = await response.json();
+            if (result.success && result.paymentUrl) {
 
 setIsPolling(true);
 setTimeout(() => setIsPolling(false), 600000);
 
-            window.location.href = result.paymentUrl;
-          } else {
-            console.log('No payment URL:', result);
+              window.location.href = result.paymentUrl;
+            } else {
+              alert('שגיאה ביצירת קישור תשלום');
+            }
+          } catch (error) {
             alert('שגיאה ביצירת קישור תשלום');
           }
-        } catch (error) {
-          alert('שגיאה ביצירת קישור תשלום');
-        }
-      }}
-      style={{
-        padding: '1rem 2rem',
-        background: 'linear-gradient(135deg, #43a047, #2e7d32)',
-        color: 'white',
-        border: 'none',
-        borderRadius: '12px',
-        cursor: 'pointer',
-        fontWeight: '600',
-        fontSize: '1rem',
-        width: '100%'
-      }}
-    >
-      💳 שלם ₪{(monthlyPackageInfo.days_count * monthlyPackageInfo.meal_price).toFixed(2)}
-    </button>
+        }}
+        style={{
+          padding: '1rem 2rem',
+          background: 'linear-gradient(135deg, #43a047, #2e7d32)',
+          color: 'white',
+          border: 'none',
+          borderRadius: '12px',
+          cursor: 'pointer',
+          fontWeight: '600',
+          fontSize: '1rem',
+          width: '100%'
+        }}
+      >
+        💳 תשלום עבור {monthNamesHeb[pm.month - 1]} - ₪{(pm.days_count * pm.meal_price).toFixed(2)}
+      </button>
+    ))}
   </div>
 )}
             

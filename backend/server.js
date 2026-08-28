@@ -2366,6 +2366,45 @@ app.get('/api/groups/:groupId/schedule', authenticateToken, requireSchoolAccess(
   }
 });
 
+// חודשי תשלום זמינים לשכבה - כל חודש (נוכחי ואילך) שהמזכירה מילאה לו לוח ימי לימוד וטרם שולם עבורו
+app.get('/api/groups/:groupId/payable-schedules', authenticateToken, requireSchoolAccess(getGroupSchoolId), async (req, res) => {
+  try {
+    const { groupId } = req.params;
+    const { studentId } = req.query;
+    const now = new Date();
+    const currentYear = now.getFullYear();
+    const currentMonth = now.getMonth() + 1;
+
+    const { data: schedules, error } = await supabase
+      .from('meal_schedules')
+      .select('year, month, days_count, meal_price')
+      .eq('group_id', groupId);
+    if (error) throw error;
+
+    const upcoming = (schedules || []).filter(s =>
+      s.year > currentYear || (s.year === currentYear && s.month >= currentMonth)
+    );
+
+    let paidSet = new Set();
+    if (studentId) {
+      const { data: paid, error: paidError } = await supabase
+        .from('monthly_payments')
+        .select('year, month')
+        .eq('student_id', studentId);
+      if (paidError) throw paidError;
+      paidSet = new Set((paid || []).map(p => `${p.year}-${p.month}`));
+    }
+
+    const result = upcoming
+      .filter(s => !paidSet.has(`${s.year}-${s.month}`))
+      .sort((a, b) => a.year - b.year || a.month - b.month);
+
+    res.json({ success: true, schedules: result });
+  } catch (error) {
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
 // עדכן הגדרות תשלום לבית ספר
 app.put('/api/schools/:schoolId/payment-method', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
@@ -2424,18 +2463,31 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
     const { payment_sum, payment_desc } = req.body;
     
     // חלץ student_id וסוג תשלום מה-description
-    // פורמט: "BonApp-{student_id}-monthly" או "BonApp-{student_id}-daily"
+    // פורמטים נתמכים: "BonApp-{student_id}-monthly" / "BonApp-{student_id}-daily"
+    // או, לתשלום חודשי מתויג לחודש ספציפי: "BonApp-{student_id}-monthly-{year}-{month}"
     let studentId = null;
     let paymentType = 'balance';
-    
+    let targetYear = null;
+    let targetMonth = null;
+
     if (payment_desc && payment_desc.startsWith('BonApp-')) {
       const parts = payment_desc.split('-');
       const lastPart = parts[parts.length - 1];
-      
+      const secondLastPart = parts[parts.length - 2];
+      const thirdLastPart = parts[parts.length - 3];
+
       if (lastPart === 'monthly' || lastPart === 'daily') {
         paymentType = lastPart;
         // הסר את הסוג מה-UUID
         studentId = parts.slice(1, -1).join('-');
+      } else if (
+        (thirdLastPart === 'monthly' || thirdLastPart === 'daily') &&
+        /^\d+$/.test(secondLastPart) && /^\d+$/.test(lastPart)
+      ) {
+        paymentType = thirdLastPart;
+        targetYear = parseInt(secondLastPart, 10);
+        targetMonth = parseInt(lastPart, 10);
+        studentId = parts.slice(1, -3).join('-');
       } else {
         studentId = payment_desc.replace('BonApp-', '');
       }
@@ -2482,13 +2534,16 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
         transaction_date: new Date().toISOString()
       });
 
-    // מנוי חודשי - סמן את החודש הנוכחי כשולם (ולא כ"יתרה" רגילה)
+    // מנוי חודשי - סמן את החודש ששולם בפועל כשולם (ולא כ"יתרה" רגילה)
+    // אם התשלום לא תויג לחודש ספציפי (פורמט ישן), נופלים חזרה לחודש הקלנדרי הנוכחי
     if (paymentType === 'monthly') {
       const now = new Date();
+      const year = targetYear || now.getFullYear();
+      const month = targetMonth || (now.getMonth() + 1);
       await supabase
         .from('monthly_payments')
         .upsert(
-          { student_id: studentId, school_id: student.school_id, year: now.getFullYear(), month: now.getMonth() + 1 },
+          { student_id: studentId, school_id: student.school_id, year, month },
           { onConflict: 'student_id,year,month', ignoreDuplicates: true }
         );
     }
