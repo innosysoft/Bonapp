@@ -2814,10 +2814,10 @@ app.get('/api/tutorial-videos', async (req, res) => {
 
 app.post('/api/tutorial-videos', authenticateToken, requireRole('super_admin'), async (req, res) => {
   try {
-    const { title, youtube_url, category, order_num } = req.body;
+    const { title, youtube_url, category, order_num, description } = req.body;
     const { data, error } = await supabase
       .from('tutorial_videos')
-      .insert({ title, youtube_url, category: category || 'general', order_num: order_num || 0 })
+      .insert({ title, youtube_url, category: category || 'general', order_num: order_num || 0, description: description || null })
       .select()
       .single();
     if (error) throw error;

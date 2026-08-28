@@ -112,6 +112,9 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
                     )}
                     <div style={{ padding: '1rem' }}>
                       <h3 style={{ margin: 0, fontSize: '1rem', color: '#333' }}>{video.title}</h3>
+                      {video.description && (
+                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.9rem', color: '#666', lineHeight: 1.5 }}>{video.description}</p>
+                      )}
                     </div>
                   </div>
                 );

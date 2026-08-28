@@ -5,7 +5,7 @@ import { authFetch } from '../auth';
 
 const VideoManager = () => {
   const [videos, setVideos] = useState([]);
-  const [newVideo, setNewVideo] = useState({ title: '', youtube_url: '', category: 'general' });
+  const [newVideo, setNewVideo] = useState({ title: '', youtube_url: '', description: '', category: 'general' });
 
   useEffect(() => {
     authFetch('https://api.bonapp.dev/api/tutorial-videos')
@@ -23,7 +23,7 @@ const VideoManager = () => {
     const data = await res.json();
     if (data.success) {
       setVideos([...videos, data.video]);
-      setNewVideo({ title: '', youtube_url: '', category: 'general' });
+      setNewVideo({ title: '', youtube_url: '', description: '', category: 'general' });
     }
   };
 
@@ -34,11 +34,16 @@ const VideoManager = () => {
 
   return (
     <div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: '1rem', marginBottom: '2rem', alignItems: 'end' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
         <input placeholder="כותרת הסרטון" value={newVideo.title} onChange={e => setNewVideo({...newVideo, title: e.target.value})}
           style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px' }} />
         <input placeholder="קישור YouTube" value={newVideo.youtube_url} onChange={e => setNewVideo({...newVideo, youtube_url: e.target.value})}
           style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px' }} />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', marginBottom: '2rem', alignItems: 'end' }}>
+        <textarea placeholder="הסבר קצר (אופציונלי)" value={newVideo.description} onChange={e => setNewVideo({...newVideo, description: e.target.value})}
+          rows={2}
+          style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontFamily: 'inherit', resize: 'vertical' }} />
         <button onClick={addVideo} style={{ padding: '0.75rem 1.5rem', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
           הוסף
         </button>
@@ -48,6 +53,7 @@ const VideoManager = () => {
           <div>
             <div style={{ fontWeight: '600' }}>{v.title}</div>
             <div style={{ fontSize: '0.85rem', color: '#666' }}>{v.youtube_url}</div>
+            {v.description && <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.25rem' }}>{v.description}</div>}
           </div>
           <button onClick={() => deleteVideo(v.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
             מחק
