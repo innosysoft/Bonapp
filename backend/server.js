@@ -2672,8 +2672,9 @@ app.get('/api/groups/:groupId/study-days', authenticateToken, requireSchoolAcces
     const { month, year } = req.query;
     
     const startDate = `${year}-${String(month).padStart(2, '0')}-01`;
-    const endDate = `${year}-${String(month).padStart(2, '0')}-31`;
-    
+    const lastDay = new Date(Number(year), Number(month), 0).getDate();
+    const endDate = `${year}-${String(month).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+
     const { data, error } = await supabase
       .from('study_days')
       .select('*')
