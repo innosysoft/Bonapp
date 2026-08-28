@@ -47,11 +47,11 @@ const [showParentDetails, setShowParentDetails] = useState(false);
 
   // סטטיסטיקות דשבורד בזמן אמת
   const [dailyStats, setDailyStats] = useState({
-    totalPayments: 2450.00,
-    transactionCount: 18,
-    averageTransaction: 136.11,
-    pendingApprovals: 3,
-    lowBalanceStudents: 7,
+    totalPayments: 0,
+    transactionCount: 0,
+    averageTransaction: 0,
+    pendingApprovals: 0,
+    lowBalanceStudents: 0,
     lastUpdate: new Date()
   });
 
