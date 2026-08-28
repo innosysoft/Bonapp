@@ -225,7 +225,7 @@ console.log('action:', data.action);
           month: calendarMonth,
           year: calendarYear,
           days_count: daysInMonth,
-          meal_price: 0
+          meal_price: schedule.meal_price || 0
         })
       });
 
@@ -390,9 +390,11 @@ console.log('action:', data.action);
                   <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <button onClick={() => {
                       const d = new Date(calendarYear, calendarMonth - 2, 1);
-                      setCalendarMonth(d.getMonth() + 1);
-                      setCalendarYear(d.getFullYear());
-                      loadStudyDays(selectedGroup.id);
+                      const newMonth = d.getMonth() + 1;
+                      const newYear = d.getFullYear();
+                      setCalendarMonth(newMonth);
+                      setCalendarYear(newYear);
+                      loadStudyDays(selectedGroup.id, newMonth, newYear);
                     }} style={{ padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer' }}>
                       ◀
                     </button>
@@ -401,9 +403,11 @@ console.log('action:', data.action);
                     </span>
                     <button onClick={() => {
                       const d = new Date(calendarYear, calendarMonth, 1);
-                      setCalendarMonth(d.getMonth() + 1);
-                      setCalendarYear(d.getFullYear());
-                      loadStudyDays(selectedGroup.id);
+                      const newMonth = d.getMonth() + 1;
+                      const newYear = d.getFullYear();
+                      setCalendarMonth(newMonth);
+                      setCalendarYear(newYear);
+                      loadStudyDays(selectedGroup.id, newMonth, newYear);
                     }} style={{ padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer' }}>
                       ▶
                     </button>
