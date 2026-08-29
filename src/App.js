@@ -11,6 +11,7 @@ import KitchenPOS from './components/KitchenPOS';
 import SecretaryPanel from './components/SecretaryPanel';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import MenuManagement from './components/MenuManagement';
+import SelfServiceKiosk from './components/SelfServiceKiosk';
 import PaymentSuccess from './components/PaymentSuccess';
 import MobileParentApp from './components/MobileParentApp';
 import MobileStudentApp from './components/MobileStudentApp';
@@ -50,6 +51,7 @@ function App() {
           <Route path="/secretary-panel" element={<SecretaryPanel />} />
           <Route path="/admin" element={<SuperAdminPanel />} />
           <Route path="/menu-management" element={<MenuManagement />} />
+          <Route path="/self-service-kiosk" element={<SelfServiceKiosk />} />
           <Route path="/mobile/parent/:token" element={<MobileParentApp />} />
 <Route path="/mobile/student/:token" element={<MobileStudentApp />} />
 <Route path="/school-contact" element={<SchoolContactForm />} />

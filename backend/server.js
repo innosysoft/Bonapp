@@ -277,6 +277,21 @@ const getMenuItemSchoolId = async (req) => {
   return data?.school_id;
 };
 
+// A 4-digit PIN, unique among students of the same school, for self-service kiosk identification.
+const generateUniqueStudentPin = async (schoolId) => {
+  for (let attempt = 0; attempt < 20; attempt++) {
+    const pin = String(Math.floor(1000 + Math.random() * 9000));
+    const { data: existing } = await supabase
+      .from('students')
+      .select('id')
+      .eq('school_id', schoolId)
+      .eq('pin', pin)
+      .maybeSingle();
+    if (!existing) return pin;
+  }
+  return null;
+};
+
 // ===== HEALTH & AUTH =====
 
 app.get('/api/health', async (req, res) => {
@@ -766,7 +781,7 @@ app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), 
 
     // יצירת QR Code אוטומטית!
     const qrCode = `STU_${student.id.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
-    
+
     await supabase
       .from('student_qr_codes')
       .insert({
@@ -775,6 +790,11 @@ app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), 
         status: 'active'
       });
 
+    // PIN לזיהוי עצמי בקיוסק
+    const studentPin = await generateUniqueStudentPin(student.school_id);
+    if (studentPin) {
+      await supabase.from('students').update({ pin: studentPin }).eq('id', student.id);
+    }
 
     res.json({
       success: true,
@@ -2058,7 +2078,7 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
         throw studentsError;
       }
 
-      // יצירת QR codes לכל התלמידים
+      // יצירת QR codes ו-PIN לכל התלמידים
       for (const student of createdStudents) {
         const qrCode = `STU_${student.id.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
         await supabase
@@ -2068,6 +2088,11 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
             qr_code: qrCode,
             status: 'active'
           });
+
+        const studentPin = await generateUniqueStudentPin(student.school_id);
+        if (studentPin) {
+          await supabase.from('students').update({ pin: studentPin }).eq('id', student.id);
+        }
       }
 
       await supabase
@@ -2152,7 +2177,7 @@ app.get('/api/menu-items/:schoolId', authenticateToken, requireSchoolAccess(req 
 
 app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
-    const { school_id, name, category, price, description, available } = req.body;
+    const { school_id, name, category, price, description, available, image_url } = req.body;
 
     const { data: menuItem, error } = await supabase
       .from('menu_items')
@@ -2162,7 +2187,8 @@ app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin',
         category,
         price,
         description,
-        available: available !== false
+        available: available !== false,
+        image_url: image_url || null
       }])
       .select()
       .single();
@@ -2179,11 +2205,14 @@ app.post('/api/menu-items', authenticateToken, requireRole('secretary', 'admin',
 app.put('/api/menu-items/:itemId', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
   try {
     const { itemId } = req.params;
-    const { name, category, price, description, available } = req.body;
+    const { name, category, price, description, available, image_url } = req.body;
+
+    const updateData = { name, category, price, description, available };
+    if (image_url !== undefined) updateData.image_url = image_url;
 
     const { data: menuItem, error } = await supabase
       .from('menu_items')
-      .update({ name, category, price, description, available })
+      .update(updateData)
       .eq('id', itemId)
       .select()
       .single();
@@ -2212,6 +2241,39 @@ app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary'
   } catch (error) {
     console.error('Delete menu item error:', error);
     res.status(500).json({ success: false, message: 'שגיאה במחיקת פריט' });
+  }
+});
+
+app.post('/api/menu-items/:itemId/image', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { imageData } = req.body;
+
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    const fileName = `${itemId}_${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from('menu-item-images')
+      .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from('menu-item-images')
+      .getPublicUrl(fileName);
+
+    const { error: updateError } = await supabase
+      .from('menu_items')
+      .update({ image_url: urlData.publicUrl })
+      .eq('id', itemId);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true, imageUrl: urlData.publicUrl });
+  } catch (error) {
+    console.error('Upload menu item image error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בהעלאת תמונה' });
   }
 });
 
@@ -2715,6 +2777,109 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('Create Grow payment error:', error);
     res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// ===== SELF-SERVICE KIOSK =====
+// Runs logged in as the kitchen device's own session (kitchen/secretary/admin role) - the
+// screen itself is locked, not the API. Students never get their own auth token.
+
+app.post('/api/kiosk/identify', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
+  try {
+    const { qrCode, pin } = req.body;
+    if (!qrCode && !pin) {
+      return res.status(400).json({ success: false, message: 'נדרש קוד QR או PIN' });
+    }
+
+    let studentId = null;
+
+    if (qrCode) {
+      const { data: qrRecord } = await supabase
+        .from('student_qr_codes')
+        .select('student_id')
+        .eq('qr_code', qrCode)
+        .eq('status', 'active')
+        .maybeSingle();
+      studentId = qrRecord?.student_id || null;
+    } else {
+      const { data: student } = await supabase
+        .from('students')
+        .select('id')
+        .eq('school_id', req.user.school_id)
+        .eq('pin', pin)
+        .maybeSingle();
+      studentId = student?.id || null;
+    }
+
+    if (!studentId) {
+      return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+
+    const { data: student, error } = await supabase
+      .from('students')
+      .select('id, first_name, last_name, school_id, balance, spending_limit, status, photo_url')
+      .eq('id', studentId)
+      .single();
+
+    if (error || !student) {
+      return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+
+    if (req.user.role !== 'super_admin' && String(student.school_id) !== String(req.user.school_id)) {
+      return res.status(403).json({ success: false, message: 'תלמיד זה אינו שייך לבית הספר שלך' });
+    }
+
+    if (student.status !== 'active') {
+      return res.status(400).json({ success: false, message: 'תלמיד זה אינו פעיל' });
+    }
+
+    // כמה הוציא היום כבר, כדי לאפשר בדיקת מגבלת הוצאה יומית גם בצד הלקוח לפני התשלום
+    const today = new Date().toISOString().split('T')[0];
+    const { data: todayMeals } = await supabase
+      .from('transactions')
+      .select('amount')
+      .eq('student_id', studentId)
+      .eq('type', 'meal')
+      .gte('transaction_date', `${today}T00:00:00`);
+    const spentToday = (todayMeals || []).reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+
+    res.json({
+      success: true,
+      student: {
+        id: student.id,
+        first_name: student.first_name,
+        last_name: student.last_name,
+        balance: student.balance,
+        spending_limit: student.spending_limit,
+        spent_today: spentToday,
+        photo_url: student.photo_url
+      }
+    });
+  } catch (error) {
+    console.error('Kiosk identify error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בזיהוי תלמיד' });
+  }
+});
+
+// מאמת את הסיסמה של המשתמש המחובר כרגע - משמש לנעילת יציאה ממסך הקיוסק
+app.post('/api/verify-password', authenticateToken, async (req, res) => {
+  try {
+    const { password } = req.body;
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('password_hash')
+      .eq('id', req.user.id)
+      .single();
+
+    if (error || !user) {
+      return res.status(404).json({ success: false, message: 'משתמש לא נמצא' });
+    }
+
+    const validPassword = await bcrypt.compare(password || '', user.password_hash);
+    res.json({ success: validPassword });
+  } catch (error) {
+    console.error('Verify password error:', error);
+    res.status(500).json({ success: false, message: 'שגיאת שרת' });
   }
 });
 

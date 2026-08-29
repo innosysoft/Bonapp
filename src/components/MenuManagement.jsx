@@ -23,10 +23,14 @@ const [savingPrices, setSavingPrices] = useState(false);
     category: '',
     price: '',
     description: '',
-    available: true
+    available: true,
+    image_url: ''
   });
+  const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState('');
+  const [uploadingImage, setUploadingImage] = useState(false);
 
-  const categories = ['ארוחה עיקרית', 'תוספות', 'משקאות', 'קינוחים', 'חטיפים'];
+  const categories = [...new Set(menuItems.map(item => item.category).filter(Boolean))];
 
   useEffect(() => {
     const loadData = async () => {
@@ -148,7 +152,12 @@ const handleMenuTypeChange = async (newType) => {
       });
 
       if (result.success) {
-        setMenuItems([...menuItems, result.menuItem]);
+        let savedItem = result.menuItem;
+        if (imageFile) {
+          const uploadedUrl = await uploadPendingImage(savedItem.id);
+          if (uploadedUrl) savedItem = { ...savedItem, image_url: uploadedUrl };
+        }
+        setMenuItems([...menuItems, savedItem]);
         setShowAddModal(false);
         resetForm();
         alert('הפריט נוסף בהצלחה!');
@@ -171,8 +180,13 @@ const handleMenuTypeChange = async (newType) => {
       });
 
       if (result.success) {
-        setMenuItems(menuItems.map(item => 
-          item.id === editingItem.id ? result.menuItem : item
+        let savedItem = result.menuItem;
+        if (imageFile) {
+          const uploadedUrl = await uploadPendingImage(savedItem.id);
+          if (uploadedUrl) savedItem = { ...savedItem, image_url: uploadedUrl };
+        }
+        setMenuItems(menuItems.map(item =>
+          item.id === editingItem.id ? savedItem : item
         ));
         setEditingItem(null);
         resetForm();
@@ -240,8 +254,11 @@ const handleMenuTypeChange = async (newType) => {
       category: item.category,
       price: item.price.toString(),
       description: item.description || '',
-      available: item.available
+      available: item.available,
+      image_url: item.image_url || ''
     });
+    setImageFile(null);
+    setImagePreview(item.image_url || '');
   };
 
   const resetForm = () => {
@@ -251,10 +268,47 @@ const handleMenuTypeChange = async (newType) => {
     price: '',
     description: '',
     available: true,
+    image_url: '',
     menu_description: '',
     active: true
   });
+  setImageFile(null);
+  setImagePreview('');
 };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files && e.target.files[0];
+    if (!file) return;
+    setImageFile(file);
+    const reader = new FileReader();
+    reader.onload = () => setImagePreview(reader.result);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadPendingImage = async (itemId) => {
+    if (!imageFile) return null;
+    setUploadingImage(true);
+    try {
+      const reader = new FileReader();
+      const imageData = await new Promise((resolve, reject) => {
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(imageFile);
+      });
+      const response = await authFetch(`${API_URL}/menu-items/${itemId}/image`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ imageData })
+      });
+      const result = await response.json();
+      return result.success ? result.imageUrl : null;
+    } catch (error) {
+      alert('הפריט נשמר, אך העלאת התמונה נכשלה');
+      return null;
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const toggleAvailability = async (item) => {
     try {
@@ -518,7 +572,27 @@ const handleMenuTypeChange = async (newType) => {
     <QrCode size={20} />
     חזור לסריקה
   </button>
-  
+
+  {menuType === 'items' && (
+    <button
+      style={{
+        background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+        color: 'white',
+        border: 'none',
+        borderRadius: '12px',
+        padding: '0.75rem 1.5rem',
+        cursor: 'pointer',
+        fontWeight: '600',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem'
+      }}
+      onClick={() => navigate('/self-service-kiosk')}
+    >
+      🖥️ פתח קיוסק עצמאי
+    </button>
+  )}
+
   <button 
     style={styles.iconButton}
     onClick={() => navigate('/')}
@@ -658,9 +732,9 @@ const handleMenuTypeChange = async (newType) => {
           <ChefHat size={24} />
           פריטי התפריט
         </h2>
-        <button 
+        <button
           style={styles.addButton}
-          onClick={() => setShowAddModal(true)}
+          onClick={() => { resetForm(); setShowAddModal(true); }}
         >
           <Plus size={20} />
           הוסף פריט חדש
@@ -671,6 +745,7 @@ const handleMenuTypeChange = async (newType) => {
         {/* כל הטבלה הקיימת של פריטים */}
         <thead>
           <tr>
+            <th style={styles.th}>תמונה</th>
             <th style={styles.th}>שם הפריט</th>
             <th style={styles.th}>קטגוריה</th>
             <th style={styles.th}>מחיר</th>
@@ -682,13 +757,18 @@ const handleMenuTypeChange = async (newType) => {
         <tbody>
           {menuItems.length === 0 ? (
             <tr>
-              <td colSpan="6" style={{ ...styles.td, textAlign: 'center', color: '#999', padding: '3rem' }}>
+              <td colSpan="7" style={{ ...styles.td, textAlign: 'center', color: '#999', padding: '3rem' }}>
                 אין פריטים בתפריט. לחץ על "הוסף פריט חדש" להתחלה.
               </td>
             </tr>
           ) : (
             menuItems.map(item => (
               <tr key={item.id}>
+                <td style={styles.td}>
+                  {item.image_url ? (
+                    <img src={item.image_url} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
+                  ) : '-'}
+                </td>
                 <td style={styles.td}><strong>{item.name}</strong></td>
                 <td style={styles.td}>{item.category}</td>
                 <td style={styles.td}>₪{item.price.toFixed(2)}</td>
@@ -840,16 +920,28 @@ const handleMenuTypeChange = async (newType) => {
 
     <div style={styles.formGroup}>
       <label style={styles.label}>קטגוריה *</label>
-      <select
+      <input
+        type="text"
+        list="menu-item-categories"
         value={formData.category}
         onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-        style={styles.select}
-      >
-        <option value="">בחר קטגוריה</option>
+        style={styles.input}
+        placeholder="לדוגמה: ארוחה, שתיה, חטיפים - או הקלד קטגוריה חדשה"
+      />
+      <datalist id="menu-item-categories">
         {categories.map(cat => (
-          <option key={cat} value={cat}>{cat}</option>
+          <option key={cat} value={cat} />
         ))}
-      </select>
+      </datalist>
+    </div>
+
+    <div style={styles.formGroup}>
+      <label style={styles.label}>תמונת הפריט</label>
+      {imagePreview && (
+        <img src={imagePreview} alt="" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.5rem', display: 'block' }} />
+      )}
+      <input type="file" accept="image/*" onChange={handleImageSelect} />
+      {uploadingImage && <span style={{ fontSize: '0.85rem', color: '#888' }}>מעלה תמונה...</span>}
     </div>
 
     <div style={styles.formGroup}>
