@@ -2094,6 +2094,23 @@ setTimeout(() => setIsPolling(false), 600000);
               </p>
             </div>
 
+            {children[selectedChild]?.pin && (
+              <div style={{
+                background: '#e8f5e9',
+                padding: '1rem',
+                borderRadius: '8px',
+                marginBottom: '1.5rem',
+                textAlign: 'center'
+              }}>
+                <p style={{ fontSize: '0.85rem', color: '#2e7d32', margin: '0 0 0.5rem 0' }}>
+                  קוד PIN אישי לקיוסק (במקום סריקת QR):
+                </p>
+                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2e7d32', margin: 0, letterSpacing: '0.3rem' }}>
+                  {children[selectedChild].pin}
+                </p>
+              </div>
+            )}
+
             {/* כפתורים */}
             <div style={{
               display: 'grid',

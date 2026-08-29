@@ -2416,6 +2416,11 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
               <div style={{ marginBottom: '0.5rem' }}>
                 <strong>תאריך הרשמה:</strong> {selectedStudent.joinDate}
               </div>
+              {selectedStudent.pin && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <strong>קוד PIN לקיוסק:</strong> {selectedStudent.pin}
+                </div>
+              )}
               {selectedStudent.notes && (
                 <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff3e0', borderRadius: '8px' }}>
                   <strong>הערות:</strong> {selectedStudent.notes}
