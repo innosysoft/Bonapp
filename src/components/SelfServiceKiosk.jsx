@@ -383,9 +383,11 @@ const SelfServiceKiosk = () => {
                   }}
                 >
                   {item.image_url ? (
-                    <img src={item.image_url} alt="" style={{ width: '100%', height: '100px', objectFit: 'contain', background: '#f5f5f5' }} />
+                    <div style={{ width: '100%', height: '160px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <img src={item.image_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
+                    </div>
                   ) : (
-                    <div style={{ width: '100%', height: '100px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '2rem' }}>🍽️</div>
+                    <div style={{ width: '100%', height: '160px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🍽️</div>
                   )}
                   <div style={{ padding: '0.75rem' }}>
                     <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{item.name}</div>
