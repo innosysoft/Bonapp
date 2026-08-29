@@ -766,7 +766,7 @@ const handleMenuTypeChange = async (newType) => {
               <tr key={item.id}>
                 <td style={styles.td}>
                   {item.image_url ? (
-                    <img src={item.image_url} alt="" style={{ width: '40px', height: '40px', objectFit: 'cover', borderRadius: '6px' }} />
+                    <img src={item.image_url} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', background: '#f5f5f5', borderRadius: '6px' }} />
                   ) : '-'}
                 </td>
                 <td style={styles.td}><strong>{item.name}</strong></td>
@@ -938,7 +938,7 @@ const handleMenuTypeChange = async (newType) => {
     <div style={styles.formGroup}>
       <label style={styles.label}>תמונת הפריט</label>
       {imagePreview && (
-        <img src={imagePreview} alt="" style={{ width: '100px', height: '100px', objectFit: 'cover', borderRadius: '8px', marginBottom: '0.5rem', display: 'block' }} />
+        <img src={imagePreview} alt="" style={{ width: '100px', height: '100px', objectFit: 'contain', background: '#f5f5f5', borderRadius: '8px', marginBottom: '0.5rem', display: 'block' }} />
       )}
       <input type="file" accept="image/*" onChange={handleImageSelect} />
       {uploadingImage && <span style={{ fontSize: '0.85rem', color: '#888' }}>מעלה תמונה...</span>}
