@@ -139,13 +139,15 @@ const SelfServiceKiosk = () => {
   }, [identifyMode, isScanning, student]);
 
   const handlePinDigit = (digit) => {
-    if (pinInput.length >= 4) return;
-    const next = pinInput + digit;
-    setPinInput(next);
-    if (next.length === 4) {
-      identifyStudent({ pin: next });
-    }
+    setPinInput(prev => (prev.length >= 4 ? prev : prev + digit));
   };
+
+  useEffect(() => {
+    if (pinInput.length === 4) {
+      identifyStudent({ pin: pinInput });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pinInput]);
 
   // --- עגלה ---
 
