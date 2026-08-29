@@ -369,10 +369,10 @@ const SelfServiceKiosk = () => {
 
           {/* פריטים */}
           <div style={{ flex: 1, padding: '1.5rem' }}>
-            <p style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem' }}>
+            <p style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem', textAlign: 'center' }}>
               שלום {student.first_name}! יתרה: ₪{student.balance.toFixed(2)}
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: '1rem' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 180px))', justifyContent: 'center', gap: '1rem' }}>
               {itemsInCategory.map(item => (
                 <div
                   key={item.id}
