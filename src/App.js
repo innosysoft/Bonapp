@@ -1,6 +1,6 @@
 import React from 'react';
 import LandingPage from './components/LandingPage';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import MainHomepage from './components/MainHomepage';
 import UniversalLogin from './components/UniversalLogin';
 import ParentRegistrationForm from './components/ParentRegistrationForm';
@@ -28,12 +28,23 @@ import AccessibilityStatementPage from './components/AccessibilityStatementPage'
 
 import './App.css';
 
+// מסך הקיוסק הוא נעול במכוון - הווידג'טים הצפים האלה יוצרים דרך יציאה לא מתוכננת ממנו
+const GlobalWidgets = () => {
+  const location = useLocation();
+  if (location.pathname === '/self-service-kiosk') return null;
+  return (
+    <>
+      <WhatsAppSupportButton />
+      <AccessibilityWidget />
+    </>
+  );
+};
+
 function App() {
   return (
     <Router>
       <div className="App">
-        <WhatsAppSupportButton />
-        <AccessibilityWidget />
+        <GlobalWidgets />
         <Routes>
           {/* דף הבית הראשי */}
           <Route path="/" element={<LandingPage />} />
