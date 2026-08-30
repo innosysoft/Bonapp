@@ -3,12 +3,14 @@ import { useNavigate } from 'react-router-dom';
 import { getMenuItems, processMealPurchase } from '../api';
 import { authFetch } from '../auth';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Lock, ShoppingCart, X } from 'lucide-react';
+import { Lock, ShoppingCart, Plus, Minus, CheckCircle, CreditCard, UtensilsCrossed, Delete } from 'lucide-react';
 
 const API_URL = 'https://api.bonapp.dev/api';
 
-// מסך קיוסק עצמאי - התלמיד עצמו מזהה את עצמו (QR או PIN) ובוחר פריטים.
-// היציאה נעולה מאחורי הסיסמה האישית של איש הצוות שמחובר בפועל.
+// מסך קיוסק עצמאי - עיצוב לפי דגם bonapp-self-service-kiosk-design.html שאושר.
+// התלמיד עצמו מזהה את עצמו (QR או PIN) ובוחר פריטים. כל הלוגיקה העסקית (זיהוי, יתרה,
+// מגבלות רכישה, חישוב סכום, תשלום, נעילת יציאה, איפוס לאחר עסקה) נשמרה כפי שהייתה -
+// רק שכבת התצוגה הוחלפה. היציאה נעולה מאחורי הסיסמה האישית של איש הצוות שמחובר בפועל.
 const SelfServiceKiosk = () => {
   const navigate = useNavigate();
   const [menuItems, setMenuItems] = useState([]);
@@ -28,6 +30,9 @@ const SelfServiceKiosk = () => {
   const [processing, setProcessing] = useState(false);
   const [purchaseError, setPurchaseError] = useState('');
   const [successInfo, setSuccessInfo] = useState(null);
+
+  // תצוגת עגלה (UI בלבד - לא משנה נתונים/לוגיקה)
+  const [cartOpen, setCartOpen] = useState(false);
 
   // נעילת יציאה
   const [showExitPrompt, setShowExitPrompt] = useState(false);
@@ -67,6 +72,7 @@ const SelfServiceKiosk = () => {
     setSuccessInfo(null);
     setPinInput('');
     setIdentifyError('');
+    setCartOpen(false);
     setIsScanning(true);
     setIdentifyMode('scan');
   }, []);
@@ -104,7 +110,7 @@ const SelfServiceKiosk = () => {
   const scannerClearingRef = useRef(Promise.resolve());
 
   useEffect(() => {
-    if (identifyMode === 'scan' && isScanning && !scannerReady && !student) {
+    if (!loading && identifyMode === 'scan' && isScanning && !scannerReady && !student) {
       let cancelled = false;
       scannerClearingRef.current.then(() => {
         if (cancelled) return;
@@ -136,7 +142,7 @@ const SelfServiceKiosk = () => {
       };
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [identifyMode, isScanning, student]);
+  }, [loading, identifyMode, isScanning, student]);
 
   const handlePinDigit = (digit) => {
     setPinInput(prev => (prev.length >= 4 ? prev : prev + digit));
@@ -154,6 +160,7 @@ const SelfServiceKiosk = () => {
   const categories = [...new Set(menuItems.filter(i => i.available).map(i => i.category))];
   const itemsInCategory = menuItems.filter(i => i.available && i.category === selectedCategory);
   const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+  const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
   const addToCart = (item) => {
     setPurchaseError('');
@@ -261,222 +268,378 @@ const SelfServiceKiosk = () => {
     }
   };
 
-  if (loading) {
-    return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>טוען...</div>;
-  }
+  const initials = student ? `${student.first_name?.[0] || ''}${student.last_name?.[0] || ''}` : '';
 
   return (
-    <div style={{
-      minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Segoe UI', sans-serif",
-      direction: 'rtl', position: 'relative', overflow: 'hidden'
-    }}>
+    <div className="bap-kiosk">
+      <style>{`
+        .bap-kiosk{
+          --navy:#17324a;--blue:#356b8c;--green:#75a843;--green2:#eef6e9;--paper:#f4f7f7;
+          --white:#fff;--muted:#607482;--line:#dce6e9;--danger:#b64e4e;--warn:#b9812e;
+          --shadow:0 10px 30px rgba(23,50,74,.1);
+          font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--paper);
+          font-size:16px;min-height:100vh;padding-bottom:118px;
+        }
+        .bap-kiosk *{box-sizing:border-box}
+        .bap-kiosk button{font:inherit}
+        .bap-kiosk button:focus-visible,.bap-kiosk input:focus-visible{outline:3px solid var(--green);outline-offset:2px}
 
-      {/* כפתור יציאה קטן ודיסקרטי */}
-      <button
-        onClick={() => setShowExitPrompt(true)}
-        style={{
-          position: 'fixed', top: '1rem', left: '1rem', zIndex: 500,
-          background: 'rgba(0,0,0,0.15)', border: 'none', borderRadius: '50%',
-          width: '40px', height: '40px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-          cursor: 'pointer', color: 'white'
-        }}
-      >
-        <Lock size={18} />
+        .bap-kiosk .kiosk-head{min-height:96px;background:#fff;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 34px;position:sticky;top:0;z-index:10;gap:12px}
+        .bap-kiosk .identity{display:flex;align-items:center;gap:13px;justify-self:start;min-height:48px}
+        .bap-kiosk .avatar{width:48px;height:48px;border-radius:14px;background:var(--green2);color:var(--green);display:grid;place-items:center;font-weight:700;font-size:18px;flex-shrink:0}
+        .bap-kiosk .identity strong{display:block;font-size:18px}
+        .bap-kiosk .identity span{font-size:14px;color:var(--muted)}
+        .bap-kiosk .brand{text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
+        .bap-kiosk .kiosk-logo{height:40px;width:auto}
+        .bap-kiosk .brand small{font-size:12px;font-weight:500;color:var(--muted)}
+        .bap-kiosk .balance{justify-self:end;text-align:left;background:#eaf3f7;padding:10px 18px;border-radius:12px;min-height:48px}
+        .bap-kiosk .balance span{display:block;font-size:12px;color:var(--muted)}
+        .bap-kiosk .balance strong{font-size:23px;color:var(--blue)}
+
+        .bap-kiosk .lock{position:fixed;left:20px;top:112px;width:48px;height:48px;border:1px solid var(--line);background:#fff;border-radius:13px;color:var(--muted);box-shadow:var(--shadow);display:grid;place-items:center;z-index:50;cursor:pointer}
+        .bap-kiosk .lock:hover{background:var(--paper)}
+
+        .bap-kiosk .content{width:min(1380px,calc(100% - 48px));margin:26px auto}
+        .bap-kiosk .welcome{display:flex;align-items:flex-end;justify-content:space-between;margin-bottom:22px;gap:16px;flex-wrap:wrap}
+        .bap-kiosk .welcome h1{font-size:32px;margin:0}
+        .bap-kiosk .welcome p{font-size:17px;color:var(--muted);margin:4px 0 0}
+        .bap-kiosk .categories{display:flex;gap:9px;overflow-x:auto;padding-bottom:2px;-webkit-overflow-scrolling:touch}
+        .bap-kiosk .cat{height:48px;padding:0 22px;border:1px solid var(--line);background:#fff;border-radius:999px;color:var(--muted);font-weight:600;white-space:nowrap;cursor:pointer;flex-shrink:0}
+        .bap-kiosk .cat.active{background:var(--blue);border-color:var(--blue);color:#fff}
+
+        .bap-kiosk .grid{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+        .bap-kiosk .meal{position:relative;min-height:310px;background:#fff;border:1px solid var(--line);border-radius:18px;overflow:hidden;box-shadow:var(--shadow);text-align:right;padding:0;cursor:pointer;display:flex;flex-direction:column}
+        .bap-kiosk .meal:hover{border-color:#9ab8c8}
+        .bap-kiosk .meal.selected{border:3px solid var(--green)}
+        .bap-kiosk .meal-photo{height:190px;background-position:center;background-size:cover;background-color:var(--green2);display:flex;align-items:center;justify-content:center;color:var(--green);flex-shrink:0}
+        .bap-kiosk .meal-photo img{width:100%;height:100%;object-fit:cover}
+        .bap-kiosk .meal-body{padding:16px 18px;display:flex;flex-direction:column;flex:1}
+        .bap-kiosk .meal-body strong{display:block;font-size:19px}
+        .bap-kiosk .meal-body small{color:var(--muted);font-size:14px;display:block;margin-top:2px}
+        .bap-kiosk .meal-bottom{display:flex;justify-content:space-between;align-items:center;margin-top:auto;padding-top:12px}
+        .bap-kiosk .meal-price{font-size:22px;color:var(--blue);font-weight:700}
+        .bap-kiosk .plus{width:44px;height:44px;border-radius:12px;border:0;background:var(--green2);color:var(--green);font-size:22px;display:grid;place-items:center;flex-shrink:0}
+        .bap-kiosk .meal.selected .plus{background:var(--green);color:#fff}
+        .bap-kiosk .qty{position:absolute;top:12px;left:12px;min-width:38px;height:38px;padding:0 8px;border-radius:11px;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 5px 15px rgba(42,101,48,.25);font-size:16px;z-index:2}
+        .bap-kiosk .empty-note{text-align:center;padding:60px 20px;color:var(--muted);font-size:18px}
+
+        .bap-kiosk .summary{position:fixed;bottom:0;right:0;left:0;min-height:96px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(23,50,74,.12);display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:24px;padding:15px 34px;z-index:20}
+        .bap-kiosk .summary-title{font-size:17px;font-weight:700}
+        .bap-kiosk .summary-items{color:var(--muted);font-size:14px;margin-top:2px}
+        .bap-kiosk .summary-total{display:flex;align-items:baseline;gap:10px}
+        .bap-kiosk .summary-total span{font-size:16px;color:var(--muted)}
+        .bap-kiosk .summary-total strong{font-size:32px;color:var(--navy)}
+        .bap-kiosk .pay{height:58px;min-width:210px;border:0;border-radius:13px;background:var(--green);color:#fff;font-weight:700;font-size:20px;box-shadow:0 7px 20px rgba(70,130,50,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+        .bap-kiosk .pay:disabled{background:#cfd8db;color:#8a9490;cursor:not-allowed;box-shadow:none}
+        .bap-kiosk .pay.warn{background:var(--warn);box-shadow:0 7px 20px rgba(185,129,46,.25)}
+        .bap-kiosk .edit{height:52px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 18px;color:var(--blue);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:16px}
+        .bap-kiosk .summary-error{color:var(--danger);font-size:14px;font-weight:600;margin-top:4px}
+
+        .bap-kiosk .cart-drawer{position:fixed;left:0;right:0;bottom:96px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(23,50,74,.12);max-height:50vh;overflow-y:auto;z-index:19;padding:18px 34px}
+        .bap-kiosk .cart-drawer h3{margin:0 0 14px;font-size:18px;display:flex;align-items:center;gap:8px}
+        .bap-kiosk .cart-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+        .bap-kiosk .cart-row:last-child{border-bottom:0}
+        .bap-kiosk .cart-row .name{font-weight:600;font-size:16px}
+        .bap-kiosk .cart-row .unit{font-size:14px;color:var(--muted)}
+        .bap-kiosk .cart-qty{display:flex;align-items:center;gap:10px}
+        .bap-kiosk .qty-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--navy)}
+
+        .bap-kiosk .center-screen{min-height:calc(100vh - 96px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
+        .bap-kiosk .id-title{font-size:30px;margin:0 0 28px}
+        .bap-kiosk .mode-tabs{display:flex;gap:8px;background:#fff;border:1px solid var(--line);padding:6px;border-radius:14px;margin-bottom:28px}
+        .bap-kiosk .mode-tab{padding:14px 26px;border-radius:10px;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:17px;cursor:pointer}
+        .bap-kiosk .mode-tab.active{background:var(--blue);color:#fff}
+        .bap-kiosk .pin-display{font-size:2.5rem;letter-spacing:1rem;margin-bottom:1.5rem;background:#fff;border:1px solid var(--line);padding:1rem 2rem;border-radius:14px;min-width:260px;box-shadow:var(--shadow)}
+        .bap-kiosk .pin-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;width:280px}
+        .bap-kiosk .pin-key{padding:1rem;font-size:1.4rem;border-radius:14px;border:1px solid var(--line);background:#fff;cursor:pointer;font-weight:700;min-height:60px;color:var(--navy)}
+        .bap-kiosk .pin-key:hover{background:var(--paper)}
+        .bap-kiosk .pin-key.muted{color:var(--muted)}
+        .bap-kiosk .id-error{color:var(--danger);margin-top:1.5rem;font-weight:700;font-size:17px}
+        .bap-kiosk .qr-box{width:340px;max-width:90vw;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+
+        .bap-kiosk .success-screen{min-height:calc(100vh - 96px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
+        .bap-kiosk .success-icon{width:96px;height:96px;border-radius:50%;background:var(--green2);color:var(--green);display:grid;place-items:center;margin-bottom:10px}
+        .bap-kiosk .success-screen h2{font-size:28px;color:var(--green);margin:0}
+        .bap-kiosk .success-screen p{font-size:19px;color:var(--muted);margin:4px 0 0}
+
+        .bap-kiosk .modal-overlay{position:fixed;inset:0;background:rgba(23,50,74,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
+        .bap-kiosk .modal-card{background:#fff;border-radius:18px;padding:32px;width:100%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .bap-kiosk .modal-icon{width:56px;height:56px;border-radius:50%;background:var(--green2);color:var(--blue);display:grid;place-items:center;margin:0 auto}
+        .bap-kiosk .modal-card h3{margin:16px 0}
+        .bap-kiosk .modal-card input{width:100%;padding:14px;border:2px solid var(--line);border-radius:10px;text-align:center;font-size:1.1rem;box-sizing:border-box}
+        .bap-kiosk .modal-error{color:var(--danger);margin-top:.5rem;font-weight:600}
+        .bap-kiosk .modal-actions{display:flex;gap:.75rem;margin-top:1.5rem}
+        .bap-kiosk .btn-secondary{flex:1;padding:14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--navy);cursor:pointer;font-weight:700}
+        .bap-kiosk .btn-primary{flex:1;padding:14px;border-radius:10px;border:0;background:var(--blue);color:#fff;cursor:pointer;font-weight:700}
+
+        @media(max-width:1000px){
+          .bap-kiosk .grid{grid-template-columns:repeat(3,1fr)}
+          .bap-kiosk .welcome{align-items:flex-start;flex-direction:column;gap:14px}
+          .bap-kiosk .kiosk-head{padding:10px 20px}
+        }
+        @media(max-width:680px){
+          .bap-kiosk{padding-bottom:176px}
+          .bap-kiosk .kiosk-head{grid-template-columns:1fr 1fr;padding:10px 16px;gap:8px}
+          .bap-kiosk .brand{grid-column:1/-1;grid-row:1}
+          .bap-kiosk .kiosk-logo{height:32px}
+          .bap-kiosk .brand small{display:none}
+          .bap-kiosk .identity{grid-column:2;grid-row:2;justify-self:start}
+          .bap-kiosk .avatar{width:38px;height:38px;font-size:15px}
+          .bap-kiosk .identity strong{font-size:15px}
+          .bap-kiosk .identity span{font-size:12px}
+          .bap-kiosk .balance{grid-column:1;grid-row:2;padding:7px 12px}
+          .bap-kiosk .balance strong{font-size:19px}
+          .bap-kiosk .lock{top:auto;bottom:190px;left:12px}
+          .bap-kiosk .content{width:calc(100% - 24px);margin:16px auto}
+          .bap-kiosk .welcome h1{font-size:24px}
+          .bap-kiosk .welcome p{font-size:15px}
+          .bap-kiosk .grid{grid-template-columns:repeat(2,1fr);gap:12px}
+          .bap-kiosk .meal{min-height:250px;border-radius:14px}
+          .bap-kiosk .meal-photo{height:130px}
+          .bap-kiosk .meal-body{padding:12px}
+          .bap-kiosk .meal-body strong{font-size:18px}
+          .bap-kiosk .meal-price{font-size:19px}
+          .bap-kiosk .plus{width:40px;height:40px}
+          .bap-kiosk .summary{min-height:150px;grid-template-columns:1fr auto;gap:10px 14px;padding:12px 16px}
+          .bap-kiosk .summary-total strong{font-size:26px}
+          .bap-kiosk .pay{grid-column:1/-1;width:100%}
+          .bap-kiosk .edit{height:46px}
+          .bap-kiosk .cart-drawer{bottom:150px;padding:16px}
+        }
+      `}</style>
+
+      {/* כותרת עליונה */}
+      <header className="kiosk-head">
+        <div className="identity">
+          {student && (
+            <>
+              <div className="avatar">{initials}</div>
+              <div>
+                <strong>שלום, {student.first_name}</strong>
+                <span>אפשר לבחור את הארוחה שלך</span>
+              </div>
+            </>
+          )}
+        </div>
+        <div className="brand">
+          <img className="kiosk-logo" src="/images/Bonapp-logo.png" alt="BonApp" />
+          <small>קיוסק ארוחות עצמאי</small>
+        </div>
+        <div className="balance">
+          {student && (
+            <>
+              <span>היתרה שלך</span>
+              <strong>₪{student.balance.toFixed(2)}</strong>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* נעילת יציאה */}
+      <button className="lock" aria-label="נעילת הקיוסק" onClick={() => setShowExitPrompt(true)}>
+        <Lock size={20} />
       </button>
 
-      {!student ? (
+      {loading ? (
+        <div className="center-screen">
+          <p style={{ fontSize: 20, color: 'var(--muted)' }}>טוען...</p>
+        </div>
+      ) : !student ? (
         // מסך זיהוי
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '2rem' }}>
-          <h1 style={{ fontSize: '2rem', color: '#333', marginBottom: '2rem' }}>🍽️ ברוכים הבאים לקיוסק</h1>
+        <div className="center-screen">
+          <h1 className="id-title">🍽️ ברוכים הבאים לקיוסק</h1>
 
-          <div style={{ display: 'flex', gap: '1rem', marginBottom: '2rem' }}>
+          <div className="mode-tabs">
             <button
+              className={`mode-tab ${identifyMode === 'scan' ? 'active' : ''}`}
               onClick={() => { setIdentifyMode('scan'); setIsScanning(true); setIdentifyError(''); }}
-              style={{
-                padding: '0.75rem 1.5rem', borderRadius: '12px', border: 'none', fontWeight: '600', cursor: 'pointer',
-                background: identifyMode === 'scan' ? '#667eea' : '#e0e0e0', color: identifyMode === 'scan' ? 'white' : '#555'
-              }}
             >
               📷 סריקת QR
             </button>
             <button
+              className={`mode-tab ${identifyMode === 'pin' ? 'active' : ''}`}
               onClick={() => { setIdentifyMode('pin'); setPinInput(''); setIdentifyError(''); }}
-              style={{
-                padding: '0.75rem 1.5rem', borderRadius: '12px', border: 'none', fontWeight: '600', cursor: 'pointer',
-                background: identifyMode === 'pin' ? '#667eea' : '#e0e0e0', color: identifyMode === 'pin' ? 'white' : '#555'
-              }}
             >
               🔢 קוד אישי (PIN)
             </button>
           </div>
 
           {identifyMode === 'scan' ? (
-            <div style={{ width: '320px', maxWidth: '90vw' }}>
+            <div className="qr-box">
               <div id="kiosk-qr-reader" />
             </div>
           ) : (
-            <div style={{ textAlign: 'center' }}>
-              <div style={{
-                fontSize: '2.5rem', letterSpacing: '1rem', marginBottom: '1.5rem',
-                background: 'white', padding: '1rem 2rem', borderRadius: '12px', minWidth: '260px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-              }}>
-                {pinInput.padEnd(4, '•')}
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem', width: '260px' }}>
+            <div>
+              <div className="pin-display">{pinInput.padEnd(4, '•')}</div>
+              <div className="pin-pad">
                 {['1', '2', '3', '4', '5', '6', '7', '8', '9'].map(d => (
-                  <button key={d} onClick={() => handlePinDigit(d)} style={pinKeyStyle}>{d}</button>
+                  <button key={d} className="pin-key" onClick={() => handlePinDigit(d)}>{d}</button>
                 ))}
-                <button onClick={() => setPinInput('')} style={{ ...pinKeyStyle, background: '#f5f5f5' }}>נקה</button>
-                <button onClick={() => handlePinDigit('0')} style={pinKeyStyle}>0</button>
-                <button onClick={() => setPinInput(pinInput.slice(0, -1))} style={{ ...pinKeyStyle, background: '#f5f5f5' }}>⌫</button>
+                <button className="pin-key muted" onClick={() => setPinInput('')}>נקה</button>
+                <button className="pin-key" onClick={() => handlePinDigit('0')}>0</button>
+                <button className="pin-key muted" aria-label="מחק ספרה" onClick={() => setPinInput(pinInput.slice(0, -1))}>
+                  <Delete size={20} style={{ margin: '0 auto' }} />
+                </button>
               </div>
             </div>
           )}
 
           {identifyError && (
-            <p style={{ color: '#f44336', marginTop: '1.5rem', fontWeight: '600' }}>{identifyError}</p>
+            <p className="id-error" role="alert">{identifyError}</p>
           )}
         </div>
       ) : successInfo ? (
         // מסך הצלחה
-        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ fontSize: '4rem' }}>✅</div>
-          <h2 style={{ fontSize: '1.8rem', color: '#2e7d32' }}>הרכישה בוצעה בהצלחה!</h2>
-          <p style={{ fontSize: '1.2rem', color: '#555' }}>שולם: ₪{successInfo.total.toFixed(2)}</p>
-          <p style={{ fontSize: '1rem', color: '#888' }}>יתרה חדשה: ₪{successInfo.newBalance.toFixed(2)}</p>
+        <div className="success-screen" role="status">
+          <div className="success-icon"><CheckCircle size={52} /></div>
+          <h2>הרכישה בוצעה בהצלחה!</h2>
+          <p>שולם: ₪{successInfo.total.toFixed(2)}</p>
+          <p>יתרה חדשה: ₪{successInfo.newBalance.toFixed(2)}</p>
         </div>
       ) : (
         // מסך קניה
-        <div style={{ display: 'flex', minHeight: '100vh', paddingBottom: '90px' }}>
-          {/* סרגל קטגוריות */}
-          <div style={{ width: '160px', background: 'white', boxShadow: '2px 0 8px rgba(0,0,0,0.05)', paddingTop: '1rem' }}>
-            {categories.map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                style={{
-                  display: 'block', width: '100%', padding: '1rem', border: 'none', cursor: 'pointer',
-                  background: selectedCategory === cat ? '#667eea' : 'transparent',
-                  color: selectedCategory === cat ? 'white' : '#555',
-                  fontWeight: '600', fontSize: '1rem', textAlign: 'center'
-                }}
-              >
-                {cat}
-              </button>
-            ))}
-          </div>
-
-          {/* פריטים */}
-          <div style={{ flex: 1, padding: '1.5rem' }}>
-            <p style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem', textAlign: 'center' }}>
-              שלום {student.first_name}! יתרה: ₪{student.balance.toFixed(2)}
-            </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 180px))', justifyContent: 'center', gap: '1rem' }}>
-              {itemsInCategory.map(item => (
-                <div
-                  key={item.id}
-                  onClick={() => addToCart(item)}
-                  style={{
-                    background: 'white', borderRadius: '12px', overflow: 'hidden', cursor: 'pointer',
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)', textAlign: 'center'
-                  }}
-                >
-                  {item.image_url ? (
-                    <div style={{ width: '100%', height: '160px', background: '#f5f5f5', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src={item.image_url} alt="" style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} />
-                    </div>
-                  ) : (
-                    <div style={{ width: '100%', height: '160px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '3rem' }}>🍽️</div>
-                  )}
-                  <div style={{ padding: '0.75rem' }}>
-                    <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>{item.name}</div>
-                    <div style={{ color: '#667eea', fontWeight: '700' }}>₪{item.price.toFixed(2)}</div>
-                  </div>
-                </div>
-              ))}
+        <main className="content">
+          <div className="welcome">
+            <div>
+              <h1>מה תרצה לאכול היום?</h1>
+              <p>בחר מנה אחת או יותר והמשך לתשלום</p>
             </div>
-          </div>
-
-          {/* עגלה */}
-          {cart.length > 0 && (
-            <div style={{ width: '260px', background: 'white', boxShadow: '-2px 0 8px rgba(0,0,0,0.05)', padding: '1rem', overflowY: 'auto' }}>
-              <h3 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}><ShoppingCart size={18} /> העגלה שלי</h3>
-              {cart.map(c => (
-                <div key={c.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.5rem 0', borderBottom: '1px solid #f0f0f0' }}>
-                  <div>
-                    <div style={{ fontSize: '0.9rem', fontWeight: '600' }}>{c.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#888' }}>₪{c.price.toFixed(2)} × {c.quantity}</div>
-                  </div>
-                  <button onClick={() => removeFromCart(c.id)} style={{ background: '#fdecea', border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer' }}>
-                    <X size={14} />
+            {categories.length > 0 && (
+              <nav className="categories" aria-label="קטגוריות">
+                {categories.map(cat => (
+                  <button
+                    key={cat}
+                    className={`cat ${selectedCategory === cat ? 'active' : ''}`}
+                    onClick={() => setSelectedCategory(cat)}
+                  >
+                    {cat}
                   </button>
-                </div>
-              ))}
-            </div>
+                ))}
+              </nav>
+            )}
+          </div>
+
+          {itemsInCategory.length === 0 ? (
+            <div className="empty-note">אין מנות זמינות כרגע</div>
+          ) : (
+            <section className="grid">
+              {itemsInCategory.map(item => {
+                const inCart = cart.find(c => c.id === item.id);
+                return (
+                  <button
+                    key={item.id}
+                    className={`meal ${inCart ? 'selected' : ''}`}
+                    onClick={() => addToCart(item)}
+                    aria-label={`הוסף ${item.name} לעגלה, ₪${item.price.toFixed(2)}${inCart ? `, כבר נבחרו ${inCart.quantity}` : ''}`}
+                  >
+                    {inCart && <span className="qty">{inCart.quantity}</span>}
+                    <div className="meal-photo">
+                      {item.image_url ? (
+                        <img src={item.image_url} alt="" />
+                      ) : (
+                        <UtensilsCrossed size={44} />
+                      )}
+                    </div>
+                    <div className="meal-body">
+                      <strong>{item.name}</strong>
+                      {(item.description || item.category) && <small>{item.description || item.category}</small>}
+                      <div className="meal-bottom">
+                        <span className="meal-price">₪{item.price.toFixed(2)}</span>
+                        <i className="plus">+</i>
+                      </div>
+                    </div>
+                  </button>
+                );
+              })}
+            </section>
           )}
+        </main>
+      )}
+
+      {/* מגירת עגלה (תצוגה בלבד - אותה לוגיקת עגלה בדיוק) */}
+      {cartOpen && student && !successInfo && cart.length > 0 && (
+        <div className="cart-drawer">
+          <h3><ShoppingCart size={18} /> העגלה שלי</h3>
+          {cart.map(c => (
+            <div key={c.id} className="cart-row">
+              <div>
+                <div className="name">{c.name}</div>
+                <div className="unit">₪{c.price.toFixed(2)} ליחידה</div>
+              </div>
+              <div className="cart-qty">
+                <button className="qty-btn" onClick={() => removeFromCart(c.id)} aria-label={`הפחת כמות של ${c.name}`}>
+                  <Minus size={16} />
+                </button>
+                <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700 }}>{c.quantity}</span>
+                <button className="qty-btn" onClick={() => addToCart(c)} aria-label={`הוסף כמות של ${c.name}`}>
+                  <Plus size={16} />
+                </button>
+              </div>
+            </div>
+          ))}
         </div>
       )}
 
-      {/* סרגל תשלום קבוע */}
+      {/* סרגל סיכום קבוע */}
       {student && !successInfo && (
-        <div style={{
-          position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white',
-          boxShadow: '0 -2px 12px rgba(0,0,0,0.1)', padding: '1rem 1.5rem',
-          display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem'
-        }}>
+        <footer className="summary">
           <div>
-            <div style={{ fontSize: '1.3rem', fontWeight: '700' }}>סה"כ: ₪{cartTotal.toFixed(2)}</div>
-            {purchaseError && <div style={{ color: '#f44336', fontSize: '0.9rem' }}>{purchaseError}</div>}
+            <div className="summary-title">סיכום ההזמנה</div>
+            <div className="summary-items" aria-live="polite">
+              {cart.length === 0
+                ? 'העגלה ריקה'
+                : `${cart.map(c => `${c.name} × ${c.quantity}`).join(' · ')} · ${cartCount === 1 ? 'פריט אחד' : `${cartCount} פריטים`}`}
+            </div>
+            {purchaseError && <div className="summary-error" role="alert">{purchaseError}</div>}
           </div>
+
+          <button className="edit" onClick={() => setCartOpen(o => !o)} disabled={cart.length === 0}>
+            <ShoppingCart size={18} />
+            {cartOpen ? 'הסתר עגלה' : 'צפייה בעגלה'}
+          </button>
+
+          <div className="summary-total">
+            <span>סה״כ</span>
+            <strong>₪{cartTotal.toFixed(2)}</strong>
+          </div>
+
           {exceedsBalance ? (
-            <button onClick={handlePayForBalance} style={{ padding: '1rem 2rem', background: '#ff9800', color: 'white', border: 'none', borderRadius: '12px', fontWeight: '700', cursor: 'pointer', fontSize: '1rem' }}>
-              💳 תשלום להשלמת יתרה
+            <button className="pay warn" onClick={handlePayForBalance}>
+              <CreditCard size={22} />
+              תשלום להשלמת יתרה
             </button>
           ) : (
-            <button
-              onClick={handleCheckout}
-              disabled={cart.length === 0 || processing}
-              style={{
-                padding: '1rem 2rem', background: cart.length === 0 ? '#ccc' : '#4CAF50', color: 'white',
-                border: 'none', borderRadius: '12px', fontWeight: '700', cursor: cart.length === 0 ? 'default' : 'pointer', fontSize: '1rem'
-              }}
-            >
-              {processing ? 'מעבד...' : '✅ שלם'}
+            <button className="pay" onClick={handleCheckout} disabled={cart.length === 0 || processing}>
+              <CheckCircle size={22} />
+              {processing ? 'מעבד...' : 'המשך לתשלום'}
             </button>
           )}
-        </div>
+        </footer>
       )}
 
       {/* בקשת סיסמת יציאה */}
       {showExitPrompt && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.8)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
-          <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', width: '90%', maxWidth: '360px', textAlign: 'center' }}>
-            <Lock size={32} color="#667eea" />
-            <h3 style={{ margin: '1rem 0' }}>סיסמת מנהל מטבח ליציאה</h3>
+        <div className="modal-overlay">
+          <div className="modal-card">
+            <div className="modal-icon"><Lock size={26} /></div>
+            <h3>סיסמת מנהל מטבח ליציאה</h3>
             <input
               type="password"
               value={exitPassword}
               onChange={(e) => setExitPassword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleExitSubmit()}
-              style={{ width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', textAlign: 'center', fontSize: '1.1rem', boxSizing: 'border-box' }}
               autoFocus
             />
-            {exitError && <p style={{ color: '#f44336', marginTop: '0.5rem' }}>{exitError}</p>}
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1.5rem' }}>
-              <button onClick={() => { setShowExitPrompt(false); setExitPassword(''); setExitError(''); }} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: '#f5f5f5', cursor: 'pointer' }}>ביטול</button>
-              <button onClick={handleExitSubmit} style={{ flex: 1, padding: '0.75rem', borderRadius: '8px', border: 'none', background: '#667eea', color: 'white', cursor: 'pointer', fontWeight: '600' }}>אישור</button>
+            {exitError && <p className="modal-error" role="alert">{exitError}</p>}
+            <div className="modal-actions">
+              <button className="btn-secondary" onClick={() => { setShowExitPrompt(false); setExitPassword(''); setExitError(''); }}>ביטול</button>
+              <button className="btn-primary" onClick={handleExitSubmit}>אישור</button>
             </div>
           </div>
         </div>
       )}
     </div>
   );
-};
-
-const pinKeyStyle = {
-  padding: '1rem', fontSize: '1.3rem', borderRadius: '12px', border: '2px solid #e0e0e0',
-  background: 'white', cursor: 'pointer', fontWeight: '600'
 };
 
 export default SelfServiceKiosk;
