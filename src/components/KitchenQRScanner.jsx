@@ -7,8 +7,9 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useNavigate, useLocation } from 'react-router-dom';
 
 // מסך ראשי למטבח - עיצוב לפי דגם bonapp-kitchen-dashboard-design.html שאושר.
-// כל הלוגיקה העסקית (סריקה, עגלה, חיוב, סטטיסטיקות, הגדרות) נשמרה כפי שהייתה -
-// רק שכבת התצוגה הוחלפה, פלוס שחזור מסך הסריקה שהיה חסר בפועל (ראו הערה למטה).
+// כל הלוגיקה העסקית (עגלה, חיוב, הגדרות) נשמרה כפי שהייתה - רק שכבת התצוגה הוחלפה.
+// זיהוי תלמיד (סריקה/חיפוש לפי שם) מתבצע במסך "קופה מהירה" הנפרד (/kitchen-pos) -
+// כפתור הכותרת מנווט לשם, בדיוק כפי שהיה לפני העיצוב מחדש.
 const KitchenQRScanner = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -595,9 +596,9 @@ const KitchenQRScanner = () => {
         </div>
 
         <div className="top-actions">
-          <button className="action scan" onClick={() => { setActiveTab('stats'); setScanning(true); }}>
+          <button className="action scan" onClick={() => navigate('/kitchen-pos')} title="קופה מהירה">
             <QrCode size={18} />
-            <span className="label">סריקת תלמיד</span>
+            <span className="label">קופה מהירה</span>
           </button>
           <button className="action primary kiosk" onClick={() => navigate('/self-service-kiosk')}>
             <span className="label">פתח קיוסק עצמאי</span>
@@ -638,9 +639,9 @@ const KitchenQRScanner = () => {
 
       {/* שורת פעולות ראשיות למובייל בלבד (≤560px) - טקסט גלוי במקום אייקונים */}
       <div className="mobile-primary-actions">
-        <button className="mobile-action-btn scan" onClick={() => { setActiveTab('stats'); setScanning(true); }}>
+        <button className="mobile-action-btn scan" onClick={() => navigate('/kitchen-pos')}>
           <QrCode size={18} />
-          סריקת תלמיד
+          קופה מהירה
         </button>
         <button className="mobile-action-btn kiosk" onClick={() => navigate('/self-service-kiosk')}>
           קיוסק עצמאי
