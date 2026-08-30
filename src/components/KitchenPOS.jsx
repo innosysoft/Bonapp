@@ -2,16 +2,19 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { searchStudents, getMenuItems, processMealPurchase, getSchools, scanStudent } from '../api';
 import { authFetch } from '../auth';
-import { QrCode, Search, ShoppingCart, DollarSign, X, Plus, Minus, Settings, ChefHat } from 'lucide-react';
+import { QrCode, Search, ShoppingCart, DollarSign, X, Plus, Minus, Settings, ChefHat, AlertCircle } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
+// עיצוב לפי דגם bonapp-kitchen-dashboard-design.html שאושר (אותה שפת עיצוב כמו KitchenQRScanner.jsx).
+// כל הלוגיקה העסקית (סריקה, חיפוש, עגלה, חיוב, אזהרת מינוס) נשמרה כפי שהייתה - רק שכבת התצוגה הוחלפה.
+const getBalanceColorVar = (balance) => (balance > 50 ? 'var(--green)' : balance > 20 ? 'var(--warn)' : 'var(--danger)');
 
 const KitchenPOS = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
   const [menuType, setMenuType] = useState('items');
-  
+
   // תלמיד
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -28,7 +31,7 @@ useEffect(() => {
   return () => window.removeEventListener('resize', handleResize);
 }, []);
 
-  
+
   // תפריט ועגלה
   const [menuItems, setMenuItems] = useState([]);
   const [dailyMenuData, setDailyMenuData] = useState([]);
@@ -66,16 +69,16 @@ const onScanSuccess = async (decodedText) => {
   console.log('QR Code scanned:', decodedText);
   setIsScanning(false);
   setScannerReady(false);
-  
+
   try {
     const response = await authFetch('https://api.bonapp.dev/api/scan-student', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ qrCode: decodedText })
     });
-    
+
     const result = await response.json();
-    
+
     if (result.success) {
       setSelectedStudent(result.student);
       setCart([]);
@@ -157,7 +160,7 @@ useEffect(() => {
   monthly_meal_price: school.monthly_meal_price || 0,
   daily_meal_price: school.daily_meal_price || 0
 });
-            
+
             if (school.menu_type === 'daily') {
               const dailyResponse = await authFetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
               const dailyData = await dailyResponse.json();
@@ -182,7 +185,7 @@ useEffect(() => {
 
   const handleSearch = async (term) => {
     setSearchTerm(term);
-    
+
     if (term.length < 2) {
       setSearchResults([]);
       return;
@@ -219,7 +222,7 @@ useEffect(() => {
   try {
     setIsScanning(false);
     const result = await scanStudent(qrCode);
-    
+
     if (result.success) {
       selectStudent(result.student);
     } else {
@@ -276,7 +279,7 @@ const stopScanning = () => {
 
   try {
     const result = await processMealPurchase(selectedStudent.id, cart, total, forceOverride);
-    
+
     if (result.requireConfirmation) {
       // הצג אזהרת מינוס
       setWarningData({
@@ -286,7 +289,7 @@ const stopScanning = () => {
       setShowWarning(true);
       return;
     }
-    
+
     if (result.success) {
   alert(`תשלום בוצע בהצלחה!\nסה"כ: ₪${total.toFixed(2)}\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}`);
 
@@ -310,113 +313,151 @@ const stopScanning = () => {
   }
 };
 
-
-  const styles = {
-    container: {
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-    },
-    header: {
-      background: 'rgba(255, 255, 255, 0.95)',
-      padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '0.75rem',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
-    },
-    logo: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem'
-    },
-    logoIcon: {
-      width: '50px',
-      height: '50px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-      borderRadius: '12px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    title: {
-      fontSize: '1.6rem',
-      fontWeight: 'bold',
-      color: '#667eea',
-      margin: 0
-    },
-    subtitle: {
-      fontSize: '0.9rem',
-      color: '#666',
-      marginTop: '0.25rem'
-    },
-    buttons: {
-      display: 'flex',
-      gap: '1rem'
-    },
-    iconButton: {
-      background: '#f8f9fa',
-      border: 'none',
-      borderRadius: '12px',
-      padding: '0.75rem',
-      cursor: 'pointer',
-      transition: 'all 0.3s'
-    },
-    main: {
-      padding: isMobile ? '1rem' : '2rem',
-      maxWidth: '1400px',
-      margin: '0 auto'
-    }
-  };
-
   return (
-    <div style={styles.container}>
+    <div className="bap-pos">
+      <style>{`
+        .bap-pos{
+          --navy:#17324a;--blue:#356b8c;--green:#75a843;--green2:#eef6e9;--paper:#f4f7f7;
+          --white:#fff;--muted:#607482;--line:#dce6e9;--danger:#b64e4e;--warn:#b9812e;
+          --shadow:0 8px 25px rgba(23,50,74,.08);
+          font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--paper);
+          font-size:15px;min-height:100vh;
+        }
+        .bap-pos *{box-sizing:border-box}
+        .bap-pos button{font:inherit}
+        .bap-pos button:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+        .bap-pos input:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+
+        .bap-pos .top{min-height:76px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;flex-wrap:wrap;padding:12px 32px;gap:16px}
+        .bap-pos .brand{display:flex;align-items:center;gap:13px;margin-left:auto}
+        .bap-pos .brand-icon{width:46px;height:46px;border-radius:12px;background:var(--blue);color:#fff;display:grid;place-items:center;flex-shrink:0}
+        .bap-pos .brand h1{font-size:19px;margin:0;color:var(--navy)}
+        .bap-pos .brand .sub{color:var(--muted);font-size:13px}
+        .bap-pos .top-actions{display:flex;gap:9px;flex-wrap:wrap}
+        .bap-pos .action{height:42px;border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:10px;padding:0 14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:8px;white-space:nowrap}
+        .bap-pos .action:hover{background:var(--paper)}
+
+        .bap-pos .main{padding:26px;max-width:1400px;margin:0 auto}
+        .bap-pos .center-wrap{display:flex;justify-content:center;align-items:center;min-height:calc(100vh - 220px)}
+
+        .bap-pos .card{background:#fff;border:1px solid var(--line);border-radius:20px;padding:36px;max-width:600px;width:100%;box-shadow:var(--shadow)}
+        .bap-pos .card.narrow{max-width:480px;text-align:center}
+        .bap-pos .card-head{text-align:center;margin-bottom:26px}
+        .bap-pos .card-icon{width:70px;height:70px;border-radius:50%;background:var(--green2);color:var(--green);display:grid;place-items:center;margin:0 auto 14px}
+        .bap-pos .card-head h2{font-size:24px;margin:0 0 6px;color:var(--navy)}
+        .bap-pos .card-head p{margin:0;color:var(--muted)}
+
+        .bap-pos .mode-tabs{display:flex;gap:8px;background:var(--paper);padding:6px;border-radius:12px;margin-bottom:22px}
+        .bap-pos .mode-tab{flex:1;padding:12px;border-radius:9px;border:0;background:transparent;color:var(--muted);font-weight:700;font-size:15px;cursor:pointer}
+        .bap-pos .mode-tab.active{background:#fff;color:var(--blue);box-shadow:var(--shadow)}
+
+        .bap-pos .scan-cta{width:100%;padding:44px 22px;border-radius:14px;border:3px dashed var(--blue);background:rgba(53,107,140,.06);color:var(--blue);font-size:17px;font-weight:700;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:12px}
+        .bap-pos .scan-box{background:#fff;border:1px solid var(--line);border-radius:14px;padding:22px;margin-bottom:14px;text-align:center}
+        .bap-pos .scan-box h3{margin:0 0 14px;color:var(--navy);font-size:16px;font-weight:600}
+        .bap-pos .cancel-scan{width:100%;padding:14px;border-radius:12px;border:1px solid var(--line);background:#fff;color:var(--navy);font-weight:700;cursor:pointer}
+
+        .bap-pos .search-input-wrap{position:relative;margin-bottom:20px}
+        .bap-pos .search-input-wrap svg{position:absolute;right:14px;top:50%;transform:translateY(-50%);color:var(--muted);pointer-events:none}
+        .bap-pos .search-input-wrap input{width:100%;padding:14px 44px 14px 14px;border:2px solid var(--line);border-radius:12px;font-size:16px}
+        .bap-pos .search-input-wrap input:focus{border-color:var(--blue)}
+
+        .bap-pos .results{background:#fff;border:2px solid var(--blue);border-radius:12px;max-height:400px;overflow-y:auto}
+        .bap-pos .result-row{padding:14px 16px;border-bottom:1px solid var(--line);cursor:pointer;display:flex;align-items:center;gap:14px;text-align:right;width:100%;background:none;border-inline:0;border-top:0}
+        .bap-pos .result-row:last-child{border-bottom:0}
+        .bap-pos .result-row:hover{background:var(--paper)}
+        .bap-pos .avatar{width:54px;height:54px;border-radius:50%;object-fit:cover;border:3px solid var(--green);flex-shrink:0}
+        .bap-pos .result-row strong{display:block;font-size:16px;color:var(--navy)}
+        .bap-pos .result-row .meta{font-size:13px;color:var(--muted);margin-top:2px}
+        .bap-pos .result-row .bal{font-size:13px;font-weight:700;margin-top:2px}
+        .bap-pos .no-results{text-align:center;padding:26px;color:var(--muted)}
+
+        .bap-pos .confirm-photo{width:170px;height:170px;border-radius:50%;object-fit:cover;border:5px solid var(--green);margin:0 auto 22px;display:block;box-shadow:var(--shadow)}
+        .bap-pos .confirm-info{background:var(--paper);border-radius:12px;padding:20px;margin-bottom:24px}
+        .bap-pos .confirm-info h3{margin:0 0 10px;font-size:21px;color:var(--navy)}
+        .bap-pos .confirm-info .meta{color:var(--muted);margin-bottom:4px;font-size:15px}
+        .bap-pos .confirm-balance{font-size:26px;font-weight:800;margin-top:10px}
+        .bap-pos .confirm-actions{display:flex;gap:12px;justify-content:center}
+        .bap-pos .btn-secondary{flex:1;padding:14px;border-radius:12px;border:2px solid var(--line);background:#fff;color:var(--navy);font-weight:700;cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;gap:8px}
+        .bap-pos .btn-primary{flex:1;padding:14px;border-radius:12px;border:0;background:var(--green);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
+
+        .bap-pos .modal-overlay{position:fixed;inset:0;background:rgba(23,50,74,.55);display:flex;align-items:center;justify-content:center;z-index:9999;padding:20px}
+        .bap-pos .modal-card{background:#fff;border-radius:18px;padding:30px;max-width:480px;width:100%;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+        .bap-pos .modal-icon{width:56px;height:56px;border-radius:50%;background:#fbeee0;color:var(--warn);display:grid;place-items:center;margin:0 auto 14px}
+        .bap-pos .modal-card h3{text-align:center;color:var(--warn);margin:0 0 16px;font-size:19px}
+        .bap-pos .modal-message{background:#fbeee0;border-radius:12px;padding:16px;margin-bottom:20px;white-space:pre-line;text-align:center;line-height:1.6}
+        .bap-pos .modal-actions{display:flex;gap:12px}
+        .bap-pos .btn-warn{flex:1;padding:14px;border-radius:12px;border:0;background:var(--warn);color:#fff;font-weight:700;cursor:pointer;font-size:15px}
+
+        .bap-pos .sales-grid{display:grid;gap:20px;max-width:1400px;margin:0 auto}
+        .bap-pos .side-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow);height:fit-content}
+        .bap-pos .student-photo{width:104px;height:104px;border-radius:50%;object-fit:cover;border:4px solid var(--green);margin:0 auto 14px;display:block}
+        .bap-pos .student-name{text-align:center;font-size:18px;font-weight:700;color:var(--navy);margin:0 0 4px}
+        .bap-pos .student-meta{text-align:center;color:var(--muted);font-size:14px;margin-bottom:14px}
+        .bap-pos .balance-box{background:var(--paper);border-radius:12px;padding:16px;text-align:center;margin-bottom:14px}
+        .bap-pos .balance-box .label{font-size:13px;color:var(--muted);margin-bottom:6px}
+        .bap-pos .balance-box .value{font-size:25px;font-weight:800}
+        .bap-pos .cancel-btn{width:100%;padding:12px;border-radius:12px;border:2px solid var(--line);background:#fff;color:var(--navy);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+
+        .bap-pos .menu-panel,.bap-pos .cart-panel{background:#fff;border:1px solid var(--line);border-radius:16px;padding:24px;box-shadow:var(--shadow)}
+        .bap-pos .menu-panel h3,.bap-pos .cart-panel h3{font-size:18px;margin:0 0 18px;color:var(--navy);display:flex;align-items:center;gap:8px}
+        .bap-pos .menu-list{max-height:600px;overflow-y:auto}
+        .bap-pos .daily-item{padding:20px;background:#fff;border:2px solid var(--blue);border-radius:12px;margin-bottom:14px}
+        .bap-pos .daily-item .name{font-weight:700;font-size:16px;color:var(--navy);margin-bottom:8px}
+        .bap-pos .daily-item .desc{color:var(--muted);margin-bottom:14px;line-height:1.5}
+        .bap-pos .daily-item .row{display:flex;justify-content:space-between;align-items:center}
+        .bap-pos .empty-note{text-align:center;padding:40px;color:var(--muted)}
+
+        .bap-pos .menu-item-row{display:flex;justify-content:space-between;align-items:center;padding:14px;margin-bottom:10px;border:1px solid var(--line);border-radius:12px;background:#fff}
+        .bap-pos .menu-item-row.disabled{background:var(--paper);opacity:.6}
+        .bap-pos .menu-item-row .name{font-weight:700;color:var(--navy)}
+        .bap-pos .menu-item-row .cat{font-size:13px;color:var(--muted)}
+        .bap-pos .price-tag{font-weight:800;color:var(--blue);font-size:16px}
+        .bap-pos .add-btn{background:var(--blue);color:#fff;border:0;border-radius:10px;padding:9px 16px;font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;font-size:14px}
+        .bap-pos .add-btn:disabled{background:#cfd8db;color:#8a9490;cursor:not-allowed}
+
+        .bap-pos .empty-cart{text-align:center;padding:44px 16px;color:var(--muted)}
+        .bap-pos .cart-item{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;padding-bottom:14px;border-bottom:1px solid var(--line)}
+        .bap-pos .qty-btn{width:28px;height:28px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--navy)}
+        .bap-pos .cart-total-row{display:flex;justify-content:space-between;align-items:center;border-top:2px solid var(--blue);padding-top:16px;margin-top:6px;margin-bottom:18px;font-size:19px;font-weight:800;color:var(--navy)}
+        .bap-pos .pay-btn{width:100%;background:var(--green);color:#fff;border:0;padding:18px;border-radius:12px;cursor:pointer;font-size:17px;font-weight:800;display:flex;align-items:center;justify-content:center;gap:10px}
+        .bap-pos .pay-btn:hover{filter:brightness(.95)}
+
+        @media(max-width:900px){
+          .bap-pos .top{padding:12px 18px}
+          .bap-pos .brand{margin-left:0;flex:1}
+          .bap-pos .main{padding:16px}
+        }
+        @media(max-width:560px){
+          .bap-pos .brand h1{font-size:16px}
+          .bap-pos .action span.label{display:none}
+          .bap-pos .action{padding:0 12px}
+          .bap-pos .card{padding:22px}
+        }
+      `}</style>
+
       {/* Header */}
-      <div style={styles.header}>
-        <div style={styles.logo}>
-          <div style={styles.logoIcon}>
-            <QrCode size={28} color="white" />
-          </div>
+      <header className="top">
+        <div className="brand">
+          <div className="brand-icon"><QrCode size={22} /></div>
           <div>
-            <div style={styles.title}>קופה מהירה</div>
-            <div style={styles.subtitle}>{schoolName || 'בית ספר'}</div>
+            <h1>קופה מהירה</h1>
+            <div className="sub">{schoolName || 'בית ספר'}</div>
           </div>
         </div>
 
-        <div style={styles.buttons}>
-          <button
-  style={{
-    background: '#f8f9fa',
-    border: 'none',
-    borderRadius: '12px',
-    padding: '0.75rem 1.5rem',
-    cursor: 'pointer',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '0.5rem',
-    color: '#666'
-  }}
-  onClick={() => navigate('/kitchen-scanner')}
-  title="חזור לניהול"
->
-  <Settings size={20} />
-  חזור לניהול
-</button>
-
-          <button
-            style={styles.iconButton}
-            onClick={() => navigate('/menu-management')}
-            title="תפריט"
-          >
-            <ChefHat size={20} />
+        <div className="top-actions">
+          <button className="action" onClick={() => navigate('/kitchen-scanner')} title="חזור לניהול">
+            <Settings size={18} />
+            <span className="label">חזור לניהול</span>
+          </button>
+          <button className="action" onClick={() => navigate('/menu-management')} title="ניהול תפריט">
+            <ChefHat size={18} />
+            <span className="label">ניהול תפריט</span>
           </button>
         </div>
-      </div>
+      </header>
 
-      <div style={styles.main}>
+      <div className="main">
         {!selectedStudent ? (
           // מסך חיפוש
           <SearchScreen
@@ -479,86 +520,27 @@ const stopScanning = () => {
   );
 };
 
-// קומפוננטות עזר - נוסיף בשלב הבא
 const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, searchMode, onSearchModeChange, isScanning, onStartScanning, onStopScanning, setIsScanning, setScannerReady, isMobile }) => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 'calc(100vh - 200px)'
-  }}>
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.95)',
-      borderRadius: isMobile ? '16px' : '24px',
-      padding: isMobile ? '1.5rem' : '3rem',
-      maxWidth: '600px',
-      width: '100%',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-      backdropFilter: 'blur(20px)'
-    }}>
-      <div style={{
-        textAlign: 'center',
-        marginBottom: '2rem'
-      }}>
-        <QrCode size={64} color="#667eea" style={{ margin: '0 auto 1rem' }} />
-        <h2 style={{
-          fontSize: '2rem',
-          fontWeight: 'bold',
-          color: '#333',
-          margin: '0 0 0.5rem 0'
-        }}>
-          זיהוי תלמיד
-        </h2>
-        <p style={{
-          color: '#666',
-          fontSize: '1rem',
-          margin: 0
-        }}>
-          בחר אפשרות זיהוי
-        </p>
+  <div className="center-wrap">
+    <div className="card">
+      <div className="card-head">
+        <div className="card-icon"><QrCode size={34} /></div>
+        <h2>זיהוי תלמיד</h2>
+        <p>בחר אפשרות זיהוי</p>
       </div>
 
       {/* טאבים */}
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        marginBottom: '2rem',
-        background: '#f8f9fa',
-        padding: '0.5rem',
-        borderRadius: '12px'
-      }}>
+      <div className="mode-tabs">
         <button
+          className={`mode-tab ${searchMode === 'scan' ? 'active' : ''}`}
           onClick={() => onSearchModeChange('scan')}
-          style={{
-            flex: 1,
-            padding: '0.75rem',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '1rem',
-            background: searchMode === 'scan' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-            color: searchMode === 'scan' ? 'white' : '#666',
-            transition: 'all 0.3s'
-          }}
         >
           📷 סריקת QR
         </button>
-        
+
         <button
+          className={`mode-tab ${searchMode === 'search' ? 'active' : ''}`}
           onClick={() => onSearchModeChange('search')}
-          style={{
-            flex: 1,
-            padding: '0.75rem',
-            borderRadius: '8px',
-            border: 'none',
-            cursor: 'pointer',
-            fontWeight: '600',
-            fontSize: '1rem',
-            background: searchMode === 'search' ? 'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-            color: searchMode === 'search' ? 'white' : '#666',
-            transition: 'all 0.3s'
-          }}
         >
           🔍 חיפוש
         </button>
@@ -566,163 +548,71 @@ const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStude
 
       {searchMode === 'scan' ? (
         // מצב סריקה
-        <div style={{ textAlign: 'center' }}>
+        <div>
           {!isScanning ? (
-            <button
-  onClick={() => {
-    setIsScanning(true);
-  }}
-  style={{
-                width: '100%',
-                padding: '3rem 2rem',
-                borderRadius: '12px',
-                border: '3px dashed #667eea',
-                background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
-                color: '#667eea',
-                fontSize: '1.2rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                transition: 'all 0.3s',
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                gap: '1rem'
-              }}
-            >
-              <QrCode size={64} />
+            <button className="scan-cta" onClick={() => { setIsScanning(true); }}>
+              <QrCode size={56} />
               לחץ לסריקת QR
             </button>
           ) : (
-  <div>
-    <div style={{
-      background: 'white',
-      borderRadius: '12px',
-      padding: '2rem',
-      marginBottom: '1rem'
-    }}>
-      <h3 style={{ textAlign: 'center', marginBottom: '1rem', color: '#333' }}>
-        📷 מכוון את המצלמה לכיוון ה-QR Code
-      </h3>
-      <div id="qr-reader" style={{ width: '100%' }}>
-
-        
-      </div>
-    </div>
-    <button
-  onClick={() => {
-    setIsScanning(false);
-    setScannerReady(false);
-  }}
-  style={{
-    width: '100%',
-    padding: '1rem',
-    borderRadius: '12px',
-    border: 'none',
-    background: '#e0e0e0',
-    color: '#666',
-    fontSize: '1rem',
-    fontWeight: '600',
-    cursor: 'pointer'
-  }}
->
-  ביטול
-</button>
-  </div>
-)}
+            <div>
+              <div className="scan-box">
+                <h3>📷 מכוון את המצלמה לכיוון ה-QR Code</h3>
+                <div id="qr-reader" style={{ width: '100%' }} />
+              </div>
+              <button
+                className="cancel-scan"
+                onClick={() => {
+                  setIsScanning(false);
+                  setScannerReady(false);
+                }}
+              >
+                ביטול
+              </button>
+            </div>
+          )}
         </div>
       ) : (
         // מצב חיפוש
         <>
-          <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
-            <Search 
-              size={20} 
-              style={{
-                position: 'absolute',
-                right: '1rem',
-                top: '50%',
-                transform: 'translateY(-50%)',
-                color: '#999'
-              }}
-            />
+          <div className="search-input-wrap">
+            <Search size={20} />
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => onSearchChange(e.target.value)}
               placeholder="הקלד לפחות 2 תווים..."
               autoFocus
-              style={{
-                width: '100%',
-                padding: '1rem 3rem 1rem 1rem',
-                border: '2px solid #e0e0e0',
-                borderRadius: '12px',
-                fontSize: '1.1rem',
-                boxSizing: 'border-box',
-                transition: 'all 0.3s'
-              }}
-              onFocus={(e) => e.target.style.borderColor = '#667eea'}
-              onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
             />
           </div>
 
           {searchResults.length > 0 && (
-            <div style={{
-              background: 'white',
-              border: '2px solid #667eea',
-              borderRadius: '12px',
-              maxHeight: '400px',
-              overflowY: 'auto'
-            }}>
+            <div className="results">
               {searchResults.map(student => (
-                <div
+                <button
                   key={student.id}
+                  className="result-row"
                   onClick={() => onSelectStudent(student)}
-                  style={{
-                    padding: '1.25rem',
-                    borderBottom: '1px solid #f0f0f0',
-                    cursor: 'pointer',
-                    transition: 'background 0.2s',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '1rem'
-                  }}
-                  onMouseEnter={(e) => e.currentTarget.style.background = '#f8f9fa'}
-                  onMouseLeave={(e) => e.currentTarget.style.background = 'white'}
                 >
-                  <img 
-                    src={student.photo_url || `https://via.placeholder.com/60/4CAF50/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
+                  <img
+                    className="avatar"
+                    src={student.photo_url || `https://via.placeholder.com/60/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
                     alt={student.first_name}
-                    style={{
-                      width: '60px',
-                      height: '60px',
-                      borderRadius: '50%',
-                      objectFit: 'cover',
-                      border: '3px solid #4CAF50'
-                    }}
                   />
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', fontSize: '1.1rem', color: '#333' }}>
-                      {student.first_name} {student.last_name}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#666', marginTop: '0.25rem' }}>
-                      כיתה {student.grade} • {student.student_phone}
-                    </div>
-                    <div style={{ fontSize: '0.9rem', color: '#4CAF50', marginTop: '0.25rem', fontWeight: '600' }}>
+                    <strong>{student.first_name} {student.last_name}</strong>
+                    <div className="meta">כיתה {student.grade} • {student.student_phone}</div>
+                    <div className="bal" style={{ color: getBalanceColorVar(student.balance) }}>
                       יתרה: ₪{student.balance.toFixed(2)}
                     </div>
                   </div>
-                </div>
+                </button>
               ))}
             </div>
           )}
 
           {searchTerm.length >= 2 && searchResults.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '2rem',
-              color: '#999'
-            }}>
-              לא נמצאו תוצאות
-            </div>
+            <div className="no-results">לא נמצאו תוצאות</div>
           )}
         </>
       )}
@@ -731,212 +621,44 @@ const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStude
 );
 
 const ConfirmScreen = ({ student, onConfirm, onCancel, isMobile }) => (
-  <div style={{
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: 'calc(100vh - 200px)'
-  }}>
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.95)',
-      borderRadius: isMobile ? '16px' : '24px',
-      padding: isMobile ? '1.5rem' : '3rem',
-      maxWidth: '500px',
-      width: '100%',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.2)',
-      backdropFilter: 'blur(20px)',
-      textAlign: 'center'
-    }}>
-      <h2 style={{
-        fontSize: '1.8rem',
-        fontWeight: 'bold',
-        color: '#333',
-        margin: '0 0 2rem 0'
-      }}>
-        אישור תלמיד
-      </h2>
+  <div className="center-wrap">
+    <div className="card narrow">
+      <div className="card-head" style={{ marginBottom: '20px' }}>
+        <h2>אישור תלמיד</h2>
+      </div>
 
-      <img 
-        src={student.photo_url || `https://via.placeholder.com/200/4CAF50/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
+      <img
+        className="confirm-photo"
+        src={student.photo_url || `https://via.placeholder.com/200/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
         alt={student.first_name}
-        style={{
-          width: '200px',
-          height: '200px',
-          borderRadius: '50%',
-          objectFit: 'cover',
-          border: '5px solid #4CAF50',
-          margin: '0 auto 2rem',
-          boxShadow: '0 8px 24px rgba(0,0,0,0.15)'
-        }}
       />
 
-      <div style={{
-        background: '#f8f9fa',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        marginBottom: '2rem'
-      }}>
-        <h3 style={{
-          fontSize: '1.8rem',
-          fontWeight: 'bold',
-          color: '#333',
-          margin: '0 0 1rem 0'
-        }}>
-          {student.first_name} {student.last_name}
-        </h3>
-        
-        <div style={{ fontSize: '1.1rem', color: '#666', marginBottom: '0.5rem' }}>
-          כיתה {student.grade}
-        </div>
-        
-        <div style={{ fontSize: '1rem', color: '#666', marginBottom: '1rem' }}>
-          {student.student_phone}
-        </div>
-        
-        <div style={{
-          fontSize: '2rem',
-          fontWeight: 'bold',
-          color: student.balance > 50 ? '#4CAF50' : student.balance > 20 ? '#FF9800' : '#f44336',
-          marginTop: '1rem'
-        }}>
+      <div className="confirm-info">
+        <h3>{student.first_name} {student.last_name}</h3>
+        <div className="meta">כיתה {student.grade}</div>
+        <div className="meta">{student.student_phone}</div>
+        <div className="confirm-balance" style={{ color: getBalanceColorVar(student.balance) }}>
           יתרה: ₪{student.balance.toFixed(2)}
         </div>
       </div>
 
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        justifyContent: 'center'
-      }}>
-        <button
-          onClick={onCancel}
-          style={{
-            flex: 1,
-            padding: '1rem 2rem',
-            borderRadius: '12px',
-            border: '2px solid #e0e0e0',
-            background: 'white',
-            color: '#666',
-            fontSize: '1.1rem',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}
-        >
-          ביטול
-        </button>
-        
-        <button
-          onClick={onConfirm}
-          style={{
-            flex: 1,
-            padding: '1rem 2rem',
-            borderRadius: '12px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-            color: 'white',
-            fontSize: '1.1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)'
-          }}
-        >
-          ✓ אישור
-        </button>
+      <div className="confirm-actions">
+        <button className="btn-secondary" onClick={onCancel}>ביטול</button>
+        <button className="btn-primary" onClick={onConfirm}>✓ אישור</button>
       </div>
     </div>
   </div>
 );
 
 const WarningModal = ({ warningData, onConfirm, onCancel }) => (
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    background: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 9999
-  }}>
-    <div style={{
-      background: 'white',
-      borderRadius: '20px',
-      padding: '2.5rem',
-      maxWidth: '500px',
-      width: '90%',
-      boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-    }}>
-      <div style={{
-        fontSize: '3rem',
-        textAlign: 'center',
-        marginBottom: '1rem'
-      }}>
-        ⚠️
-      </div>
-      
-      <h3 style={{
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#FF9800',
-        textAlign: 'center',
-        marginBottom: '1.5rem'
-      }}>
-        אזהרת מינוס
-      </h3>
-      
-      <div style={{
-        background: '#fff3e0',
-        borderRadius: '12px',
-        padding: '1.5rem',
-        marginBottom: '2rem',
-        whiteSpace: 'pre-line',
-        textAlign: 'center',
-        fontSize: '1.1rem',
-        lineHeight: 1.6
-      }}>
-        {warningData?.message}
-      </div>
-      
-      <div style={{
-        display: 'flex',
-        gap: '1rem'
-      }}>
-        <button
-          onClick={onCancel}
-          style={{
-            flex: 1,
-            padding: '1rem 2rem',
-            borderRadius: '12px',
-            border: '2px solid #e0e0e0',
-            background: 'white',
-            color: '#666',
-            fontSize: '1.1rem',
-            fontWeight: '600',
-            cursor: 'pointer'
-          }}
-        >
-          ביטול
-        </button>
-        
-        <button
-          onClick={onConfirm}
-          style={{
-            flex: 1,
-            padding: '1rem 2rem',
-            borderRadius: '12px',
-            border: 'none',
-            background: 'linear-gradient(135deg, #FF9800, #F57C00)',
-            color: 'white',
-            fontSize: '1.1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            boxShadow: '0 4px 15px rgba(255, 152, 0, 0.3)'
-          }}
-        >
-          אשר בכל זאת
-        </button>
+  <div className="modal-overlay">
+    <div className="modal-card">
+      <div className="modal-icon"><AlertCircle size={28} /></div>
+      <h3>אזהרת מינוס</h3>
+      <div className="modal-message">{warningData?.message}</div>
+      <div className="modal-actions">
+        <button className="btn-secondary" onClick={onCancel}>ביטול</button>
+        <button className="btn-warn" onClick={onConfirm}>אשר בכל זאת</button>
       </div>
     </div>
   </div>
@@ -948,148 +670,45 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
   const todayMenu = dailyMenuData.find(d => d.day_of_week === today);
 
   return (
-    <div style={{
-      display: 'grid',
-      gridTemplateColumns: isMobile ? '1fr' : '300px 1fr 400px',
-      gap: isMobile ? '1rem' : '2rem',
-      maxWidth: '1400px',
-      margin: '0 auto'
-    }}>
-      {/* עמודה שמאל - פרטי תלמיד */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: isMobile ? '14px' : '20px',
-        padding: isMobile ? '1.25rem' : '2rem',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
-        height: 'fit-content',
-        position: isMobile ? 'static' : 'sticky',
-        top: '2rem'
-      }}>
-        <img 
-          src={student.photo_url || `https://via.placeholder.com/120/4CAF50/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
+    <div className="sales-grid" style={{ gridTemplateColumns: isMobile ? '1fr' : '280px 1fr 360px' }}>
+      {/* עמודה - פרטי תלמיד */}
+      <div className="side-panel" style={{ position: isMobile ? 'static' : 'sticky', top: '20px' }}>
+        <img
+          className="student-photo"
+          src={student.photo_url || `https://via.placeholder.com/120/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
           alt={student.first_name}
-          style={{
-            width: '120px',
-            height: '120px',
-            borderRadius: '50%',
-            objectFit: 'cover',
-            border: '4px solid #4CAF50',
-            margin: '0 auto 1rem',
-            display: 'block'
-          }}
         />
-        
-        <h3 style={{
-          fontSize: '1.3rem',
-          fontWeight: 'bold',
-          color: '#333',
-          margin: '0 0 0.5rem 0',
-          textAlign: 'center'
-        }}>
-          {student.first_name} {student.last_name}
-        </h3>
-        
-        <div style={{ textAlign: 'center', color: '#666', fontSize: '0.9rem', marginBottom: '1rem' }}>
-          כיתה {student.grade}
-        </div>
-        
-        <div style={{
-          background: '#f8f9fa',
-          borderRadius: '12px',
-          padding: '1rem',
-          marginBottom: '1rem',
-          textAlign: 'center'
-        }}>
-          <div style={{ fontSize: '0.85rem', color: '#666', marginBottom: '0.5rem' }}>
-            יתרה נוכחית
-          </div>
-          <div style={{
-            fontSize: '1.8rem',
-            fontWeight: 'bold',
-            color: student.balance > 50 ? '#4CAF50' : student.balance > 20 ? '#FF9800' : '#f44336'
-          }}>
+        <h3 className="student-name">{student.first_name} {student.last_name}</h3>
+        <div className="student-meta">כיתה {student.grade}</div>
+
+        <div className="balance-box">
+          <div className="label">יתרה נוכחית</div>
+          <div className="value" style={{ color: getBalanceColorVar(student.balance) }}>
             ₪{student.balance.toFixed(2)}
           </div>
         </div>
 
-        <button
-          onClick={onCancel}
-          style={{
-            width: '100%',
-            padding: '0.75rem',
-            borderRadius: '12px',
-            border: '2px solid #e0e0e0',
-            background: 'white',
-            color: '#666',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem'
-          }}
-        >
+        <button className="cancel-btn" onClick={onCancel}>
           <X size={18} />
           בטל עסקה
         </button>
       </div>
 
-      {/* עמודה אמצע - תפריט */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: isMobile ? '14px' : '20px',
-        padding: isMobile ? '1.25rem' : '2rem',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.1)'
-      }}>
-        <h3 style={{
-          fontSize: '1.5rem',
-          fontWeight: 'bold',
-          color: '#333',
-          margin: '0 0 1.5rem 0'
-        }}>
-          {menuType === 'daily' ? 'תפריט היום' : 'תפריט'}
-        </h3>
+      {/* עמודה - תפריט */}
+      <div className="menu-panel">
+        <h3>{menuType === 'daily' ? 'תפריט היום' : 'תפריט'}</h3>
 
-        <div style={{ maxHeight: '600px', overflowY: 'auto' }}>
+        <div className="menu-list">
           {menuType === 'daily' ? (
             // תפריט יומי
             todayMenu ? (
-              <div style={{
-                padding: '1.5rem',
-                background: 'white',
-                borderRadius: '12px',
-                border: '2px solid #667eea',
-                marginBottom: '1rem'
-              }}>
-                <div style={{
-                  fontWeight: '600',
-                  fontSize: '1.1rem',
-                  color: '#333',
-                  marginBottom: '1rem'
-                }}>
-                  ארוחת היום
-                </div>
-                <div style={{
-                  color: '#666',
-                  marginBottom: '1rem',
-                  lineHeight: 1.5
-                }}>
-                  {todayMenu.menu_description}
-                </div>
-                <div style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center'
-                }}>
-                  <span style={{
-                    fontWeight: 'bold',
-                    color: '#667eea',
-                    fontSize: '1.3rem'
-                  }}>
-                    ₪{getMealPrice().toFixed(2)}
-                  </span>
+              <div className="daily-item">
+                <div className="name">ארוחת היום</div>
+                <div className="desc">{todayMenu.menu_description}</div>
+                <div className="row">
+                  <span className="price-tag">₪{getMealPrice().toFixed(2)}</span>
                   <button
+                    className="add-btn"
                     onClick={() => onAddToCart({
                       id: `daily-${today}`,
                       name: 'ארוחת היום',
@@ -1098,84 +717,29 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
                       available: todayMenu.active
                     })}
                     disabled={!todayMenu.active}
-                    style={{
-                      background: !todayMenu.active ? '#e0e0e0' : 'linear-gradient(135deg, #667eea, #764ba2)',
-                      color: !todayMenu.active ? '#999' : 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      padding: '0.75rem 1.5rem',
-                      cursor: !todayMenu.active ? 'not-allowed' : 'pointer',
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
                   >
-                    <Plus size={18} />
+                    <Plus size={16} />
                     הוסף
                   </button>
                 </div>
               </div>
             ) : (
-              <div style={{
-                textAlign: 'center',
-                padding: '3rem',
-                color: '#999'
-              }}>
-                לא הוגדר תפריט להיום
-              </div>
+              <div className="empty-note">לא הוגדר תפריט להיום</div>
             )
           ) : (
             // תפריט פריטים
             menuItems.map(item => (
-              <div key={item.id} style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                padding: '1rem',
-                marginBottom: '0.75rem',
-                background: item.available ? 'white' : '#f5f5f5',
-                borderRadius: '12px',
-                border: '1px solid #e0e0e0',
-                opacity: item.available ? 1 : 0.6
-              }}>
+              <div key={item.id} className={`menu-item-row ${!item.available ? 'disabled' : ''}`}>
                 <div>
-                  <div style={{ fontWeight: '600', color: '#333', fontSize: '1rem' }}>
-                    {item.name}
-                  </div>
-                  <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                    {item.category}
-                  </div>
+                  <div className="name">{item.name}</div>
+                  <div className="cat">{item.category}</div>
                 </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '1rem'
-                }}>
-                  <span style={{
-                    fontWeight: 'bold',
-                    color: '#667eea',
-                    fontSize: '1.1rem'
-                  }}>
-                    ₪{item.price.toFixed(2)}
-                  </span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <span className="price-tag">₪{item.price.toFixed(2)}</span>
                   <button
+                    className="add-btn"
                     onClick={() => onAddToCart(item)}
                     disabled={!item.available}
-                    style={{
-                      background: !item.available ? '#e0e0e0' : 'linear-gradient(135deg, #667eea, #764ba2)',
-                      color: !item.available ? '#999' : 'white',
-                      border: 'none',
-                      borderRadius: '12px',
-                      padding: '0.5rem 1rem',
-                      cursor: !item.available ? 'not-allowed' : 'pointer',
-                      fontSize: '0.9rem',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
                   >
                     <Plus size={16} />
                     הוסף
@@ -1187,95 +751,27 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
         </div>
       </div>
 
-      {/* עמודה ימין - עגלה */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        borderRadius: isMobile ? '14px' : '20px',
-        padding: isMobile ? '1.25rem' : '2rem',
-        boxShadow: '0 12px 40px rgba(0,0,0,0.1)',
-        height: 'fit-content',
-        position: isMobile ? 'static' : 'sticky',
-        top: '2rem'
-      }}>
-        <h3 style={{
-          fontSize: '1.5rem',
-          fontWeight: 'bold',
-          color: '#333',
-          margin: '0 0 1.5rem 0',
-          display: 'flex',
-          alignItems: 'center',
-          gap: '0.5rem'
-        }}>
-          <ShoppingCart size={24} />
-          עגלת קניות
-        </h3>
+      {/* עמודה - עגלה */}
+      <div className="cart-panel" style={{ position: isMobile ? 'static' : 'sticky', top: '20px', height: 'fit-content' }}>
+        <h3><ShoppingCart size={20} /> עגלת קניות</h3>
 
         {cart.length === 0 ? (
-          <div style={{
-            textAlign: 'center',
-            padding: '3rem 1rem',
-            color: '#999'
-          }}>
-            העגלה ריקה
-          </div>
+          <div className="empty-cart">העגלה ריקה</div>
         ) : (
           <>
-            <div style={{ marginBottom: '1.5rem' }}>
+            <div>
               {cart.map(item => (
-                <div key={item.id} style={{
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                  marginBottom: '1rem',
-                  paddingBottom: '1rem',
-                  borderBottom: '1px solid #e0e0e0'
-                }}>
+                <div key={item.id} className="cart-item">
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', fontSize: '0.95rem' }}>
-                      {item.name}
-                    </div>
-                    <div style={{ fontSize: '0.85rem', color: '#666' }}>
-                      ₪{item.price.toFixed(2)} × {item.quantity}
-                    </div>
+                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{item.name}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>₪{item.price.toFixed(2)} × {item.quantity}</div>
                   </div>
-                  <div style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.5rem'
-                  }}>
-                    <button
-                      onClick={() => onUpdateQuantity(item.id, item.quantity - 1)}
-                      style={{
-                        background: '#e0e0e0',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '28px',
-                        height: '28px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <button className="qty-btn" onClick={() => onUpdateQuantity(item.id, item.quantity - 1)} aria-label={`הפחת כמות של ${item.name}`}>
                       <Minus size={14} />
                     </button>
-                    <span style={{ minWidth: '24px', textAlign: 'center', fontWeight: '600' }}>
-                      {item.quantity}
-                    </span>
-                    <button
-                      onClick={() => onUpdateQuantity(item.id, item.quantity + 1)}
-                      style={{
-                        background: '#e0e0e0',
-                        border: 'none',
-                        borderRadius: '50%',
-                        width: '28px',
-                        height: '28px',
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center'
-                      }}
-                    >
+                    <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 600 }}>{item.quantity}</span>
+                    <button className="qty-btn" onClick={() => onUpdateQuantity(item.id, item.quantity + 1)} aria-label={`הוסף כמות של ${item.name}`}>
                       <Plus size={14} />
                     </button>
                   </div>
@@ -1283,56 +779,18 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
               ))}
             </div>
 
-            <div style={{
-              borderTop: '2px solid #667eea',
-              paddingTop: '1.5rem',
-              marginBottom: '1.5rem'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '1.5rem'
-              }}>
-                <strong style={{ fontSize: '1.3rem', color: '#333' }}>
-                  סה״כ:
-                </strong>
-                <strong style={{ fontSize: '1.8rem', color: '#667eea' }}>
-                  ₪{onCalculateTotal().toFixed(2)}
-                </strong>
-              </div>
-
-              <button
-                onClick={() => onProcessPayment()}
-                style={{
-                  width: '100%',
-                  background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                  color: 'white',
-                  border: 'none',
-                  padding: '1.25rem',
-                  borderRadius: '12px',
-                  cursor: 'pointer',
-                  fontSize: '1.2rem',
-                  fontWeight: '600',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: '0.75rem',
-                  boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)'
-                }}
-              >
-                <DollarSign size={24} />
-                בצע תשלום
-              </button>
+            <div className="cart-total-row">
+              <span>סה"כ:</span>
+              <span>₪{onCalculateTotal().toFixed(2)}</span>
             </div>
+
+            <button className="pay-btn" onClick={() => onProcessPayment()}>
+              <DollarSign size={22} />
+              בצע תשלום
+            </button>
           </>
         )}
-
-        
       </div>
-      
-      
-
     </div>
   );
 };
