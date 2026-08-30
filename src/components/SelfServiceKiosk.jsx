@@ -284,19 +284,19 @@ const SelfServiceKiosk = () => {
         .bap-kiosk button{font:inherit}
         .bap-kiosk button:focus-visible,.bap-kiosk input:focus-visible{outline:3px solid var(--green);outline-offset:2px}
 
-        .bap-kiosk .kiosk-head{min-height:96px;background:#fff;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 34px;position:sticky;top:0;z-index:10;gap:12px}
-        .bap-kiosk .identity{display:flex;align-items:center;gap:13px;justify-self:start;min-height:48px}
-        .bap-kiosk .avatar{width:48px;height:48px;border-radius:14px;background:var(--green2);color:var(--green);display:grid;place-items:center;font-weight:700;font-size:18px;flex-shrink:0}
-        .bap-kiosk .identity strong{display:block;font-size:18px}
-        .bap-kiosk .identity span{font-size:14px;color:var(--muted)}
+        .bap-kiosk .kiosk-head{min-height:108px;background:#fff;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:10px 34px;position:sticky;top:0;z-index:10;gap:12px}
+        .bap-kiosk .identity{display:flex;align-items:center;gap:16px;justify-self:start;min-height:58px}
+        .bap-kiosk .avatar{width:58px;height:58px;border-radius:16px;background:var(--green2);color:var(--green);display:grid;place-items:center;font-weight:700;font-size:22px;flex-shrink:0}
+        .bap-kiosk .identity strong{display:block;font-size:26px}
+        .bap-kiosk .identity span{font-size:17px;color:var(--muted)}
         .bap-kiosk .brand{text-align:center;display:flex;flex-direction:column;align-items:center;gap:2px}
-        .bap-kiosk .kiosk-logo{height:40px;width:auto}
-        .bap-kiosk .brand small{font-size:12px;font-weight:500;color:var(--muted)}
-        .bap-kiosk .balance{justify-self:end;text-align:left;background:#eaf3f7;padding:10px 18px;border-radius:12px;min-height:48px}
-        .bap-kiosk .balance span{display:block;font-size:12px;color:var(--muted)}
-        .bap-kiosk .balance strong{font-size:23px;color:var(--blue)}
+        .bap-kiosk .kiosk-logo{height:44px;width:auto}
+        .bap-kiosk .brand small{font-size:13px;font-weight:500;color:var(--muted)}
+        .bap-kiosk .balance{justify-self:end;text-align:left;background:#eaf3f7;padding:10px 20px;border-radius:12px;min-height:58px}
+        .bap-kiosk .balance span{display:block;font-size:14px;color:var(--muted)}
+        .bap-kiosk .balance strong{font-size:32px;color:var(--blue)}
 
-        .bap-kiosk .lock{position:fixed;left:20px;top:112px;width:48px;height:48px;border:1px solid var(--line);background:#fff;border-radius:13px;color:var(--muted);box-shadow:var(--shadow);display:grid;place-items:center;z-index:50;cursor:pointer}
+        .bap-kiosk .lock{position:fixed;left:20px;top:124px;width:48px;height:48px;border:1px solid var(--line);background:#fff;border-radius:13px;color:var(--muted);box-shadow:var(--shadow);display:grid;place-items:center;z-index:50;cursor:pointer}
         .bap-kiosk .lock:hover{background:var(--paper)}
 
         .bap-kiosk .content{width:min(1380px,calc(100% - 48px));margin:26px auto}
@@ -323,26 +323,26 @@ const SelfServiceKiosk = () => {
         .bap-kiosk .qty{position:absolute;top:12px;left:12px;min-width:38px;height:38px;padding:0 8px;border-radius:11px;background:var(--green);color:#fff;display:grid;place-items:center;font-weight:700;box-shadow:0 5px 15px rgba(42,101,48,.25);font-size:16px;z-index:2}
         .bap-kiosk .empty-note{text-align:center;padding:60px 20px;color:var(--muted);font-size:18px}
 
-        .bap-kiosk .summary{position:fixed;bottom:0;right:0;left:0;min-height:96px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(23,50,74,.12);display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:24px;padding:15px 34px;z-index:20}
-        .bap-kiosk .summary-title{font-size:17px;font-weight:700}
-        .bap-kiosk .summary-items{color:var(--muted);font-size:14px;margin-top:2px}
+        .bap-kiosk .summary{position:fixed;bottom:0;right:0;left:0;min-height:108px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(23,50,74,.12);display:grid;grid-template-columns:1fr auto auto auto;align-items:center;gap:24px;padding:15px 34px;z-index:20}
+        .bap-kiosk .summary-title{font-size:20px;font-weight:700}
+        .bap-kiosk .summary-items{color:var(--muted);font-size:17px;margin-top:3px}
         .bap-kiosk .summary-total{display:flex;align-items:baseline;gap:10px}
-        .bap-kiosk .summary-total span{font-size:16px;color:var(--muted)}
-        .bap-kiosk .summary-total strong{font-size:32px;color:var(--navy)}
-        .bap-kiosk .pay{height:58px;min-width:210px;border:0;border-radius:13px;background:var(--green);color:#fff;font-weight:700;font-size:20px;box-shadow:0 7px 20px rgba(70,130,50,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
+        .bap-kiosk .summary-total span{font-size:18px;color:var(--muted)}
+        .bap-kiosk .summary-total strong{font-size:40px;color:var(--navy)}
+        .bap-kiosk .pay{height:62px;min-width:220px;border:0;border-radius:13px;background:var(--green);color:#fff;font-weight:700;font-size:22px;box-shadow:0 7px 20px rgba(70,130,50,.25);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px}
         .bap-kiosk .pay:disabled{background:#cfd8db;color:#8a9490;cursor:not-allowed;box-shadow:none}
         .bap-kiosk .pay.warn{background:var(--warn);box-shadow:0 7px 20px rgba(185,129,46,.25)}
-        .bap-kiosk .edit{height:52px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 18px;color:var(--blue);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:16px}
-        .bap-kiosk .summary-error{color:var(--danger);font-size:14px;font-weight:600;margin-top:4px}
+        .bap-kiosk .edit{height:56px;border:1px solid var(--line);border-radius:11px;background:#fff;padding:0 20px;color:var(--blue);font-weight:600;cursor:pointer;display:flex;align-items:center;gap:8px;font-size:18px}
+        .bap-kiosk .summary-error{color:var(--danger);font-size:16px;font-weight:600;margin-top:5px}
 
-        .bap-kiosk .cart-drawer{position:fixed;left:0;right:0;bottom:96px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(23,50,74,.12);max-height:50vh;overflow-y:auto;z-index:19;padding:18px 34px}
-        .bap-kiosk .cart-drawer h3{margin:0 0 14px;font-size:18px;display:flex;align-items:center;gap:8px}
-        .bap-kiosk .cart-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line)}
+        .bap-kiosk .cart-drawer{position:fixed;left:0;right:0;bottom:108px;background:#fff;border-top:1px solid var(--line);box-shadow:0 -8px 30px rgba(23,50,74,.12);max-height:50vh;overflow-y:auto;z-index:19;padding:20px 34px}
+        .bap-kiosk .cart-drawer h3{margin:0 0 16px;font-size:22px;display:flex;align-items:center;gap:10px}
+        .bap-kiosk .cart-row{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:1px solid var(--line)}
         .bap-kiosk .cart-row:last-child{border-bottom:0}
-        .bap-kiosk .cart-row .name{font-weight:600;font-size:16px}
-        .bap-kiosk .cart-row .unit{font-size:14px;color:var(--muted)}
-        .bap-kiosk .cart-qty{display:flex;align-items:center;gap:10px}
-        .bap-kiosk .qty-btn{width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--navy)}
+        .bap-kiosk .cart-row .name{font-weight:600;font-size:19px}
+        .bap-kiosk .cart-row .unit{font-size:16px;color:var(--muted)}
+        .bap-kiosk .cart-qty{display:flex;align-items:center;gap:12px}
+        .bap-kiosk .qty-btn{width:40px;height:40px;border-radius:50%;border:1px solid var(--line);background:#fff;display:grid;place-items:center;cursor:pointer;color:var(--navy)}
 
         .bap-kiosk .center-screen{min-height:calc(100vh - 96px);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:2rem;text-align:center}
         .bap-kiosk .id-title{font-size:30px;margin:0 0 28px}
@@ -378,18 +378,19 @@ const SelfServiceKiosk = () => {
           .bap-kiosk .kiosk-head{padding:10px 20px}
         }
         @media(max-width:680px){
-          .bap-kiosk{padding-bottom:176px}
+          .bap-kiosk{padding-bottom:198px}
           .bap-kiosk .kiosk-head{grid-template-columns:1fr 1fr;padding:10px 16px;gap:8px}
           .bap-kiosk .brand{grid-column:1/-1;grid-row:1}
           .bap-kiosk .kiosk-logo{height:32px}
           .bap-kiosk .brand small{display:none}
           .bap-kiosk .identity{grid-column:2;grid-row:2;justify-self:start}
-          .bap-kiosk .avatar{width:38px;height:38px;font-size:15px}
-          .bap-kiosk .identity strong{font-size:15px}
-          .bap-kiosk .identity span{font-size:12px}
-          .bap-kiosk .balance{grid-column:1;grid-row:2;padding:7px 12px}
-          .bap-kiosk .balance strong{font-size:19px}
-          .bap-kiosk .lock{top:auto;bottom:190px;left:12px}
+          .bap-kiosk .avatar{width:44px;height:44px;font-size:17px}
+          .bap-kiosk .identity strong{font-size:19px}
+          .bap-kiosk .identity span{font-size:14px}
+          .bap-kiosk .balance{grid-column:1;grid-row:2;padding:8px 14px}
+          .bap-kiosk .balance span{font-size:13px}
+          .bap-kiosk .balance strong{font-size:24px}
+          .bap-kiosk .lock{top:149px;left:12px}
           .bap-kiosk .content{width:calc(100% - 24px);margin:16px auto}
           .bap-kiosk .welcome h1{font-size:24px}
           .bap-kiosk .welcome p{font-size:15px}
@@ -400,11 +401,16 @@ const SelfServiceKiosk = () => {
           .bap-kiosk .meal-body strong{font-size:18px}
           .bap-kiosk .meal-price{font-size:19px}
           .bap-kiosk .plus{width:40px;height:40px}
-          .bap-kiosk .summary{min-height:150px;grid-template-columns:1fr auto;gap:10px 14px;padding:12px 16px}
-          .bap-kiosk .summary-total strong{font-size:26px}
-          .bap-kiosk .pay{grid-column:1/-1;width:100%}
-          .bap-kiosk .edit{height:46px}
-          .bap-kiosk .cart-drawer{bottom:150px;padding:16px}
+          .bap-kiosk .summary{min-height:172px;grid-template-columns:1fr auto;gap:10px 14px;padding:12px 16px}
+          .bap-kiosk .summary-title{font-size:18px}
+          .bap-kiosk .summary-items{font-size:15px}
+          .bap-kiosk .summary-total span{font-size:16px}
+          .bap-kiosk .summary-total strong{font-size:32px}
+          .bap-kiosk .pay{grid-column:1/-1;width:100%;font-size:20px}
+          .bap-kiosk .edit{height:48px;font-size:16px}
+          .bap-kiosk .cart-drawer{bottom:172px;padding:16px}
+          .bap-kiosk .cart-drawer h3{font-size:19px}
+          .bap-kiosk .cart-row .name{font-size:17px}
         }
       `}</style>
 
@@ -570,7 +576,7 @@ const SelfServiceKiosk = () => {
                 <button className="qty-btn" onClick={() => removeFromCart(c.id)} aria-label={`הפחת כמות של ${c.name}`}>
                   <Minus size={16} />
                 </button>
-                <span style={{ minWidth: 20, textAlign: 'center', fontWeight: 700 }}>{c.quantity}</span>
+                <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700, fontSize: 18 }}>{c.quantity}</span>
                 <button className="qty-btn" onClick={() => addToCart(c)} aria-label={`הוסף כמות של ${c.name}`}>
                   <Plus size={16} />
                 </button>
