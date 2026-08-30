@@ -1,645 +1,503 @@
-
-import React, { useState, useEffect } from 'react';
+import React, { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { 
-  Utensils, 
-  Smartphone, 
-  CreditCard, 
-  BarChart3, 
-  Shield, 
-  Clock,
-  CheckCircle,
-  ArrowRight,
-  Users,
-  Zap,
-  Phone,
-  Mail
-} from 'lucide-react';
+import { Menu, X } from 'lucide-react';
 
+// עיצוב דף הבית - מבוסס על דגם bonapp-homepage-design.html שאושר.
+// כל הכפתורים מחוברים לנתיבים האמיתיים הקיימים במערכת (login/register/school-contact/
+// contact/about/support/terms/privacy/school-policy/accessibility) - שום נתיב לא הומצא.
 const LandingPage = () => {
-
-const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
-
-useEffect(() => {
-  const handleResize = () => setIsMobile(window.innerWidth < 768);
-  window.addEventListener('resize', handleResize);
-  return () => window.removeEventListener('resize', handleResize);
-}, []);
-
   const navigate = useNavigate();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const hamburgerRef = useRef(null);
 
-  const styles = {
-    // Header
-    header: {
-      position: 'fixed',
-      top: 0,
-      left: 0,
-      right: 0,
-      background: 'rgba(255, 255, 255, 0.95)',
-      backdropFilter: 'blur(10px)',
-      padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
-      display: 'flex',
-      justifyContent: 'space-between',
-      alignItems: 'center',
-      boxShadow: '0 2px 20px rgba(0,0,0,0.05)',
-      zIndex: 1000
-    },
-    logo: {
-      display: 'flex',
-      alignItems: 'center',
-      gap: '0.75rem',
-      fontSize: isMobile ? '1.2rem' : '1.5rem',
-      fontWeight: 'bold',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-      WebkitBackgroundClip: 'text',
-      WebkitTextFillColor: 'transparent'
-    },
-    logoIcon: {
-      width: isMobile ? '32px' : '40px',
-      height: isMobile ? '32px' : '40px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-      borderRadius: '10px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center'
-    },
-    headerButtons: {
-      display: 'flex',
-      gap: isMobile ? '0.5rem' : '1rem'
-    },
-    loginBtn: {
-      padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1.5rem',
-      background: 'transparent',
-      border: '2px solid #667eea',
-      borderRadius: '10px',
-      color: '#667eea',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      fontSize: isMobile ? '0.85rem' : '1rem'
-    },
-    signupBtn: {
-      padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1.5rem',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-      border: 'none',
-      borderRadius: '10px',
-      color: 'white',
-      fontWeight: '600',
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)',
-      fontSize: isMobile ? '0.85rem' : '1rem'
-    },
-
-    // Hero Section
-   hero: {
-  minHeight: '100vh',
-  background: `url('/images/hero-banner.png')`,
-  backgroundSize: 'cover',
-  backgroundPosition: isMobile ? 'right center' : 'center',
-  backgroundRepeat: 'no-repeat',
-  display: 'flex',
-  alignItems: 'center',
-  justifyContent: 'center',
-  padding: isMobile ? '5rem 1rem 3rem' : '6rem 2rem 4rem',
-  textAlign: 'center',
-  color: '#4a6fa5'
-},
-    heroContent: {
-      maxWidth: '800px'
-    },
-
-    heroTitle: {
-  fontSize: isMobile ? '1.5rem' : 'clamp(1.8rem, 5vw, 2.8rem)',
-  fontWeight: 'bold',
-  marginBottom: '1rem',
-  lineHeight: '1.3',
-  color: '#7cb342'
-},
-
-    heroSubtitle: {
-  fontSize: 'clamp(1rem, 3vw, 1.4rem)',
-  fontWeight: '500',
-  marginBottom: '2.5rem',
-  lineHeight: '1.8',
-  color: '#4a6fa5',
-  maxWidth: '700px',
-  margin: '0 auto 2.5rem',
-  padding: '0 1rem'
-},
-
-    heroCTA: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.75rem',
-      padding: '1.25rem 2.5rem',
-      background: 'white',
-      color: '#667eea',
-      border: 'none',
-      borderRadius: '12px',
-      fontSize: '1.2rem',
-      fontWeight: 'bold',
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
-    },
-
-    // Features Section
-    features: {
-      padding: '6rem 2rem',
-      background: '#f8f9fa'
-    },
-    sectionTitle: {
-      textAlign: 'center',
-      fontSize: '2.5rem',
-      fontWeight: 'bold',
-      marginBottom: '1rem',
-      color: '#333'
-    },
-    sectionSubtitle: {
-      textAlign: 'center',
-      fontSize: '1.1rem',
-      color: '#666',
-      marginBottom: '4rem',
-      maxWidth: '600px',
-      margin: '0 auto 4rem'
-    },
-    featuresGrid: {
-      display: 'grid',
-      gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
-      gap: '2rem',
-      maxWidth: '1200px',
-      margin: '0 auto'
-    },
-    featureCard: {
-      background: 'white',
-      padding: '2rem',
-      borderRadius: '16px',
-      boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-      transition: 'all 0.3s',
-      textAlign: 'center'
-    },
-    featureIcon: {
-      width: '70px',
-      height: '70px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-      borderRadius: '16px',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      margin: '0 auto 1.5rem'
-    },
-    featureTitle: {
-      fontSize: '1.3rem',
-      fontWeight: 'bold',
-      marginBottom: '0.75rem',
-      color: '#333'
-    },
-    featureDesc: {
-      color: '#666',
-      lineHeight: '1.6'
-    },
-
-    // How It Works
-    howItWorks: {
-      padding: '6rem 2rem',
-      background: 'white'
-    },
-    stepsContainer: {
-      maxWidth: '1000px',
-      margin: '0 auto',
-      display: 'grid',
-      gap: '3rem'
-    },
-    step: {
-      display: 'flex',
-      gap: '2rem',
-      alignItems: 'center'
-    },
-    stepNumber: {
-      width: '60px',
-      height: '60px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
-      borderRadius: '50%',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'center',
-      color: 'white',
-      fontSize: '1.5rem',
-      fontWeight: 'bold',
-      flexShrink: 0
-    },
-    stepContent: {
-      flex: 1
-    },
-    stepTitle: {
-      fontSize: '1.4rem',
-      fontWeight: 'bold',
-      marginBottom: '0.5rem',
-      color: '#333'
-    },
-    stepDesc: {
-      color: '#666',
-      lineHeight: '1.6'
-    },
-
-    // CTA Section
-    cta: {
-      padding: '6rem 2rem',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      textAlign: 'center',
-      color: 'white'
-    },
-    ctaTitle: {
-      fontSize: '2.5rem',
-      fontWeight: 'bold',
-      marginBottom: '1.5rem'
-    },
-    ctaSubtitle: {
-      fontSize: '1.2rem',
-      marginBottom: '2.5rem',
-      opacity: 0.95
-    },
-    ctaButton: {
-      display: 'inline-flex',
-      alignItems: 'center',
-      gap: '0.75rem',
-      padding: '1.25rem 2.5rem',
-      background: 'white',
-      color: '#667eea',
-      border: 'none',
-      borderRadius: '12px',
-      fontSize: '1.2rem',
-      fontWeight: 'bold',
-      cursor: 'pointer',
-      transition: 'all 0.3s',
-      boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
-    }
+  const closeMobileMenu = () => {
+    setMobileMenuOpen(false);
+    hamburgerRef.current?.focus();
   };
 
-  const features = [
-    {
-      icon: <Smartphone size={32} color="white" />,
-      title: 'סריקת QR פשוטה',
-      desc: 'תלמידים סורקים QR ומזמינים ארוחות בקלות ובמהירות'
-    },
-    {
-      icon: <CreditCard size={32} color="white" />,
-      title: 'תשלומים מאובטחים',
-      desc: 'הורים מטעינים יתרה דרך Paybox, Bit או מזומן במזכירות'
-    },
-    {
-      icon: <BarChart3 size={32} color="white" />,
-      title: 'דוחות ותובנות',
-      desc: 'מערכת ניהול מלאה עם דוחות מכירות וניהול תפריט'
-    },
-    {
-      icon: <Shield size={32} color="white" />,
-      title: 'בטוח ומוגן',
-      desc: 'הצפנה מלאה של נתונים ותשלומים מאובטחים'
-    },
-    {
-      icon: <Clock size={32} color="white" />,
-      title: 'חוסך זמן',
-      desc: 'אין יותר תורים ארוכים - הכל מהיר ויעיל'
-    },
-    {
-      icon: <Users size={32} color="white" />,
-      title: 'ניהול קל',
-      desc: 'פאנל ניהול נוח למזכירות ולמנהלי בתי ספר'
-    }
-  ];
-
-  const steps = [
-    {
-      title: 'הרשמה ויצירת חשבון',
-      desc: 'הורים נרשמים למערכת עם פרטי הילדים ומקבלים QR code ייחודי לכל תלמיד'
-    },
-    {
-      title: 'טעינת יתרה',
-      desc: 'הורים מטעינים כסף דרך Paybox, Bit או מזומן במזכירות בית הספר'
-    },
-    {
-      title: 'סריקה ורכישה',
-      desc: 'תלמידים סורקים QR במזנון, בוחרים מנות ומשלמים מהיתרה'
-    },
-    {
-      title: 'מעקב ובקרה',
-      desc: 'הורים רואים דוחות מכירות ויכולים לנהל הגדרות וגבולות הוצאה'
-    }
-  ];
+  const goTo = (path) => {
+    setMobileMenuOpen(false);
+    navigate(path);
+  };
 
   return (
-    <div style={{ fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif" }}>
-      {/* Header */}
-      <header style={styles.header}>
-        <div style={styles.logo}>
-  <img 
-    src="/images/Bonapp-logo.png" 
-    alt="BonApp Logo" 
-    style={{ height: '30px', width: 'auto' }}
-  />
-</div>
-        <div style={styles.headerButtons}>
-          {!isMobile && (
-            <>
-              <button onClick={() => navigate('/about')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>אודות</button>
-              <button onClick={() => navigate('/support')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>תמיכה</button>
-              <button onClick={() => navigate('/contact')} style={{ background: 'none', border: 'none', color: '#667eea', cursor: 'pointer', fontSize: '0.9rem', fontWeight: '600' }}>צור קשר</button>
-            </>
-          )}
-          <button
-            style={styles.loginBtn}
-            onClick={() => navigate('/school-contact')}
-            onMouseEnter={(e) => {
-              e.target.style.background = '#667eea';
-              e.target.style.color = 'white';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.color = '#667eea';
-            }}
-          >
-            הצטרף לשירות
-          </button>
-          <button
+    <div className="bap-lp">
+      <style>{`
+        .bap-lp{
+          --navy:#17324a;--blue:#356b8c;--blue2:#eaf3f7;--green:#75a843;--green2:#eef6e9;
+          --paper:#f8faf8;--white:#fff;--muted:#607482;--line:#dce6e9;--dark:#102b3d;
+          font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--white);line-height:1.55;
+        }
+        .bap-lp *{box-sizing:border-box}
+        .bap-lp button,.bap-lp a{font:inherit}
+        .bap-lp a{text-decoration:none;color:inherit}
+        .bap-lp img{max-width:100%}
+        .bap-lp .wrap{width:min(1180px,calc(100% - 40px));margin:auto}
+        .bap-lp .top{height:76px;display:flex;align-items:center;gap:34px;background:#fff}
+        .bap-lp .logo{display:flex;align-items:center;gap:8px;font-size:28px;font-weight:700;color:var(--blue);margin-left:auto;letter-spacing:-1px}
+        .bap-lp .logo img{height:32px;width:auto}
+        .bap-lp .logo i{font-style:normal;color:var(--green)}
+        .bap-lp nav{display:flex;gap:28px;font-size:15px;color:#425f70}
+        .bap-lp nav a:hover{color:var(--blue)}
+        .bap-lp .actions{display:flex;gap:10px}
+        .bap-lp .btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:11px;padding:11px 20px;font-weight:600;background:#fff;color:var(--navy);cursor:pointer;white-space:nowrap}
+        .bap-lp .btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+        .bap-lp .btn.light{background:#fff;color:var(--blue)}
+        .bap-lp .btn:focus-visible,.bap-lp nav a:focus-visible,.bap-lp footer button:focus-visible,.bap-lp .faq summary:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+        .bap-lp .hamburger{display:none;align-items:center;justify-content:center;width:44px;height:44px;border:1px solid var(--line);border-radius:11px;background:#fff;color:var(--navy);cursor:pointer}
+        .bap-lp .hamburger:focus-visible{outline:3px solid var(--green);outline-offset:2px}
+        .bap-lp .mobile-menu{display:flex;flex-direction:column;gap:2px;background:#fff;border-top:1px solid var(--line);box-shadow:0 12px 24px rgba(23,50,74,.1);padding:8px}
+        .bap-lp .mobile-menu a,.bap-lp .mobile-menu button{display:block;width:100%;text-align:right;padding:13px 12px;border-radius:8px;background:none;border:none;color:var(--navy);font-size:16px;cursor:pointer}
+        .bap-lp .mobile-menu a:hover,.bap-lp .mobile-menu button:hover{background:var(--paper)}
+        .bap-lp .mobile-menu .btn.primary{margin-top:6px;text-align:center;color:#fff}
+        .bap-lp .mobile-menu a:focus-visible,.bap-lp .mobile-menu button:focus-visible{outline:3px solid var(--green);outline-offset:-2px}
 
+        .bap-lp .hero{position:relative;overflow:hidden;background:url('/images/hero-banner.png') center/cover no-repeat}
+        .bap-lp .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(9,28,39,.08),rgba(9,28,39,.18) 55%,rgba(9,28,39,.44))}
+        .bap-lp .hero-inner{position:relative;z-index:1;min-height:670px;display:flex;align-items:flex-end;justify-content:center;text-align:center}
+        .bap-lp .hero-copy{width:min(820px,100%);padding:70px 0 54px;color:#fff;text-shadow:0 2px 18px rgba(8,26,36,.5)}
+        .bap-lp .eyebrow{display:inline-block;color:#fff;font-weight:700;margin-bottom:10px;background:rgba(17,50,70,.66);padding:7px 15px;border-radius:999px;backdrop-filter:blur(7px)}
+        .bap-lp .hero h1{font-size:51px;line-height:1.08;letter-spacing:-1.5px;margin:0 auto 14px;max-width:760px}
+        .bap-lp .hero p{font-size:19px;color:#fff;max-width:720px;margin:0 auto 25px}
+        .bap-lp .hero .actions{margin-bottom:12px;justify-content:center;text-shadow:none}
+        .bap-lp .hero .btn.light{background:rgba(255,255,255,.94);border-color:#fff}
+        .bap-lp .micro{font-size:13px;color:#fff}
 
+        .bap-lp .audiences{background:#fff;border-bottom:1px solid var(--line)}
+        .bap-lp .audience-grid{display:grid;grid-template-columns:repeat(3,1fr);padding:30px 0;gap:0}
+        .bap-lp .audience{padding:5px 34px;border-left:1px solid var(--line)}
+        .bap-lp .audience:last-child{border:0}
+        .bap-lp .audience strong{display:block;font-size:17px;margin-bottom:3px}
+        .bap-lp .audience span{font-size:14px;color:var(--muted)}
 
-            style={styles.loginBtn}
-            onClick={() => navigate('/login')}
-            onMouseEnter={(e) => {
-              e.target.style.background = '#667eea';
-              e.target.style.color = 'white';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'transparent';
-              e.target.style.color = '#667eea';
-            }}
-          >
-            כניסה למערכת
-          </button>
-          <button 
-            style={styles.signupBtn}
-            onClick={() => navigate('/register')}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 6px 20px rgba(102, 126, 234, 0.4)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 4px 15px rgba(102, 126, 234, 0.3)';
-            }}
-          >
-            הרשמה
-          </button>
+        .bap-lp section.pad{padding:92px 0}
+        .bap-lp .center{text-align:center}
+        .bap-lp .section-kicker{font-size:14px;color:var(--green);font-weight:700;margin-bottom:8px}
+        .bap-lp .section-title{font-size:40px;line-height:1.2;letter-spacing:-1px;margin:0 0 14px}
+        .bap-lp .section-desc{font-size:18px;color:var(--muted);max-width:700px;margin:0 auto 48px}
+
+        .bap-lp .comparison{display:grid;grid-template-columns:1fr 1fr;gap:24px;max-width:950px;margin:auto}
+        .bap-lp .compare{padding:34px;border-radius:18px;background:#fff;border:1px solid var(--line)}
+        .bap-lp .compare.before{background:#fafafa}
+        .bap-lp .compare.after{background:var(--green2);border-color:#d7e8cb}
+        .bap-lp .compare h3{font-size:22px;margin:0 0 20px}
+        .bap-lp .compare ul{list-style:none;padding:0;margin:0}
+        .bap-lp .compare li{padding:9px 30px 9px 0;position:relative;color:#4e6674}
+        .bap-lp .compare li::before{position:absolute;right:0;font-weight:700}
+        .bap-lp .compare.before li::before{content:"×";color:#a17272}
+        .bap-lp .compare.after li::before{content:"✓";color:var(--green)}
+
+        .bap-lp .soft{background:var(--paper)}
+        .bap-lp .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:46px;margin-top:48px}
+        .bap-lp .step-num{width:48px;height:48px;background:var(--blue);color:#fff;border-radius:14px;display:grid;place-items:center;font-weight:700;margin-bottom:20px}
+        .bap-lp .step h3{font-size:21px;margin:0 0 8px}
+        .bap-lp .step p{color:var(--muted);margin:0}
+
+        .bap-lp .product{display:grid;grid-template-columns:.85fr 1.15fr;gap:70px;align-items:center}
+        .bap-lp .product-copy .section-desc{margin:0 0 28px}
+        .bap-lp .browser{background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 24px 60px rgba(23,50,74,.14);overflow:hidden}
+        .bap-lp .browser-bar{height:42px;background:#f2f5f6;border-bottom:1px solid var(--line);display:flex;align-items:center;padding:0 15px;gap:6px}
+        .bap-lp .dot{width:8px;height:8px;border-radius:50%;background:#b8c7ce;display:inline-block}
+        .bap-lp .app{padding:24px;background:#f8fafb}
+        .bap-lp .app-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+        .bap-lp .balance{font-size:32px;font-weight:700;color:var(--blue)}
+        .bap-lp .app-row{display:flex;align-items:center;gap:13px;background:#fff;border:1px solid #e6edef;border-radius:12px;padding:14px;margin-top:10px}
+        .bap-lp .app-icon{width:44px;height:44px;border-radius:10px;background:var(--green2);display:grid;place-items:center;color:var(--green);font-weight:700}
+        .bap-lp .app-row small{display:block;color:var(--muted)}
+
+        .bap-lp .schools{background:var(--dark);color:#fff}
+        .bap-lp .schools-grid{display:grid;grid-template-columns:1fr 1fr;gap:70px;align-items:center}
+        .bap-lp .schools .section-kicker{color:#a9ce8e}
+        .bap-lp .schools .section-desc{color:#c0d0da;margin:0 0 30px}
+        .bap-lp .feature-list{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+        .bap-lp .feature{background:rgba(255,255,255,.07);padding:16px;border-radius:12px;color:#e8f0f4}
+        .bap-lp .feature::before{content:"✓";color:#a9ce8e;margin-left:9px;font-weight:700}
+
+        .bap-lp .trust{display:grid;grid-template-columns:repeat(4,1fr);gap:20px}
+        .bap-lp .trust-item{text-align:center;padding:22px 10px}
+        .bap-lp .trust-icon{width:44px;height:44px;margin:0 auto 14px;border-radius:50%;background:var(--blue2);display:grid;place-items:center;color:var(--blue);font-size:20px}
+        .bap-lp .trust-item strong{display:block}
+        .bap-lp .trust-item span{font-size:14px;color:var(--muted)}
+
+        .bap-lp .faq{max-width:820px;margin:45px auto 0}
+        .bap-lp .faq details{border-bottom:1px solid var(--line);padding:19px 5px}
+        .bap-lp .faq summary{font-size:17px;font-weight:600;cursor:pointer}
+        .bap-lp .faq p{color:var(--muted)}
+
+        .bap-lp .cta{margin:0 auto 90px;width:min(1180px,calc(100% - 40px));padding:55px;background:var(--blue2);border-radius:24px;text-align:center}
+        .bap-lp .cta h2{font-size:36px;margin:0 0 10px}
+        .bap-lp .cta p{color:var(--muted);margin:0 0 25px}
+        .bap-lp .cta .actions{justify-content:center}
+
+        .bap-lp footer{background:#0e2636;color:#dce7ed;padding:50px 0 28px}
+        .bap-lp .footer-grid{display:grid;grid-template-columns:2fr 1fr 1fr;gap:50px}
+        .bap-lp .footer-logo{font-size:26px;font-weight:700;color:#fff}
+        .bap-lp .footer-logo i{color:#9cc77e;font-style:normal}
+        .bap-lp footer p{color:#aebfc9;font-size:14px}
+        .bap-lp footer h4{margin:0 0 12px;color:#fff}
+        .bap-lp .footer-links{display:grid;gap:8px}
+        .bap-lp footer button{background:none;border:none;padding:0;cursor:pointer;color:#aebfc9;font-size:14px;text-align:inherit}
+        .bap-lp footer button:hover{color:#fff}
+        .bap-lp .copyright{border-top:1px solid rgba(255,255,255,.12);margin-top:35px;padding-top:22px;padding-bottom:90px;font-size:13px;color:#8fa4b0}
+
+        @media(max-width:800px){
+          .bap-lp .wrap{width:min(100% - 28px,1180px)}
+          .bap-lp nav{display:none}
+          .bap-lp .top{height:66px}
+          .bap-lp .top>.actions .btn:first-child{display:flex;padding:9px 12px}
+          .bap-lp .top>.actions .btn.primary{display:none}
+          .bap-lp .hamburger{display:flex}
+          .bap-lp header{position:relative}
+          .bap-lp .mobile-menu{position:absolute;top:100%;left:0;right:0;z-index:999}
+          .bap-lp .hero{background-position:center center}
+          .bap-lp .hero::after{background:linear-gradient(180deg,rgba(9,28,39,.04),rgba(9,28,39,.18) 42%,rgba(9,28,39,.68))}
+          .bap-lp .hero-inner{min-height:520px;align-items:flex-end}
+          .bap-lp .hero-copy{width:100%;padding:48px 0 4px}
+          .bap-lp .hero h1{font-size:32px}
+          .bap-lp .hero p{font-size:17px}
+          .bap-lp .hero .actions{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center}
+          .bap-lp .hero .actions .btn{display:inline-flex;width:auto;min-width:145px;padding:10px 18px}
+          .bap-lp .audience-grid,.bap-lp .comparison,.bap-lp .steps,.bap-lp .product,.bap-lp .schools-grid,.bap-lp .trust,.bap-lp .footer-grid{grid-template-columns:1fr}
+          .bap-lp .audience{border:0;border-bottom:1px solid var(--line);padding:18px 0}
+          .bap-lp .audience-grid{padding:8px 0}
+          .bap-lp .steps{gap:18px}
+          .bap-lp .step{display:flex;gap:16px;align-items:flex-start;position:relative}
+          .bap-lp .step-num{margin-bottom:0;flex-shrink:0}
+          .bap-lp .step-content{flex:1}
+          .bap-lp .step:not(:last-child)::after{content:"";position:absolute;top:48px;right:23px;bottom:-18px;width:2px;background:var(--line)}
+          .bap-lp .product,.bap-lp .schools-grid{gap:40px}
+          .bap-lp .feature-list{grid-template-columns:1fr}
+          .bap-lp .section-title{font-size:28px}
+          .bap-lp section.pad{padding:56px 0}
+          .bap-lp .cta{padding:40px 20px}
+          .bap-lp .cta h2{font-size:28px}
+          .bap-lp .footer-grid{gap:8px}
+          .bap-lp .footer-grid>div{padding:20px 0;border-bottom:1px solid rgba(255,255,255,.1)}
+          .bap-lp .footer-grid>div:last-child{border-bottom:none}
+          .bap-lp footer h4{font-size:16px;margin-bottom:14px}
+          .bap-lp footer p{font-size:15px;line-height:1.7}
+          .bap-lp .footer-links{gap:14px}
+          .bap-lp .footer-links a,.bap-lp .footer-links button{font-size:15px}
+          .bap-lp .copyright{font-size:14px;line-height:1.7}
+        }
+        @media(max-width:420px){
+          .bap-lp .hero h1{font-size:26px}
+        }
+      `}</style>
+
+      <header>
+        <div className="wrap top">
+          <div className="logo">
+            <img src="/images/Bonapp-logo.png" alt="BonApp" />
+          </div>
+          <nav>
+            <a href="#how">איך זה עובד</a>
+            <a href="#schools">לבתי ספר</a>
+            <a href="#parents">להורים</a>
+            <a href="#faq">שאלות נפוצות</a>
+            <button onClick={() => navigate('/contact')} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'inherit', font: 'inherit' }}>צור קשר</button>
+          </nav>
+          <div className="actions">
+            <button className="btn" onClick={() => navigate('/login')}>כניסת משתמש רשום</button>
+            <button className="btn primary" onClick={() => navigate('/register')}>רישום הורה חדש</button>
+            <button
+              ref={hamburgerRef}
+              className="hamburger"
+              aria-label={mobileMenuOpen ? 'סגור תפריט' : 'פתח תפריט'}
+              aria-expanded={mobileMenuOpen}
+              aria-controls="mobile-menu"
+              onClick={() => setMobileMenuOpen(o => !o)}
+              onKeyDown={(e) => { if (e.key === 'Escape') closeMobileMenu(); }}
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+          </div>
         </div>
+
+        {mobileMenuOpen && (
+          <nav id="mobile-menu" className="mobile-menu" onKeyDown={(e) => { if (e.key === 'Escape') closeMobileMenu(); }}>
+            <a href="#how" onClick={() => setMobileMenuOpen(false)}>איך זה עובד</a>
+            <a href="#schools" onClick={() => setMobileMenuOpen(false)}>לבתי ספר</a>
+            <a href="#parents" onClick={() => setMobileMenuOpen(false)}>להורים</a>
+            <a href="#faq" onClick={() => setMobileMenuOpen(false)}>שאלות נפוצות</a>
+            <button onClick={() => goTo('/about')}>אודות</button>
+            <button onClick={() => goTo('/support')}>תמיכה</button>
+            <button onClick={() => goTo('/contact')}>צור קשר</button>
+            <button className="btn primary" onClick={() => goTo('/register')}>רישום הורה חדש</button>
+          </nav>
+        )}
       </header>
 
-      {/* Hero */}
-      <section style={styles.hero}>
-        <div style={styles.heroContent}>
-          <h1 style={styles.heroTitle}>
-            מערכת ניהול ארוחות חכמה<br/>לבתי ספר
-          </h1>
-          <p style={styles.heroSubtitle}>
-  פתרון דיגיטלי מלא לניהול מזנון בית הספר<br />
-  סריקת QR • תשלומים מקוונים • דוחות בזמן אמת
-</p>
-          <button
-  style={styles.heroCTA}
-  onClick={() => navigate('/register')}
-            onMouseEnter={(e) => {
-              e.target.style.transform = 'scale(1.05)';
-              e.target.style.boxShadow = '0 15px 40px rgba(0,0,0,0.3)';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.transform = 'scale(1)';
-              e.target.style.boxShadow = '0 10px 30px rgba(0,0,0,0.2)';
-            }}
-          >
-            רישום תלמידים
-            <ArrowRight size={24} />
-          </button>
-        </div>
-      </section>
-
-      {/* Features */}
-      <section style={styles.features}>
-        <h2 style={styles.sectionTitle}>למה לבחור ב-BonApp?</h2>
-        <p style={styles.sectionSubtitle}>
-          מערכת מקיפה שחוסכת זמן, כסף ומביאה שקט נפשי להורים ולבית הספר
-        </p>
-        <div style={styles.featuresGrid}>
-          {features.map((feature, index) => (
-            <div 
-              key={index} 
-              style={styles.featureCard}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = 'translateY(-10px)';
-                e.currentTarget.style.boxShadow = '0 8px 30px rgba(0,0,0,0.15)';
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = 'translateY(0)';
-                e.currentTarget.style.boxShadow = '0 4px 20px rgba(0,0,0,0.08)';
-              }}
-            >
-              <div style={styles.featureIcon}>
-                {feature.icon}
+      <main>
+        {/* באנר ראשי */}
+        <section className="hero">
+          <div className="wrap hero-inner">
+            <div className="hero-copy">
+              <span className="eyebrow">פחות פתקים. פחות התעסקות. יותר שקט.</span>
+              <h1>הדרך החכמה לנהל ארוחות בבית הספר</h1>
+              <p>הורים מטעינים יתרה, תלמידים מזדהים באמצעות QR, ובית הספר מקבל שליטה מלאה - בלי מזומן, בלי רשימות ובלי ויכוחים.</p>
+              <div className="actions">
+                <button className="btn primary" onClick={() => navigate('/register')}>רישום הורה</button>
+                <a className="btn light" href="#schools">אני מנהל/ת בית ספר</a>
               </div>
-              <h3 style={styles.featureTitle}>{feature.title}</h3>
-              <p style={styles.featureDesc}>{feature.desc}</p>
+              <div className="micro">הרישום לוקח דקות ספורות</div>
             </div>
-          ))}
-        </div>
-      </section>
+          </div>
+        </section>
 
-      {/* How It Works */}
-      <section style={styles.howItWorks}>
-        <h2 style={styles.sectionTitle}>איך זה עובד?</h2>
-        <p style={styles.sectionSubtitle}>
-          4 צעדים פשוטים להתחלה
-        </p>
-        <div style={styles.stepsContainer}>
-          {steps.map((step, index) => (
-            <div key={index} style={styles.step}>
-              <div style={styles.stepNumber}>{index + 1}</div>
-              <div style={styles.stepContent}>
-                <h3 style={styles.stepTitle}>{step.title}</h3>
-                <p style={styles.stepDesc}>{step.desc}</p>
+        {/* יתרונות להורים, לתלמידים ולבית הספר */}
+        <section className="audiences" id="parents">
+          <div className="wrap audience-grid">
+            <div className="audience">
+              <strong>להורים</strong>
+              <span>יתרה, היסטוריית רכישות ושליטה בהוצאות</span>
+            </div>
+            <div className="audience">
+              <strong>לתלמידים</strong>
+              <span>סריקה מהירה בלי כסף ובלי פתקים</span>
+            </div>
+            <div className="audience">
+              <strong>לבית הספר</strong>
+              <span>ניהול פשוט, בקרה ודוחות בזמן אמת</span>
+            </div>
+          </div>
+        </section>
+
+        {/* השוואה לפני/אחרי */}
+        <section className="pad">
+          <div className="wrap center">
+            <div className="section-kicker">עושים סדר</div>
+            <h2 className="section-title">ניהול הארוחות לא צריך להיות מסובך</h2>
+            <p className="section-desc">BonApp מרכזת את כל התהליך במקום אחד ומחליפה את הפתקים, המזומן והרשימות הידניות במערכת ברורה ופשוטה.</p>
+            <div className="comparison">
+              <div className="compare before">
+                <h3>לפני BonApp</h3>
+                <ul>
+                  <li>גביית מזומן</li>
+                  <li>פתקים שהולכים לאיבוד</li>
+                  <li>רשימות ועדכונים ידניים</li>
+                  <li>קושי לדעת מי שילם</li>
+                  <li>עומס על המזכירות</li>
+                </ul>
+              </div>
+              <div className="compare after">
+                <h3>עם BonApp</h3>
+                <ul>
+                  <li>טעינת יתרה דיגיטלית</li>
+                  <li>זיהוי תלמיד באמצעות QR</li>
+                  <li>תיעוד אוטומטי של כל רכישה</li>
+                  <li>מידע זמין וברור להורים</li>
+                  <li>שליטה ודוחות לבית הספר</li>
+                </ul>
               </div>
             </div>
-          ))}
+          </div>
+        </section>
+
+        {/* איך זה עובד - 3 שלבים */}
+        <section className="pad soft" id="how">
+          <div className="wrap">
+            <div className="center">
+              <div className="section-kicker">פשוט מההתחלה</div>
+              <h2 className="section-title">איך BonApp עובדת?</h2>
+              <p className="section-desc">שלושה צעדים קצרים, וכל מערך הארוחות עובד בצורה מסודרת.</p>
+            </div>
+            <div className="steps">
+              <div className="step">
+                <div className="step-num">1</div>
+                <div className="step-content">
+                  <h3>נרשמים ומוסיפים ילדים</h3>
+                  <p>ההורה פותח חשבון ומוסיף ילד אחד או כמה ילדים באותו בית ספר.</p>
+                </div>
+              </div>
+              <div className="step">
+                <div className="step-num">2</div>
+                <div className="step-content">
+                  <h3>מקבלים אישור ומטעינים</h3>
+                  <p>לאחר אישור בית הספר, ההורה יכול להטעין את היתרה ולעקוב אחריה.</p>
+                </div>
+              </div>
+              <div className="step">
+                <div className="step-num">3</div>
+                <div className="step-content">
+                  <h3>סורקים ומקבלים ארוחה</h3>
+                  <p>התלמיד מזדהה באמצעות QR, והעסקה מתועדת מיד במערכת.</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* המחשת ממשק המערכת */}
+        <section className="pad">
+          <div className="wrap product">
+            <div className="product-copy">
+              <div className="section-kicker">ממשק ברור לכולם</div>
+              <h2 className="section-title">פשוט להורה.<br />פשוט לבית הספר.</h2>
+              <p className="section-desc">כל אחד רואה בדיוק את המידע שהוא צריך - בלי תפריטים מסובכים ובלי צורך בידע טכני.</p>
+              <button className="btn" onClick={() => navigate('/support')}>צפו בסרטוני הדרכה</button>
+            </div>
+            <div className="browser">
+              <div className="browser-bar">
+                <i className="dot" /><i className="dot" /><i className="dot" />
+              </div>
+              <div className="app">
+                <div className="app-head">
+                  <div>
+                    <strong>שלום, משפחת ישראלי</strong>
+                    <small style={{ display: 'block', color: 'var(--muted)' }}>החשבון של נועה</small>
+                  </div>
+                  <div>
+                    <small>יתרה זמינה</small>
+                    <div className="balance">₪86.50</div>
+                  </div>
+                </div>
+                <div className="app-row">
+                  <div className="app-icon">QR</div>
+                  <div>
+                    <strong>הקוד של נועה מוכן</strong>
+                    <small>לסריקה מהירה בחדר האוכל</small>
+                  </div>
+                </div>
+                <div className="app-row">
+                  <div className="app-icon">₪</div>
+                  <div>
+                    <strong>ארוחת צהריים</strong>
+                    <small>היום, 12:35 · 18 ₪</small>
+                  </div>
+                </div>
+                <div className="app-row">
+                  <div className="app-icon">+</div>
+                  <div>
+                    <strong>הוספת כסף לחשבון</strong>
+                    <small>טעינה פשוטה ומהירה</small>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* אזור לבתי ספר */}
+        <section className="pad schools" id="schools">
+          <div className="wrap schools-grid">
+            <div>
+              <div className="section-kicker">לבתי ספר</div>
+              <h2 className="section-title">כל מה שצריך לניהול מערך הארוחות</h2>
+              <p className="section-desc">פחות עבודה ידנית לצוות, יותר שקיפות להורים ושליטה מלאה בכל מה שקורה.</p>
+              <button className="btn light" onClick={() => navigate('/school-contact')}>אני רוצה לשמוע עוד</button>
+            </div>
+            <div className="feature-list">
+              <div className="feature">רישום ואישור תלמידים</div>
+              <div className="feature">מעקב אחר יתרות ותשלומים</div>
+              <div className="feature">ניהול תפריט ומנות</div>
+              <div className="feature">דוחות בזמן אמת</div>
+              <div className="feature">הפחתת עומס מהמזכירות</div>
+              <div className="feature">מידע ברור ושקוף להורים</div>
+            </div>
+          </div>
+        </section>
+
+        {/* אמון וביטחון */}
+        <section className="pad">
+          <div className="wrap">
+            <div className="center">
+              <div className="section-kicker">אפשר לסמוך עלינו</div>
+              <h2 className="section-title">מערכת שנבנתה בשביל השטח</h2>
+            </div>
+            <div className="trust">
+              <div className="trust-item">
+                <div className="trust-icon">✓</div>
+                <strong>מערכת מאובטחת</strong>
+                <span>שמירה מסודרת על המידע</span>
+              </div>
+              <div className="trust-item">
+                <div className="trust-icon">◎</div>
+                <strong>הרשאות משתמשים</strong>
+                <span>כל אחד רואה את מה שרלוונטי לו</span>
+              </div>
+              <div className="trust-item">
+                <div className="trust-icon">?</div>
+                <strong>תמיכה אנושית</strong>
+                <span>יש למי לפנות כשצריך עזרה</span>
+              </div>
+              <div className="trust-item">
+                <div className="trust-icon">B</div>
+                <strong>מבית Innosys</strong>
+                <span>ניסיון טכנולוגי עם בתי ספר</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* שאלות נפוצות */}
+        <section className="pad soft" id="faq">
+          <div className="wrap center">
+            <div className="section-kicker">כל מה שצריך לדעת</div>
+            <h2 className="section-title">שאלות נפוצות</h2>
+            <div className="faq" style={{ textAlign: 'right' }}>
+              <details>
+                <summary>איך הורה נרשם למערכת?</summary>
+                <p>לוחצים על רישום הורה, ממלאים פרטים ומוסיפים את הילדים הלומדים בבית הספר.</p>
+              </details>
+              <details>
+                <summary>איך מוסיפים יותר מילד אחד?</summary>
+                <p>בתוך אותו חשבון הורה ניתן להוסיף כמה ילדים הלומדים באותו בית ספר.</p>
+              </details>
+              <details>
+                <summary>איך מטעינים כסף לחשבון?</summary>
+                <p>אפשרויות הטעינה מוצגות להורה לאחר אישור הרישום על ידי בית הספר.</p>
+              </details>
+              <details>
+                <summary>למי פונים במקרה של תקלה?</summary>
+                <p>אפשר לפנות לצוות התמיכה דרך עמוד התמיכה או כפתור הוואטסאפ באתר.</p>
+              </details>
+            </div>
+          </div>
+        </section>
+
+        {/* קריאה לפעולה */}
+        <section className="cta" id="contact">
+          <h2>מוכנים לעבור לניהול פשוט יותר?</h2>
+          <p>חוסכים זמן, מונעים בלבול ומקבלים שליטה ברורה על מערך הארוחות.</p>
+          <div className="actions">
+            <button className="btn primary" onClick={() => navigate('/register')}>רישום הורה</button>
+            <button className="btn" onClick={() => navigate('/school-contact')}>יצירת קשר לבית ספר</button>
+          </div>
+        </section>
+      </main>
+
+      <footer>
+        <div className="wrap">
+          <div className="footer-grid">
+            <div>
+              <div className="footer-logo">Bon<i>App</i></div>
+              <p>מערכת חכמה לניהול ארוחות בבתי ספר<br />מבית Innosys</p>
+              <p><a href="tel:1-700-502042">1-700-502042</a></p>
+            </div>
+            <div>
+              <h4>BonApp</h4>
+              <div className="footer-links">
+                <button onClick={() => navigate('/about')}>אודות</button>
+                <button onClick={() => navigate('/support')}>תמיכה</button>
+                <button onClick={() => navigate('/contact')}>צור קשר</button>
+              </div>
+            </div>
+            <div>
+              <h4>מידע משפטי</h4>
+              <div className="footer-links">
+                <button onClick={() => navigate('/terms')}>תנאי שימוש</button>
+                <button onClick={() => navigate('/privacy')}>מדיניות פרטיות</button>
+                <button onClick={() => navigate('/school-policy')}>מדיניות בית ספר</button>
+                <button onClick={() => navigate('/accessibility')}>הצהרת נגישות</button>
+              </div>
+            </div>
+          </div>
+          <div className="copyright">© {new Date().getFullYear()} BonApp by Innosys. כל הזכויות שמורות.</div>
         </div>
-      </section>
-
-      {/* CTA */}
-      <section style={styles.cta}>
-        <h2 style={styles.ctaTitle}>מוכנים להתחיל?</h2>
-        <p style={styles.ctaSubtitle}>
-          הצטרפו למאות בתי ספר שכבר משתמשים ב-BonApp
-        </p>
-        <button 
-  style={styles.ctaButton}
-  onClick={() => navigate('/school-contact')}
-          onMouseEnter={(e) => {
-            e.target.style.transform = 'scale(1.05)';
-          }}
-          onMouseLeave={(e) => {
-            e.target.style.transform = 'scale(1)';
-          }}
-        >
-          הרשמה חינם
-          <Zap size={24} />
-        </button>
-      </section>
-
-{/* Footer */}
-      <footer style={{
-        background: 'linear-gradient(135deg, #2c3e50 0%, #34495e 100%)',
-        padding: '3rem 2rem',
-        color: 'white',
-        textAlign: 'center'
-      }}>
-        <div style={{
-          maxWidth: '1200px',
-          margin: '0 auto'
-        }}>
-          {/* Logo and Tagline */}
-          <div style={{ marginBottom: '2rem' }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              gap: '0.5rem',
-              marginBottom: '1rem'
-            }}>
-              <span style={{
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                WebkitBackgroundClip: 'text',
-                WebkitTextFillColor: 'transparent'
-              }}>
-                BonApp
-              </span>
-              <span style={{ color: '#bdc3c7', fontSize: '1.2rem' }}>מבית</span>
-              <span style={{
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                color: '#ff8c42'
-              }}>
-                Innosys
-              </span>
-            </div>
-            <p style={{
-              color: '#bdc3c7',
-              fontSize: '1rem',
-              margin: 0
-            }}>
-              מערכת ניהול ארוחות חכמה לבתי ספר
-            </p>
-          </div>
-
-          {/* Contact Info */}
-          <div style={{
-            display: 'flex',
-            justifyContent: 'center',
-            gap: '3rem',
-            flexWrap: 'wrap',
-            marginBottom: '2rem'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <Phone size={20} color="#ff8c42" />
-              <a 
-                href="tel:1-700-502042" 
-                style={{
-                  color: 'white',
-                  textDecoration: 'none',
-                  fontSize: '1.1rem'
-                }}
-                onMouseEnter={(e) => e.target.style.color = '#ff8c42'}
-                onMouseLeave={(e) => e.target.style.color = 'white'}
-              >
-                1-700-502042
-              </a>
-            </div>
-
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <Mail size={20} color="#ff8c42" />
-              <a 
-                href="https://innosys.co.il/websites" 
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{
-                  color: 'white',
-                  textDecoration: 'none',
-                  fontSize: '1.1rem'
-                }}
-                onMouseEnter={(e) => e.target.style.color = '#ff8c42'}
-                onMouseLeave={(e) => e.target.style.color = 'white'}
-              >
-                innosys.co.il/websites
-              </a>
-            </div>
-          </div>
-
-          {/* Copyright */}
-          <div style={{
-            borderTop: '1px solid rgba(255, 255, 255, 0.1)',
-            paddingTop: '1.5rem',
-            color: '#95a5a6',
-            fontSize: '0.9rem'
-          }}>
-            <div style={{ margin: 0 }}>
-
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '2rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-  <button onClick={() => navigate('/about')} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>
-    אודות
-  </button>
-  <button onClick={() => navigate('/support')} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>
-    תמיכה
-  </button>
-  <button onClick={() => navigate('/contact')} style={{ background: 'none', border: 'none', color: '#ccc', cursor: 'pointer', fontSize: '1rem' }}>
-    צור קשר
-  </button>
-</div>
-
-              <div style={{ display: 'flex', justifyContent: 'center', gap: '1.5rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-  <button onClick={() => navigate('/terms')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
-    תנאי שימוש
-  </button>
-  <button onClick={() => navigate('/privacy')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
-    מדיניות פרטיות
-  </button>
-  <button onClick={() => navigate('/school-policy')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
-    מדיניות בית ספר
-  </button>
-  <button onClick={() => navigate('/accessibility')} style={{ background: 'none', border: 'none', color: '#999', cursor: 'pointer', fontSize: '0.85rem' }}>
-    הצהרת נגישות
-  </button>
-</div>
-
-              © {new Date().getFullYear()} BonApp by Innosys. כל הזכויות שמורות.
-            </div>
-          </div>
-        </div>
-
       </footer>
-
-      
     </div>
   );
 };
-
-
 
 export default LandingPage;
