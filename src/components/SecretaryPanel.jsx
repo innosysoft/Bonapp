@@ -1277,6 +1277,16 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
               }}>
                 <Users size={32} />
                 ניהול תלמידים
+                <span style={{
+                  fontSize: '1rem',
+                  fontWeight: '600',
+                  color: '#667eea',
+                  background: '#eef0ff',
+                  padding: '0.35rem 1rem',
+                  borderRadius: '999px'
+                }}>
+                  {students.length} תלמידים רשומים
+                </span>
               </h2>
 
               <div style={{
