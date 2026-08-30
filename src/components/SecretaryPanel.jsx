@@ -6,11 +6,17 @@ import { setToken, authFetch } from '../auth';
 import * as XLSX from 'xlsx';
 import GradeGroupsTab from './GradeGroupsTab';
 import {
-  Search, Plus, DollarSign, Receipt, Edit, Eye, CreditCard, Banknote, Clock,
-  CheckCircle, User, Phone, Mail, FileText, Download, Filter, Settings, LogOut,
+  Search, Plus, DollarSign, Edit, Eye, CreditCard, Banknote, Clock,
+  CheckCircle, User, Phone, Mail, FileText, Download, Filter, Settings,
   AlertCircle, XCircle, Calendar, TrendingUp, Users, Home, Bell, RefreshCw,
   Printer, Check, X, UserCheck, UserX, Wallet, PiggyBank, QrCode, Trash2
 } from 'lucide-react';
+import SecretaryShell from './secretary/SecretaryShell';
+import PageHeader from './secretary/PageHeader';
+import StatusBadge from './secretary/StatusBadge';
+import IconButton from './secretary/IconButton';
+import EmptyState from './secretary/EmptyState';
+import './secretary/secretary.css';
 
 const SecretaryPanel = () => {
   const navigate = useNavigate();
@@ -35,8 +41,8 @@ const [transactions, setTransactions] = useState([]);
 const [parentDetails, setParentDetails] = useState(null);
 const [showParentDetails, setShowParentDetails] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
-  
-  
+
+
     studentId: '',
     amount: '',
     paymentMethod: 'cash',
@@ -98,7 +104,7 @@ if (registrationsData.success) {
 
 // חשב סטטיסטיקות אמיתיות
       const today = new Date().toISOString().split('T')[0];
-      const todayTransactions = transactionsData.transactions?.filter(t => 
+      const todayTransactions = transactionsData.transactions?.filter(t =>
         new Date(t.transaction_date).toISOString().split('T')[0] === today
       ) || [];
 
@@ -140,7 +146,7 @@ if (registrationsData.success) {
   // דמה של תלמידים מורחבת
   const [students, setStudents] = useState([]);
 const [loading, setLoading] = useState(true);
-   
+
 
   // הרשמות ממתינות לאישור
 const [pendingRegistrations, setPendingRegistrations] = useState([
@@ -234,15 +240,15 @@ const loadStudentSchedule = async (studentId) => {
   if (paymentForm.studentId && paymentForm.amount && parseFloat(paymentForm.amount) > 0) {
     try {
       const result = await addMoney(paymentForm.studentId, parseFloat(paymentForm.amount), paymentForm.paymentMethod);
-      
+
       if (result.success) {
         // עדכן את יתרת התלמיד ב-state המקומי
-        setStudents(prev => prev.map(student => 
-          student.id == paymentForm.studentId 
+        setStudents(prev => prev.map(student =>
+          student.id == paymentForm.studentId
             ? { ...student, balance: result.newBalance }
             : student
         ));
-        
+
         // **הוסף את השורות האלה:**
         // רענן את רשימת העסקאות
         const transactionsData = await getSchoolTransactions(currentUser.school_id);
@@ -250,18 +256,18 @@ const loadStudentSchedule = async (studentId) => {
         if (transactionsData.success) {
           setTransactions(transactionsData.transactions);
         }
-        
+
         const receiptNumber = `REC${String(Date.now()).slice(-6)}`;
         const student = students.find(s => s.id == paymentForm.studentId);
-        
+
         alert(`התשלום נוסף בהצלחה!\nקבלה מס׳: ${receiptNumber}\nעבור: ${student?.first_name} ${student?.last_name}\nסכום: ₪${parseFloat(paymentForm.amount).toFixed(2)}\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}`);
-        
+
         setShowAddPayment(false);
         setPaymentForm({
           studentId: '', amount: '', paymentMethod: 'cash',
           checkNumber: '', bankName: '', notes: ''
         });
-        
+
       } else {
         alert(result.message || 'שגיאה בהוספת תשלום');
       }
@@ -275,24 +281,24 @@ const loadStudentSchedule = async (studentId) => {
   try {
     const action = approve ? 'approve' : 'reject';
     let reason = '';
-    
+
     if (!approve) {
       reason = prompt('סיבת דחייה (יישלח למשפחה):');
       if (!reason) return;
     }
-    
+
     const result = await handleRegistrationAction(registrationId, action, reason);
-    
+
     if (result.success) {
       // הסר מהרשימה
       setPendingRegistrations(prev => prev.filter(r => r.id !== registrationId));
-      
+
       if (approve) {
   // רענן את רשימת התלמידים
   const schoolData = await getSchoolStudents(currentUser.school_id);
   if (schoolData.success) {
     setStudents(schoolData.students);
-    
+
     // צור QR לכל תלמיד חדש
     for (const student of schoolData.students) {
       try {
@@ -302,15 +308,15 @@ const loadStudentSchedule = async (studentId) => {
       }
     }
   }
-  
+
   if (result.parentPassword) {
   const currentRegistration = pendingRegistrations.find(r => r.id === registrationId);
   if (currentRegistration) {
     const copyText = `אימייל: ${currentRegistration.parent_email}\nסיסמה: ${result.parentPassword}`;
-    
+
     const detailsDiv = document.createElement('div');
     detailsDiv.innerHTML = `
-  <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+  <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
               background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
               z-index: 1000; direction: rtl; text-align: center;">
     <h3 style="color: #4CAF50; margin-bottom: 1rem;">ההרשמה אושרה בהצלחה!</h3>
@@ -320,12 +326,12 @@ const loadStudentSchedule = async (studentId) => {
       <p><strong>סיסמה:</strong> <span style="font-family: monospace; font-size: 1.2rem; color: #2196F3;">${result.parentPassword}</span></p>
     </div>
     <div style="margin-top: 1rem;">
-      <button onclick="this.parentElement.parentElement.remove()" 
-              style="background: #4CAF50; color: white; border: none; padding: 0.75rem 1.5rem; 
+      <button onclick="this.parentElement.parentElement.remove()"
+              style="background: #4CAF50; color: white; border: none; padding: 0.75rem 1.5rem;
                      border-radius: 25px; cursor: pointer; margin-left: 0.5rem;">
         סגור
       </button>
-      <button id="copyBtn" style="background: #2196F3; color: white; border: none; padding: 0.75rem 1.5rem; 
+      <button id="copyBtn" style="background: #2196F3; color: white; border: none; padding: 0.75rem 1.5rem;
                          border-radius: 25px; cursor: pointer;">
         העתק פרטים
       </button>
@@ -337,7 +343,7 @@ const loadStudentSchedule = async (studentId) => {
 `;
 
 document.body.appendChild(detailsDiv);
-    
+
     // פעולת העתקה - רק פעם אחת
     document.getElementById('copyBtn').onclick = () => {
       navigator.clipboard.writeText(copyText);
@@ -376,7 +382,7 @@ document.body.appendChild(detailsDiv);
     alert('שגיאה בעיבוד הרשמה. נסה שוב.');
   }
 };
- 
+
 // הוסף פונקציה לטעינת פרטי הורה:
 const loadParentDetails = async (studentId) => {
   try {
@@ -396,14 +402,14 @@ const loadParentDetails = async (studentId) => {
 const generateReport = (type) => {
   const reports = {
     daily: 'דוח יומי',
-    weekly: 'דוח שבועי', 
+    weekly: 'דוח שבועי',
     monthly: 'דוח חודשי',
     students: 'דוח תלמידים',
     debts: 'דוח חובות'
   };
-  
+
   let reportData = [];
-  
+
   switch(type) {
     case 'students':
       reportData = students.map(student => ({
@@ -413,7 +419,7 @@ const generateReport = (type) => {
         'טלפון הורה': student.users?.phone,
         'טלפון תלמיד': student.studentPhone,
         'פעילות אחרונה': student.lastActivity,
-        'סטטוס': student.status === 'active' ? 'פעיל' : 
+        'סטטוס': student.status === 'active' ? 'פעיל' :
                  student.status === 'debt' ? 'חוב' : 'יתרה נמוכה'
       }));
       break;
@@ -435,7 +441,7 @@ const generateReport = (type) => {
         'מספר קבלה': payment.id || 'לא ידוע'
       }));
   }
-  
+
   // הצג את הדוח על המסך במקום להוריד
   setCurrentReport(reportData);
   setReportType(reports[type]);
@@ -444,18 +450,18 @@ const generateReport = (type) => {
 
 const downloadReport = () => {
   if (!currentReport || !reportType) return;
-  
+
   // יצירת worksheet
   const ws = XLSX.utils.json_to_sheet(currentReport);
   const wb = XLSX.utils.book_new();
   XLSX.utils.book_append_sheet(wb, ws, reportType);
-  
+
   // הורדת הקובץ
   const filename = `${reportType}_${new Date().toISOString().split('T')[0]}.xlsx`;
   XLSX.writeFile(wb, filename);
 };
-    
-  
+
+
 
   const handleDeleteStudent = async (e, student) => {
     e.stopPropagation();
@@ -473,7 +479,7 @@ const downloadReport = () => {
   };
 
   const filteredStudents = students.filter(student =>
-  student && student.first_name && 
+  student && student.first_name &&
   (`${student.first_name} ${student?.last_name || ''}`.includes(searchQuery) ||
    student.users?.phone?.includes(searchQuery) ||
    student.student_phone?.includes(searchQuery) ||
@@ -486,773 +492,168 @@ const downloadReport = () => {
   payment.payment_method?.includes(searchQuery)
 );
 
+  // עוזרי תצוגה בלבד - לא משנים נתונים, רק ממפים ערך קיים לצבע/תווית
+  const paymentMethodTone = (method) =>
+    method === 'cash' ? 'success' :
+    method === 'check' ? 'info' :
+    method === 'bit' ? 'neutral' :
+    method === 'credit_card' ? 'warning' : 'neutral';
+
+  const paymentMethodLabel = (method) =>
+    method === 'cash' ? 'מזומן' :
+    method === 'check' ? 'שיק' :
+    method === 'bit' ? 'ביט' :
+    method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה';
+
+  const studentStatusTone = (status) =>
+    status === 'active' ? 'success' : status === 'debt' ? 'danger' : 'warning';
+
+  const studentStatusLabel = (status) =>
+    status === 'active' ? 'פעיל' : status === 'debt' ? 'חוב' : 'יתרה נמוכה';
+
+  const balanceTone = (balance) =>
+    balance >= 0 ? (balance > 20 ? 'positive' : 'zero') : 'negative';
+
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-      fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
-    }}>
-      {/* כותרת עם סטטיסטיקות */}
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        padding: '1.5rem 2rem',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-        backdropFilter: 'blur(20px)'
-      }}>
-        <div style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-          maxWidth: '1400px',
-          margin: '0 auto',
-          flexWrap: 'wrap',
-          gap: '1rem'
-        }}>
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            <div style={{
-              width: '50px',
-              height: '50px',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}>
-              <Receipt size={28} color="white" />
-            </div>
-            <div>
-              <div style={{
-                fontSize: '1.6rem',
-                fontWeight: 'bold',
-                color: '#667eea'
-              }}>
-                פאנל מזכירה
-              </div>
-              <div style={{
-                fontSize: '0.9rem',
-                color: '#666',
-                marginTop: '0.25rem'
-              }}>
-               {schoolName || 'בית ספר'} • עדכון אחרון: {dailyStats.lastUpdate.toLocaleTimeString('he-IL')}
-              </div>
-            </div>
-          </div>
-
-          <div style={{
-            display: 'flex',
-            gap: '2rem',
-            alignItems: 'center'
-          }}>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{
-                fontSize: '1.2rem',
-                fontWeight: 'bold',
-                color: '#667eea',
-                margin: 0
-              }}>
-                ₪{(dailyStats.totalPayments || 0).toFixed(0)}
-              </p>
-              <p style={{
-                fontSize: '0.8rem',
-                color: '#666',
-                margin: '0.25rem 0 0 0'
-              }}>
-                תשלומים היום
-              </p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{
-                fontSize: '1.2rem',
-                fontWeight: 'bold',
-                color: '#667eea',
-                margin: 0
-              }}>
-                {dailyStats.transactionCount}
-              </p>
-              <p style={{
-                fontSize: '0.8rem',
-                color: '#666',
-                margin: '0.25rem 0 0 0'
-              }}>
-                עסקאות
-              </p>
-            </div>
-            <div style={{ textAlign: 'center' }}>
-              <p style={{
-                fontSize: '1.2rem',
-                fontWeight: 'bold',
-                color: dailyStats.pendingApprovals > 0 ? '#f44336' : '#4CAF50',
-                margin: 0
-              }}>
-                {dailyStats.pendingApprovals}
-              </p>
-              <p style={{
-                fontSize: '0.8rem',
-                color: '#666',
-                margin: '0.25rem 0 0 0'
-              }}>
-                ממתינים לאישור
-              </p>
-            </div>
-          </div>
-          
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: '1rem'
-          }}>
-            <div style={{ textAlign: 'right' }}>
-              <div style={{
-                fontWeight: '600',
-                fontSize: '1.1rem',
-                color: '#333'
-              }}>
-                {currentUser?.name || 'מזכירה'}
-              </div>
-              <div style={{
-                fontSize: '0.9rem',
-                color: '#777'
-              }}>
-                מזכירה ראשית
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button 
-  style={{
-    background: '#f8f9fa',
-    border: 'none',
-    borderRadius: '12px',
-    padding: '1rem',
-    cursor: 'pointer',
-    transition: 'all 0.3s'
-  }}
-  onClick={() => setShowAdminPanel(true)}
-  title="הגדרות מתקדמות"
->
-  <Settings size={20} />
-</button>
-
-              <button 
-                style={{
-                  background: '#f8f9fa',
-                  border: 'none',
-                  borderRadius: '12px',
-                  padding: '1rem',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s'
-                }}
-                onClick={() => navigate('/')}
-              >
-                <LogOut size={20} />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div style={{
-        maxWidth: '1400px',
-        margin: '0 auto',
-        padding: '2rem'
-      }}>
-        {/* טאבים */}
-        <div style={{
-          display: 'flex',
-          gap: '0.5rem',
-          marginBottom: '2rem',
-          background: 'rgba(255, 255, 255, 0.95)',
-          padding: '0.75rem',
-          borderRadius: '16px',
-          boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-          backdropFilter: 'blur(20px)'
-        }}>
-          <button
-            onClick={() => setActiveTab('payments')}
-            style={{
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              fontWeight: '600',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              background: activeTab === 'payments' ? 
-                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-              color: activeTab === 'payments' ? 'white' : '#667eea',
-              boxShadow: activeTab === 'payments' ? 
-                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
-            }}
-          >
-            <DollarSign size={20} />
-            תשלומים
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('students')}
-            style={{
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              fontWeight: '600',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              background: activeTab === 'students' ? 
-                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-              color: activeTab === 'students' ? 'white' : '#667eea',
-              boxShadow: activeTab === 'students' ? 
-                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
-            }}
-          >
-            <Users size={20} />
-            תלמידים
-          </button>
-
-          <button
-            onClick={() => setActiveTab('registrations')}
-            style={{
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              fontWeight: '600',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              background: activeTab === 'registrations' ? 
-                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-              color: activeTab === 'registrations' ? 'white' : '#667eea',
-              boxShadow: activeTab === 'registrations' ? 
-                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none',
-              position: 'relative'
-            }}
-          >
-            <UserCheck size={20} />
-            הרשמות חדשות
-            {pendingRegistrations.length > 0 && (
-              <span style={{
-                background: '#f44336',
-                color: 'white',
-                borderRadius: '50%',
-                width: '20px',
-                height: '20px',
-                fontSize: '0.75rem',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                marginLeft: '0.5rem',
-                animation: 'pulse 2s infinite'
-              }}>
-                {pendingRegistrations.length}
-              </span>
-            )}
-          </button>
-          
-          <button
-            onClick={() => setActiveTab('reports')}
-            style={{
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              fontWeight: '600',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              background: activeTab === 'reports' ? 
-                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-              color: activeTab === 'reports' ? 'white' : '#667eea',
-              boxShadow: activeTab === 'reports' ? 
-                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
-            }}
-          >
-
-            
-            <FileText size={20} />
-            דוחות
-          </button>
-
-          <button
-            onClick={() => setActiveTab('groups')}
-            style={{
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              fontWeight: '600',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              background: activeTab === 'groups' ? 
-                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-              color: activeTab === 'groups' ? 'white' : '#667eea',
-              boxShadow: activeTab === 'groups' ? 
-                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
-            }}
-          >
-            <Users size={20} />
-            שכבות
-          </button>
-
-          <button
-            onClick={() => setActiveTab('settings')}
-            style={{
-              padding: '1rem 2rem',
-              borderRadius: '12px',
-              border: 'none',
-              cursor: 'pointer',
-              transition: 'all 0.3s',
-              fontWeight: '600',
-              fontSize: '1rem',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              background: activeTab === 'settings' ? 
-                'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-              color: activeTab === 'settings' ? 'white' : '#667eea',
-              boxShadow: activeTab === 'settings' ? 
-                '0 4px 15px rgba(102, 126, 234, 0.3)' : 'none'
-            }}
-          >
-            ⚙️ הגדרות
-          </button>
-          
-        </div>
-
-        {/* תוכן ראשי */}
-        <div style={{
-          background: 'rgba(255, 255, 255, 0.95)',
-          borderRadius: '20px',
-          padding: '2.5rem',
-          boxShadow: '0 12px 40px rgba(0, 0, 0, 0.1)',
-          backdropFilter: 'blur(20px)',
-          minHeight: '600px'
-        }}>
-          
-          {/* טאב תשלומים */}
-          {activeTab === 'payments' && (
-            <>
-              <h2 style={{
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                color: '#333',
-                marginBottom: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem'
-              }}>
-                <DollarSign size={32} />
-                ניהול תשלומים
-              </h2>
-
-              {/* סטטיסטיקות מפורטות */}
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))',
-                gap: '1.5rem',
-                marginBottom: '2.5rem'
-              }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1))',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  textAlign: 'center',
-                  border: '1px solid rgba(102, 126, 234, 0.1)'
-                }}>
-                  <p style={{
-                    fontSize: '2.2rem',
-                    fontWeight: 'bold',
-                    color: '#667eea',
-                    margin: '0 0 0.5rem 0'
-                  }}>
-                    ₪{(dailyStats.totalPayments || 0).toFixed(2)}
-                  </p>
-                  <p style={{
-                    color: '#666',
-                    fontSize: '0.95rem',
-                    fontWeight: '500'
-                  }}>
-                    סה״כ תשלומים היום
-                  </p>
+    <>
+      <SecretaryShell
+        schoolName={schoolName || 'בית ספר'}
+        lastUpdateLabel={dailyStats.lastUpdate.toLocaleTimeString('he-IL')}
+        userName={currentUser?.name || 'מזכירה'}
+        userRole="מזכירה ראשית"
+        navItems={[
+          { key: 'payments', label: 'תשלומים', icon: <DollarSign size={18} /> },
+          { key: 'students', label: 'תלמידים', icon: <Users size={18} /> },
+          { key: 'registrations', label: 'הרשמות חדשות', icon: <UserCheck size={18} />, badge: pendingRegistrations.length },
+          { key: 'reports', label: 'דוחות', icon: <FileText size={18} /> },
+          { key: 'groups', label: 'שכבות', icon: <Users size={18} /> },
+          { key: 'settings', label: '⚙️ הגדרות', icon: null }
+        ]}
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        onSettingsClick={() => setShowAdminPanel(true)}
+        onLogout={() => navigate('/')}
+        headerStats={[
+          { label: 'תשלומים היום', value: `₪${(dailyStats.totalPayments || 0).toFixed(0)}` },
+          { label: 'עסקאות', value: dailyStats.transactionCount },
+          { label: 'ממתינים לאישור', value: dailyStats.pendingApprovals, tone: dailyStats.pendingApprovals > 0 ? 'alert' : undefined }
+        ]}
+      >
+        {/* טאב תשלומים */}
+        {activeTab === 'payments' && (
+          <>
+            <PageHeader
+              icon={<DollarSign size={28} />}
+              title="ניהול תשלומים"
+              actions={
+                <div className="bap-sec-stats">
+                  <div className="bap-sec-stat">
+                    <span>סה״כ תשלומים היום</span>
+                    <strong>₪{(dailyStats.totalPayments || 0).toFixed(2)}</strong>
+                  </div>
+                  <div className="bap-sec-stat">
+                    <span>עסקאות היום</span>
+                    <strong>{dailyStats.transactionCount}</strong>
+                  </div>
+                  <div className="bap-sec-stat alert">
+                    <span>ממוצע עסקה</span>
+                    <strong>₪{(dailyStats.averageTransaction || 0).toFixed(0)}</strong>
+                  </div>
+                  <div className="bap-sec-stat danger">
+                    <span>יתרות נמוכות</span>
+                    <strong>{dailyStats.lowBalanceStudents}</strong>
+                  </div>
                 </div>
-                
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(76, 175, 80, 0.1), rgba(69, 160, 73, 0.1))',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  textAlign: 'center',
-                  border: '1px solid rgba(76, 175, 80, 0.1)'
-                }}>
-                  <p style={{
-                    fontSize: '2.2rem',
-                    fontWeight: 'bold',
-                    color: '#4CAF50',
-                    margin: '0 0 0.5rem 0'
-                  }}>
-                    {dailyStats.transactionCount}
-                  </p>
-                  <p style={{
-                    color: '#666',
-                    fontSize: '0.95rem',
-                    fontWeight: '500'
-                  }}>
-                    עסקאות היום
-                  </p>
-                </div>
+              }
+            />
 
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(255, 152, 0, 0.1), rgba(245, 124, 0, 0.1))',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  textAlign: 'center',
-                  border: '1px solid rgba(255, 152, 0, 0.1)'
-                }}>
-                  <p style={{
-                    fontSize: '2.2rem',
-                    fontWeight: 'bold',
-                    color: '#FF9800',
-                    margin: '0 0 0.5rem 0'
-                  }}>
-                    ₪{(dailyStats.averageTransaction || 0 ).toFixed(0)}
-                  </p>
-                  <p style={{
-                    color: '#666',
-                    fontSize: '0.95rem',
-                    fontWeight: '500'
-                  }}>
-                    ממוצע עסקה
-                  </p>
-                </div>
-
-                <div style={{
-                  background: 'linear-gradient(135deg, rgba(244, 67, 54, 0.1), rgba(211, 47, 47, 0.1))',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  textAlign: 'center',
-                  border: '1px solid rgba(244, 67, 54, 0.1)'
-                }}>
-                  <p style={{
-                    fontSize: '2.2rem',
-                    fontWeight: 'bold',
-                    color: '#f44336',
-                    margin: '0 0 0.5rem 0'
-                  }}>
-                    {dailyStats.lowBalanceStudents}
-                  </p>
-                  <p style={{
-                    color: '#666',
-                    fontSize: '0.95rem',
-                    fontWeight: '500'
-                  }}>
-                    יתרות נמוכות
-                  </p>
-                </div>
-              </div>
-
-              {/* כלי חיפוש ופילטור */}
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '2rem',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1rem',
-                background: '#f8f9fa',
-                borderRadius: '12px'
-              }}>
-                <div style={{
-                  position: 'relative',
-                  maxWidth: '350px',
-                  flex: 1
-                }}>
-                  <Search size={20} style={{
-                    position: 'absolute',
-                    left: '1.25rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#999'
-                  }} />
+            <div className="bap-sec-panel">
+              <div className="bap-sec-panel-tools">
+                <div className="bap-sec-search-wrap">
+                  <Search size={20} />
                   <input
                     type="text"
+                    className="bap-sec-search"
                     placeholder="חפש תלמיד, הורה או מספר קבלה..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '1rem 1rem 1rem 3.5rem',
-                      border: '2px solid #e0e0e0',
-                      borderRadius: '25px',
-                      fontSize: '1rem',
-                      transition: 'all 0.3s',
-                      boxSizing: 'border-box'
-                    }}
                   />
                 </div>
-                
-                <div style={{
-                  display: 'flex',
-                  gap: '1rem',
-                  alignItems: 'center'
-                }}>
-                  <select 
-                    value={dateFilter}
-                    onChange={(e) => setDateFilter(e.target.value)}
-                    style={{
-                      padding: '0.75rem 1rem',
-                      border: '2px solid #e0e0e0',
-                      borderRadius: '12px',
-                      fontSize: '0.9rem',
-                      background: 'white',
-                      cursor: 'pointer'
-                    }}
-                  >
-                    <option value="today">היום</option>
-                    <option value="week">השבוע</option>
-                    <option value="month">החודש</option>
-                    <option value="all">הכל</option>
-                  </select>
-                  
-                  <button
-                  
-  onClick={() => {
-    setPaymentForm({
-      studentId: '',
-      amount: '',
-      paymentMethod: 'cash',
-      checkNumber: '',
-      bankName: '',
-      notes: ''
-    });
-    setShowAddPayment(true);
-  }}
 
-                    style={{
-                      background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '25px',
-                      cursor: 'pointer',
-                      transition: 'all 0.3s',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.75rem',
-                      fontSize: '1rem',
-                      fontWeight: '600',
-                      boxShadow: '0 6px 20px rgba(76, 175, 80, 0.3)'
-                    }}
-                  >
-                    <Plus size={20} />
-                    הוסף תשלום
-                  </button>
-                </div>
+                <select
+                  className="bap-sec-select"
+                  value={dateFilter}
+                  onChange={(e) => setDateFilter(e.target.value)}
+                >
+                  <option value="today">היום</option>
+                  <option value="week">השבוע</option>
+                  <option value="month">החודש</option>
+                  <option value="all">הכל</option>
+                </select>
+
+                <div className="bap-sec-spacer" />
+
+                <button
+                  className="bap-sec-btn bap-sec-btn--success"
+                  onClick={() => {
+                    setPaymentForm({
+                      studentId: '',
+                      amount: '',
+                      paymentMethod: 'cash',
+                      checkNumber: '',
+                      bankName: '',
+                      notes: ''
+                    });
+                    setShowAddPayment(true);
+                  }}
+                >
+                  <Plus size={18} />
+                  הוסף תשלום
+                </button>
               </div>
 
-              {/* טבלת תשלומים */}
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'separate',
-                  borderSpacing: 0,
-                  background: 'white',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)'
-                }}>
-                  <thead style={{
-                    background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)'
-                  }}>
+              <div className="bap-sec-table-wrap">
+                <table className="bap-sec-table-mobile">
+                  <thead>
                     <tr>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>פעולות</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>הערות</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>מספר קבלה</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>זמן</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>אמצעי תשלום</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>סכום</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>תלמיד</th>
+                      <th>פעולות</th>
+                      <th>הערות</th>
+                      <th>מספר קבלה</th>
+                      <th>זמן</th>
+                      <th>אמצעי תשלום</th>
+                      <th>סכום</th>
+                      <th>תלמיד</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredPayments.map(payment => (
-                      <tr key={payment.id} style={{
-                        transition: 'all 0.3s',
-                        cursor: 'pointer'
-                      }}>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#666', padding: '0.25rem',
-                              borderRadius: '4px',
-                              transition: 'background 0.3s'
-                            }}
-                            title="צפה בפרטים"
-                            >
+                      <tr key={payment.id}>
+                        <td className="bap-sec-td-actions" data-label="פעולות">
+                          <div className="bap-sec-row-actions">
+                            <IconButton title="צפה בפרטים" ariaLabel="צפה בפרטים">
                               <Eye size={16} />
-                            </button>
-                            <button style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#666', padding: '0.25rem',
-                              borderRadius: '4px',
-                              transition: 'background 0.3s'
-                            }}
-                            title="הדפס קבלה"
-                            >
+                            </IconButton>
+                            <IconButton title="הדפס קבלה" ariaLabel="הדפס קבלה">
                               <Printer size={16} />
-                            </button>
+                            </IconButton>
                           </div>
                         </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{ fontSize: '0.8rem', color: '#666' }}>
-                            {payment.description || '-'}
-                          </span>
+                        <td data-label="הערות">{payment.description || '-'}</td>
+                        <td data-label="מספר קבלה">{payment.id || '-'}</td>
+                        <td data-label="זמן">{new Date(payment.transaction_date).toLocaleString('he-IL')}</td>
+                        <td data-label="אמצעי תשלום">
+                          <StatusBadge tone={paymentMethodTone(payment.payment_method)}>
+                            {paymentMethodLabel(payment.payment_method)}
+                          </StatusBadge>
                         </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{ fontWeight: '600', color: '#667eea' }}>
-                            {payment.id || '-'}
-                          </span>
-                        </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>{new Date(payment.transaction_date).toLocaleString('he-IL')}</td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{
-                            display: 'inline-block',
-                            padding: '0.4rem 1rem',
-                            borderRadius: '16px',
-                            fontSize: '0.8rem',
-                            fontWeight: '600',
-                            background: payment.method === 'cash' ? '#e8f5e8' :
-                                       payment.method === 'check' ? '#e3f2fd' :
-                                       payment.method === 'bit' ? '#f3e5f5' :
-                                       payment.method === 'credit_card' ? '#fff8e1' : '#fce4ec',
-                            color: payment.method === 'cash' ? '#2e7d32' :
-                                  payment.method === 'check' ? '#1976d2' :
-                                  payment.method === 'bit' ? '#7b1fa2' :
-                                  payment.method === 'credit_card' ? '#f57c00' : '#c2185b'
-                          }}>
-                            {payment.payment_method === 'cash' ? 'מזומן' :
-payment.payment_method === 'check' ? 'שיק' :
-payment.payment_method === 'bit' ? 'ביט' :
-payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה'}
-                          </span>
-                        </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{
-                            fontWeight: 'bold',
-                            fontSize: '1rem',
-                            color: '#4CAF50'
-                          }}>
+                        <td data-label="סכום">
+                          <span className="bap-sec-money bap-sec-money--positive">
                             +₪{(payment.amount || 0).toFixed(2)}
                           </span>
                         </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{
-                            fontWeight: '600',
-                            color: '#333'
-                          }}>{payment.students?.first_name} {payment.students?.last_name || ''}</span>
-                          <br />
-                          <span style={{ fontSize: '0.8rem', color: '#666' }}>
-                            
+                        <td className="bap-sec-td-name" data-label="תלמיד">
+                          <span className="bap-sec-student">
+                            {payment.students?.first_name} {payment.students?.last_name || ''}
                           </span>
                         </td>
                       </tr>
@@ -1260,880 +661,418 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
+            </div>
+          </>
+        )}
 
-          {/* טאב תלמידים */}
-          {activeTab === 'students' && (
-            <>
-              <h2 style={{
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                color: '#333',
-                marginBottom: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem'
-              }}>
-                <Users size={32} />
-                ניהול תלמידים
-                <span style={{
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  color: '#667eea',
-                  background: '#eef0ff',
-                  padding: '0.35rem 1rem',
-                  borderRadius: '999px'
-                }}>
-                  {students.length} תלמידים רשומים
-                </span>
-              </h2>
+        {/* טאב תלמידים */}
+        {activeTab === 'students' && (
+          <>
+            <PageHeader
+              icon={<Users size={28} />}
+              title="ניהול תלמידים"
+              badge={<span className="bap-sec-title-badge">{students.length} תלמידים רשומים</span>}
+            />
 
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                marginBottom: '2rem',
-                flexWrap: 'wrap',
-                gap: '1rem',
-                padding: '1rem',
-                background: '#f8f9fa',
-                borderRadius: '12px'
-              }}>
-                <div style={{
-                  position: 'relative',
-                  maxWidth: '350px',
-                  flex: 1
-                }}>
-                  <Search size={20} style={{
-                    position: 'absolute',
-                    left: '1.25rem',
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    color: '#999'
-                  }} />
+            <div className="bap-sec-panel">
+              <div className="bap-sec-panel-tools">
+                <div className="bap-sec-search-wrap">
+                  <Search size={20} />
                   <input
                     type="text"
+                    className="bap-sec-search"
                     placeholder="חפש תלמיד, הורה או טלפון..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    style={{
-                      width: '100%',
-                      padding: '1rem 1rem 1rem 3.5rem',
-                      border: '2px solid #e0e0e0',
-                      borderRadius: '25px',
-                      fontSize: '1rem',
-                      transition: 'all 0.3s',
-                      boxSizing: 'border-box'
-                    }}
                   />
                 </div>
               </div>
 
-              <div style={{ overflowX: 'auto' }}>
-                <table style={{
-                  width: '100%',
-                  borderCollapse: 'separate',
-                  borderSpacing: 0,
-                  background: 'white',
-                  borderRadius: '12px',
-                  overflow: 'hidden',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)'
-                }}>
-                  <thead style={{
-                    background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)'
-                  }}>
+              <div className="bap-sec-table-wrap">
+                <table className="bap-sec-table-mobile">
+                  <thead>
                     <tr>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>פעולות</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>סטטוס</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>פעילות אחרונה</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>טלפון הורה</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>יתרה</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>כיתה</th>
-                      <th style={{
-                        padding: '1.25rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        color: '#555',
-                        borderBottom: '2px solid #e0e0e0',
-                        fontSize: '0.95rem'
-                      }}>שם</th>
+                      <th>פעולות</th>
+                      <th>סטטוס</th>
+                      <th>פעילות אחרונה</th>
+                      <th>טלפון הורה</th>
+                      <th>יתרה</th>
+                      <th>כיתה</th>
+                      <th>שם</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredStudents.map(student => (
-                      <tr 
-                        key={student.id} 
-                        style={{
-                          transition: 'all 0.3s',
-                          cursor: 'pointer'
-                        }}
+                      <tr
+                        key={student.id}
                         onClick={() => {
                           setSelectedStudent(student);
                           setShowStudentDetails(true);
                         }}
+                        style={{ cursor: 'pointer' }}
                       >
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <div style={{ display: 'flex', gap: '0.5rem' }}>
-                            <button style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#667eea', padding: '0.25rem',
-                              borderRadius: '4px',
-                              transition: 'background 0.3s'
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedStudent(student);
-                              setShowStudentDetails(true);
-                            }}
-                            title="עריכת פרטים"
+                        <td className="bap-sec-td-actions" data-label="פעולות">
+                          <div className="bap-sec-row-actions">
+                            <IconButton
+                              variant="default"
+                              title="עריכת פרטים"
+                              ariaLabel="עריכת פרטים"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedStudent(student);
+                                setShowStudentDetails(true);
+                              }}
                             >
                               <Edit size={16} />
-                            </button>
-                            <button style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#667eea', padding: '0.25rem',
-                              borderRadius: '4px',
-                              transition: 'background 0.3s'
-                            }}
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              setSelectedStudent(student);
-                              setShowAddPayment(true);
-                              setPaymentForm(prev => ({...prev, studentId: student.id.toString()}));
-                            }}
-                            title="הוסף תשלום"
+                            </IconButton>
+                            <IconButton
+                              variant="default"
+                              title="הוסף תשלום"
+                              ariaLabel="הוסף תשלום"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedStudent(student);
+                                setShowAddPayment(true);
+                                setPaymentForm(prev => ({ ...prev, studentId: student.id.toString() }));
+                              }}
                             >
                               <Wallet size={16} />
-                            </button>
-                            <button style={{
-                              background: 'none', border: 'none', cursor: 'pointer',
-                              color: '#f44336', padding: '0.25rem',
-                              borderRadius: '4px',
-                              transition: 'background 0.3s'
-                            }}
-                            onClick={(e) => handleDeleteStudent(e, student)}
-                            title="מחק תלמיד"
+                            </IconButton>
+                            <IconButton
+                              variant="danger"
+                              title="מחק תלמיד"
+                              ariaLabel="מחק תלמיד"
+                              onClick={(e) => handleDeleteStudent(e, student)}
                             >
                               <Trash2 size={16} />
-                            </button>
+                            </IconButton>
                           </div>
                         </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{
-                            display: 'inline-block',
-                            padding: '0.4rem 1rem',
-                            borderRadius: '20px',
-                            fontSize: '0.8rem',
-                            fontWeight: '600',
-                            background: student.status === 'active' ? '#e8f5e8' :
-                                       student.status === 'debt' ? '#ffebee' : '#fff3e0',
-                            color: student.status === 'active' ? '#2e7d32' :
-                                  student.status === 'debt' ? '#c62828' : '#f57c00'
-                          }}>
-                            {student.status === 'active' ? 'פעיל' :
-                             student.status === 'debt' ? 'חוב' : 'יתרה נמוכה'}
-                          </span>
+                        <td data-label="סטטוס">
+                          <StatusBadge tone={studentStatusTone(student.status)}>
+                            {studentStatusLabel(student.status)}
+                          </StatusBadge>
                         </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>{student.lastActivity}</td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          {student.users?.phone}
-                          
-                        </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{
-                            fontWeight: 'bold',
-                            fontSize: '1rem',
-                            color: student.balance >= 0 ? 
-                                   student.balance > 20 ? '#4CAF50' : '#FF9800' :
-                                   '#f44336'
-                          }}>
+                        <td data-label="פעילות אחרונה">{student.lastActivity}</td>
+                        <td data-label="טלפון הורה">{student.users?.phone}</td>
+                        <td data-label="יתרה">
+                          <span className={`bap-sec-money bap-sec-money--${balanceTone(student.balance)}`}>
                             ₪{(student.balance || 0).toFixed(2)}
                           </span>
                         </td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>{student.grade}</td>
-                        <td style={{
-                          padding: '1.25rem',
-                          textAlign: 'right',
-                          borderBottom: '1px solid #f0f0f0',
-                          fontSize: '0.9rem'
-                        }}>
-                          <span style={{
-                            fontWeight: '600',
-                            color: '#333'
-                          }}>
+                        <td data-label="כיתה">{student.grade}</td>
+                        <td className="bap-sec-td-name" data-label="שם">
+                          <span className="bap-sec-student">
                             {student?.first_name} {student?.last_name || ''}
                           </span>
-                          <br />
-                          <span style={{ fontSize: '0.8rem', color: '#666' }}>
-                            {student.className}
-                          </span>
+                          {student.className && <span className="bap-sec-sub">{student.className}</span>}
                         </td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
-            </>
-          )}
+            </div>
+          </>
+        )}
 
+        {/* טאב הרשמות */}
+        {activeTab === 'registrations' && (
+          <>
+            <PageHeader
+              icon={<UserCheck size={28} />}
+              title="הרשמות ממתינות לאישור"
+              badge={
+                pendingRegistrations && pendingRegistrations.length > 0 ? (
+                  <span className="bap-sec-title-badge bap-sec-title-badge--danger">
+                    {pendingRegistrations.length}
+                  </span>
+                ) : null
+              }
+            />
 
+            {!pendingRegistrations || pendingRegistrations.length === 0 ? (
+              <EmptyState
+                icon={<CheckCircle size={48} />}
+                title="אין הרשמות ממתינות"
+                description="כל ההרשמות אושרו או נדחו"
+              />
+            ) : (
+              <div className="bap-sec-reg-grid">
+                {pendingRegistrations.map(registration => {
+                  const children = JSON.parse(registration.children_data || '[]');
+                  return (
+                    <div key={registration.id} className="bap-sec-reg-card">
+                      <div className="bap-sec-reg-head">
+                        <div>
+                          <h3>{registration.parent_name}</h3>
+                          <p>{registration.parent_phone} • {registration.parent_email}</p>
+                          <p>הוגש: {new Date(registration.created_at).toLocaleString('he-IL')}</p>
+                        </div>
 
-          {/* טאב הרשמות */}
-          {activeTab === 'registrations' && (
-  <>
-    <h2 style={{
-      fontSize: '1.8rem',
-      fontWeight: 'bold',
-      color: '#333',
-      marginBottom: '2rem',
-      display: 'flex',
-      alignItems: 'center',
-      gap: '1rem'
-    }}>
-      <UserCheck size={32} />
-      הרשמות ממתינות לאישור
-      {pendingRegistrations && pendingRegistrations.length > 0 && (
-        <span style={{
-          background: '#f44336',
-          color: 'white',
-          borderRadius: '50%',
-          width: '30px',
-          height: '30px',
-          fontSize: '0.9rem',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          fontWeight: 'bold'
-        }}>
-          {pendingRegistrations.length}
-        </span>
-      )}
-    </h2>
+                        <div className="bap-sec-reg-actions">
+                          <button
+                            className="bap-sec-btn bap-sec-btn--danger"
+                            onClick={() => handleApproveRegistration(registration.id, false)}
+                          >
+                            <X size={16} />
+                            דחה
+                          </button>
 
-    {!pendingRegistrations || pendingRegistrations.length === 0 ? (
-      <div style={{
-        textAlign: 'center',
-        padding: '4rem',
-        color: '#999'
-      }}>
-        <CheckCircle size={60} style={{ opacity: 0.5, marginBottom: '1rem' }} />
-        <h3 style={{ marginBottom: '0.5rem' }}>אין הרשמות ממתינות</h3>
-        <p>כל ההרשמות אושרו או נדחו</p>
-      </div>
-    ) : (
-      <div style={{
-        display: 'grid',
-        gap: '1.5rem'
-      }}>
-        {pendingRegistrations.map(registration => {
-          const children = JSON.parse(registration.children_data || '[]');
-          return (
-            <div key={registration.id} style={{
-              background: 'white',
-              border: '2px solid #f0f0f0',
-              borderRadius: '16px',
-              padding: '2rem',
-              boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-              transition: 'all 0.3s'
-            }}>
-              <div style={{
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'flex-start',
-                marginBottom: '1.5rem'
-              }}>
-                <div>
-                  <h3 style={{
-                    fontSize: '1.3rem',
-                    fontWeight: 'bold',
-                    color: '#333',
-                    margin: '0 0 0.5rem 0'
-                  }}>
-                    {registration.parent_name}
-                  </h3>
-                  <p style={{
-                    color: '#666',
-                    fontSize: '0.9rem',
-                    margin: '0.25rem 0'
-                  }}>
-                    {registration.parent_phone} • {registration.parent_email}
-                  </p>
-                  <p style={{
-                    color: '#666',
-                    fontSize: '0.9rem',
-                    margin: '0.25rem 0'
-                  }}>
-                    הוגש: {new Date(registration.created_at).toLocaleString('he-IL')}
-                  </p>
-                </div>
-                
-                <div style={{ display: 'flex', gap: '1rem' }}>
-                  <button
-                    onClick={() => handleApproveRegistration(registration.id, false)}
-                    style={{
-                      background: 'linear-gradient(135deg, #ffebee, #ffcdd2)',
-                      color: '#c62828',
-                      border: '2px solid #ffcdd2',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '25px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    <X size={16} />
-                    דחה
-                  </button>
-                  
-                  <button
-                    onClick={() => handleApproveRegistration(registration.id, true)}
-                    style={{
-                      background: 'linear-gradient(135deg, #e8f5e8, #c8e6c9)',
-                      color: '#2e7d32',
-                      border: '2px solid #c8e6c9',
-                      padding: '0.75rem 1.5rem',
-                      borderRadius: '25px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    <Check size={16} />
-                    אשר
-                  </button>
-                </div>
-              </div>
-              
-              <div style={{
-                background: '#f8f9fa',
-                padding: '1rem',
-                borderRadius: '8px',
-                marginBottom: '1rem'
-              }}>
-                <h4 style={{
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  margin: '0 0 0.75rem 0',
-                  color: '#555'
-                }}>
-                  ילדים להרשמה:
-                </h4>
-                {children.map((child, index) => (
-                  <div key={index} style={{
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    padding: '0.75rem 0',
-                    borderBottom: index < children.length - 1 ? '1px solid #e0e0e0' : 'none'
-                  }}>
-                    <span style={{ fontWeight: '600' }}>
-                      {child.firstName} {child.lastName}
-                    </span>
-                    <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                      <span>כיתה {child.grade}</span> • <span>{child.phone}</span>
+                          <button
+                            className="bap-sec-btn bap-sec-btn--success"
+                            onClick={() => handleApproveRegistration(registration.id, true)}
+                          >
+                            <Check size={16} />
+                            אשר
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="bap-sec-reg-children">
+                        <h4>ילדים להרשמה:</h4>
+                        {children.map((child, index) => (
+                          <div key={index} className="bap-sec-reg-child-row">
+                            <span style={{ fontWeight: 600 }}>{child.firstName} {child.lastName}</span>
+                            <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>
+                              <span>כיתה {child.grade}</span> • <span>{child.phone}</span>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
+              </div>
+            )}
+          </>
+        )}
+
+        {/* טאב דוחות */}
+        {activeTab === 'reports' && (
+          <>
+            <PageHeader icon={<FileText size={28} />} title="דוחות ונתונים" />
+
+            <div className="bap-sec-report-grid">
+              <div className="bap-sec-report-card">
+                <div className="bap-sec-report-icon"><AlertCircle size={36} style={{ color: 'var(--blue)' }} /></div>
+                <h3>דוח חובות</h3>
+                <p>תלמידים עם יתרה שלילית וחובות פתוחים</p>
+                <button className="bap-sec-btn bap-sec-btn--primary" onClick={() => generateReport('debts')}>
+                  <Download size={16} />
+                  הורד דוח חובות
+                </button>
+              </div>
+
+              <div className="bap-sec-report-card">
+                <div className="bap-sec-report-icon"><Users size={36} style={{ color: 'var(--green)' }} /></div>
+                <h3>דוח תלמידים</h3>
+                <p>יתרות, פעילות וסטטיסטיקות כל התלמידים</p>
+                <button className="bap-sec-btn bap-sec-btn--success" onClick={() => generateReport('students')}>
+                  <Download size={16} />
+                  הורד דוח תלמידים
+                </button>
+              </div>
+
+              <div className="bap-sec-report-card">
+                <div className="bap-sec-report-icon"><Calendar size={36} style={{ color: 'var(--navy)' }} /></div>
+                <h3>דוח שבועי</h3>
+                <p>סיכום פעילות שבועית והשוואות</p>
+                <button className="bap-sec-btn bap-sec-btn--primary" onClick={() => generateReport('weekly')}>
+                  <Download size={16} />
+                  הורד דוח שבועי
+                </button>
+              </div>
+
+              <div className="bap-sec-report-card">
+                <div className="bap-sec-report-icon"><Settings size={36} style={{ color: 'var(--muted)' }} /></div>
+                <h3>דוח מותאם אישית</h3>
+                <p>בחר תאריכים ונתונים ספציפיים</p>
+                <button
+                  className="bap-sec-btn bap-sec-btn--secondary"
+                  onClick={() => {
+                    const reportType = prompt('בחר סוג דוח:\n1 - תלמידים\n2 - חובות\n3 - תשלומים\nהכנס מספר:');
+
+                    if (reportType === '1') {
+                      generateReport('students');
+                    } else if (reportType === '2') {
+                      generateReport('debts');
+                    } else if (reportType === '3') {
+                      generateReport('daily');
+                    } else {
+                      alert('בחירה לא תקינה');
+                    }
+                  }}
+                >
+                  <Settings size={16} />
+                  צור דוח מותאם
+                </button>
               </div>
             </div>
-          );
-        })}
-      </div>
-    )}
-  </>
-)}
-          {/* טאב דוחות */}
-          {activeTab === 'reports' && (
-            <>
-              <h2 style={{
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                color: '#333',
-                marginBottom: '2rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '1rem'
-              }}>
-                <FileText size={32} />
-                דוחות ונתונים
-              </h2>
+          </>
+        )}
 
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
-                gap: '2rem'
-              }}>
-                <div style={{
-                  background: 'linear-gradient(135deg, #ffffff, #f8f9fa)',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-                  textAlign: 'center',
-                  border: '1px solid #e9ecef',
-                  transition: 'all 0.3s'
-                }}>
-                  <AlertCircle size={40} style={{ color: '#f44336', marginBottom: '1rem' }} />
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>דוח חובות</h3>
-                  <p style={{ color: '#666', marginBottom: '2rem', lineHeight: '1.5' }}>
-                    תלמידים עם יתרה שלילית וחובות פתוחים
+        {/* טאב שכבות */}
+        {activeTab === 'groups' && (
+          <GradeGroupsTab schoolId={schoolData?.id || currentUser?.school_id} />
+        )}
+
+        {/* טאב הגדרות */}
+        {activeTab === 'settings' && (
+          <div className="bap-sec-settings-wrap">
+            <PageHeader title="⚙️ הגדרות בית ספר" />
+
+            <div className="bap-sec-settings-card">
+              <h3>💰 תמחור</h3>
+
+              {schoolData?.enable_daily_payment && (
+                <div className="bap-sec-field">
+                  <label>מחיר ארוחה יומית (₪)</label>
+                  <div className="bap-sec-readonly">{schoolData?.daily_meal_price || 0} ₪</div>
+                  <p style={{ color: '#999', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                    מחיר הארוחה נקבע בפאנל ניהול המטבח, כדי למנוע התנגשות בין שני מקומות עריכה.
                   </p>
-                  <button
-                    onClick={() => generateReport('debts')}
-                    style={{
-                      background: 'linear-gradient(135deg, #f44336, #d32f2f)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '25px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      margin: '0 auto',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    <Download size={16} />
-                    הורד דוח חובות
-                  </button>
                 </div>
+              )}
 
-                <div style={{
-                  background: 'linear-gradient(135deg, #ffffff, #f8f9fa)',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-                  textAlign: 'center',
-                  border: '1px solid #e9ecef',
-                  transition: 'all 0.3s'
-                }}>
-                  <Users size={40} style={{ color: '#FF9800', marginBottom: '1rem' }} />
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>דוח תלמידים</h3>
-                  <p style={{ color: '#666', marginBottom: '2rem', lineHeight: '1.5' }}>
-                    יתרות, פעילות וסטטיסטיקות כל התלמידים
-                  </p>
-                  <button
-                    onClick={() => generateReport('students')}
-                    style={{
-                      background: 'linear-gradient(135deg, #FF9800, #f57c00)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '25px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      margin: '0 auto',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    <Download size={16} />
-                    הורד דוח תלמידים
-                  </button>
-                </div>
-
-                {/* דוח נוסף - שבועי */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #ffffff, #f8f9fa)',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-                  textAlign: 'center',
-                  border: '1px solid #e9ecef',
-                  transition: 'all 0.3s'
-                }}>
-                  <Calendar size={40} style={{ color: '#9C27B0', marginBottom: '1rem' }} />
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>דוח שבועי</h3>
-                  <p style={{ color: '#666', marginBottom: '2rem', lineHeight: '1.5' }}>
-                    סיכום פעילות שבועית והשוואות
-                  </p>
-                  <button
-                    onClick={() => generateReport('weekly')}
-                    style={{
-                      background: 'linear-gradient(135deg, #9C27B0, #7B1FA2)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '25px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      margin: '0 auto',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    <Download size={16} />
-                    הורד דוח שבועי
-                  </button>
-                </div>
-
-                {/* דוח מותאם אישית */}
-                <div style={{
-                  background: 'linear-gradient(135deg, #ffffff, #f8f9fa)',
-                  padding: '2rem',
-                  borderRadius: '16px',
-                  boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-                  textAlign: 'center',
-                  border: '1px solid #e9ecef',
-                  transition: 'all 0.3s'
-                }}>
-                  <Settings size={40} style={{ color: '#607D8B', marginBottom: '1rem' }} />
-                  <h3 style={{ margin: '0 0 1rem 0', color: '#333' }}>דוח מותאם אישית</h3>
-                  <p style={{ color: '#666', marginBottom: '2rem', lineHeight: '1.5' }}>
-                    בחר תאריכים ונתונים ספציפיים
-                  </p>
-                  <button
-                    onClick={() => {
-  const reportType = prompt('בחר סוג דוח:\n1 - תלמידים\n2 - חובות\n3 - תשלומים\nהכנס מספר:');
-  
-  if (reportType === '1') {
-    generateReport('students');
-  } else if (reportType === '2') {
-    generateReport('debts');
-  } else if (reportType === '3') {
-    generateReport('daily');
-  } else {
-    alert('בחירה לא תקינה');
-  }
-}}
-
-                    style={{
-                      background: 'linear-gradient(135deg, #607D8B, #455A64)',
-                      color: 'white',
-                      border: 'none',
-                      padding: '1rem 2rem',
-                      borderRadius: '25px',
-                      cursor: 'pointer',
-                      fontWeight: '600',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem',
-                      margin: '0 auto',
-                      transition: 'all 0.3s'
-                    }}
-                  >
-                    <Settings size={16} />
-                    צור דוח מותאם
-                  </button>
-                </div>
-              </div>
-            </>
-          )}
-
-{/* טאב שכבות */}
-{activeTab === 'groups' && (
-  <GradeGroupsTab schoolId={schoolData?.id || currentUser?.school_id} />
-)}
-
-{/* טאב הגדרות */}
-{activeTab === 'settings' && (
-  <div style={{ direction: 'rtl' }}>
-    <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333', marginBottom: '2rem' }}>
-      ⚙️ הגדרות בית ספר
-    </h2>
-    
-    <div style={{
-      background: 'white', padding: '2rem', borderRadius: '16px',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.05)', maxWidth: '500px'
-    }}>
-      <h3 style={{ margin: '0 0 1.5rem 0', color: '#555' }}>💰 תמחור</h3>
-
-      {schoolData?.enable_daily_payment && (
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#333' }}>
-            מחיר ארוחה יומית (₪)
-          </label>
-          <div style={{
-            padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px',
-            fontSize: '1rem', color: '#666', background: '#f8f9fa', width: '150px', boxSizing: 'border-box'
-          }}>
-            {schoolData?.daily_meal_price || 0} ₪
-          </div>
-          <p style={{ color: '#999', fontSize: '0.85rem', marginTop: '0.5rem' }}>
-            מחיר הארוחה נקבע בפאנל ניהול המטבח, כדי למנוע התנגשות בין שני מקומות עריכה.
-          </p>
-        </div>
-      )}
-
-      <p style={{ color: '#999', fontSize: '0.9rem' }}>
-        הגדרות נוספות מנוהלות ע"י מנהל המערכת
-      </p>
-    </div>
-
-    {/* ניהול צוות */}
-    <div style={{
-      background: 'white', padding: '2rem', borderRadius: '16px',
-      boxShadow: '0 4px 16px rgba(0,0,0,0.05)', maxWidth: '600px', marginTop: '2rem'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h3 style={{ margin: 0, color: '#555' }}>👥 צוות בית הספר</h3>
-        <button
-          onClick={() => setShowAddStaffForm(!showAddStaffForm)}
-          style={{
-            background: 'linear-gradient(135deg, #667eea, #764ba2)', color: 'white', border: 'none',
-            padding: '0.6rem 1.2rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600',
-            display: 'flex', alignItems: 'center', gap: '0.4rem', fontSize: '0.9rem'
-          }}
-        >
-          <Plus size={16} />
-          הוסף איש צוות
-        </button>
-      </div>
-
-      {showAddStaffForm && (
-        <div style={{ background: '#f8f9fa', padding: '1.25rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'grid', gap: '0.75rem' }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
-            <input type="text" placeholder="שם פרטי *" value={newStaff.firstName}
-              onChange={e => setNewStaff({ ...newStaff, firstName: e.target.value })}
-              style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
-            <input type="text" placeholder="שם משפחה *" value={newStaff.lastName}
-              onChange={e => setNewStaff({ ...newStaff, lastName: e.target.value })}
-              style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
-          </div>
-          <input type="email" placeholder="אימייל *" value={newStaff.email}
-            onChange={e => setNewStaff({ ...newStaff, email: e.target.value })}
-            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
-          <input type="tel" placeholder="טלפון" value={newStaff.phone}
-            onChange={e => setNewStaff({ ...newStaff, phone: e.target.value })}
-            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
-          <input type="password" placeholder="סיסמה זמנית *" value={newStaff.password}
-            onChange={e => setNewStaff({ ...newStaff, password: e.target.value })}
-            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }} />
-          <select value={newStaff.role} onChange={e => setNewStaff({ ...newStaff, role: e.target.value })}
-            style={{ padding: '0.65rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '0.95rem' }}>
-            <option value="secretary">מזכירה</option>
-            <option value="kitchen">מנהל מטבח</option>
-            <option value="admin">מנהל בית ספר</option>
-          </select>
-          <button onClick={addStaffUser}
-            style={{ padding: '0.75rem', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', fontWeight: '600', cursor: 'pointer' }}>
-            שמור
-          </button>
-        </div>
-      )}
-
-      {staffUsers.length === 0 ? (
-        <p style={{ color: '#999', textAlign: 'center', padding: '1rem' }}>אין אנשי צוות נוספים</p>
-      ) : (
-        staffUsers.map(user => (
-          <div key={user.id} style={{
-            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-            padding: '1rem', borderRadius: '8px', marginBottom: '0.5rem', background: '#f8f9fa'
-          }}>
-            <div>
-              <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{user.first_name} {user.last_name}</p>
-              <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>
-                {user.email} · {user.role === 'secretary' ? 'מזכירה' : user.role === 'kitchen' ? 'מנהל מטבח' : user.role === 'admin' ? 'מנהל בית ספר' : user.role}
+              <p style={{ color: '#999', fontSize: '0.9rem' }}>
+                הגדרות נוספות מנוהלות ע"י מנהל המערכת
               </p>
             </div>
-            <button
-              onClick={() => deleteStaffUser(user.id)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f44336', padding: '0.25rem' }}
-              title="מחק איש צוות"
-            >
-              <Trash2 size={18} />
-            </button>
+
+            {/* ניהול צוות */}
+            <div className="bap-sec-settings-card">
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ margin: 0 }}>👥 צוות בית הספר</h3>
+                <button className="bap-sec-btn bap-sec-btn--primary" onClick={() => setShowAddStaffForm(!showAddStaffForm)}>
+                  <Plus size={16} />
+                  הוסף איש צוות
+                </button>
+              </div>
+
+              {showAddStaffForm && (
+                <div style={{ background: 'var(--paper)', padding: '1.25rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'grid', gap: '0.75rem' }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.75rem' }}>
+                    <input type="text" className="bap-sec-input" placeholder="שם פרטי *" value={newStaff.firstName}
+                      onChange={e => setNewStaff({ ...newStaff, firstName: e.target.value })} />
+                    <input type="text" className="bap-sec-input" placeholder="שם משפחה *" value={newStaff.lastName}
+                      onChange={e => setNewStaff({ ...newStaff, lastName: e.target.value })} />
+                  </div>
+                  <input type="email" className="bap-sec-input" placeholder="אימייל *" value={newStaff.email}
+                    onChange={e => setNewStaff({ ...newStaff, email: e.target.value })} />
+                  <input type="tel" className="bap-sec-input" placeholder="טלפון" value={newStaff.phone}
+                    onChange={e => setNewStaff({ ...newStaff, phone: e.target.value })} />
+                  <input type="password" className="bap-sec-input" placeholder="סיסמה זמנית *" value={newStaff.password}
+                    onChange={e => setNewStaff({ ...newStaff, password: e.target.value })} />
+                  <select className="bap-sec-select" style={{ width: '100%' }} value={newStaff.role} onChange={e => setNewStaff({ ...newStaff, role: e.target.value })}>
+                    <option value="secretary">מזכירה</option>
+                    <option value="kitchen">מנהל מטבח</option>
+                    <option value="admin">מנהל בית ספר</option>
+                  </select>
+                  <button className="bap-sec-btn bap-sec-btn--success" onClick={addStaffUser}>
+                    שמור
+                  </button>
+                </div>
+              )}
+
+              {staffUsers.length === 0 ? (
+                <EmptyState description="אין אנשי צוות נוספים" />
+              ) : (
+                staffUsers.map(user => (
+                  <div key={user.id} className="bap-sec-staff-row">
+                    <div>
+                      <p style={{ fontWeight: 600, color: 'var(--navy)' }}>{user.first_name} {user.last_name}</p>
+                      <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
+                        {user.email} · {user.role === 'secretary' ? 'מזכירה' : user.role === 'kitchen' ? 'מנהל מטבח' : user.role === 'admin' ? 'מנהל בית ספר' : user.role}
+                      </p>
+                    </div>
+                    <IconButton variant="danger" title="מחק איש צוות" ariaLabel="מחק איש צוות" onClick={() => deleteStaffUser(user.id)}>
+                      <Trash2 size={18} />
+                    </IconButton>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
-        ))
-      )}
-    </div>
-  </div>
-)}
-        </div>
-      </div>
+        )}
+      </SecretaryShell>
 
       {/* מודל הוספת תשלום */}
       {showAddPayment && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '1rem'
-        }}>
-          <div style={{
-            background: 'white', borderRadius: '20px', padding: '2.5rem',
-            maxWidth: '600px', width: '100%', maxHeight: '90vh',
-            overflowY: 'auto', boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-          }}>
-            <h3 style={{
-              fontSize: '1.8rem', fontWeight: 'bold', color: '#333',
-              marginBottom: '2rem', textAlign: 'center',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem'
-            }}>
-              <DollarSign size={28} />
-              הוספת תשלום ידני
-            </h3>
-            
-            <div style={{ marginBottom: '2rem' }}>
-  <label style={{
-    display: 'block', fontSize: '1rem', fontWeight: '600',
-    color: '#333', marginBottom: '0.5rem', textAlign: 'right'
-  }}>תלמיד</label>
-  
-  {paymentForm.studentId ? (
-  // אם יש תלמיד נבחר מראש - הצג עם אפשרות שינוי
-  <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-    <div style={{
-      flex: 1, padding: '0.75rem', border: '2px solid #e0e0e0',
-      borderRadius: '12px', fontSize: '1rem', background: '#f8f9fa',
-      textAlign: 'right', color: '#333'
-    }}>
-      {(() => {
-  const student = students.find(s => String(s.id) === String(paymentForm.studentId));
-  return student ? `${student.first_name} ${student.last_name} - כיתה ${student.grade}` : 'תלמיד לא נמצא';
-})()}
-    </div>
-    <button
-      type="button"
-      onClick={() => setPaymentForm(prev => ({...prev, studentId: ''}))}
-      style={{
-        padding: '0.75rem', border: '2px solid #f44336', borderRadius: '8px',
-        background: 'white', color: '#f44336', cursor: 'pointer',
-        fontSize: '0.8rem', fontWeight: '600'
-      }}
-    >
-      שנה
-    </button>
-  </div>
-) : ( 
+        <div className="bap-sec-modal-overlay">
+          <div className="bap-sec-modal">
+            <div className="bap-sec-modal-head">
+              <h3 className="bap-sec-modal-title bap-sec-modal-title--center">
+                <DollarSign size={26} />
+                הוספת תשלום ידני
+              </h3>
+              <button type="button" className="bap-sec-modal-close" onClick={() => setShowAddPayment(false)} aria-label="סגירת חלון הוספת תשלום">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="bap-sec-modal-scroll">
+            <div className="bap-sec-field">
+              <label>תלמיד</label>
 
-    // אם אין תלמיד נבחר - הצג dropdown
-    <select
-      value={paymentForm.studentId}
-      onChange={(e) => {
-  setPaymentForm(prev => ({...prev, studentId: e.target.value}));
-  loadStudentSchedule(e.target.value);
-}}
-      style={{
-        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
-        borderRadius: '12px', fontSize: '1rem', transition: 'all 0.3s',
-        boxSizing: 'border-box', textAlign: 'right', background: 'white'
-      }}
-    >
-      <option value="">בחר תלמיד...</option>
-      {students.map(student => (
-  <option key={student.id} value={student.id}>
-    {student?.first_name} {student?.last_name || ''} - כיתה {student.grade} (יתרה: ₪{(student.balance || 0).toFixed(2)})
-  </option>
-))}
-    </select>
-  )}
-</div>
+              {paymentForm.studentId ? (
+                <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                  <div className="bap-sec-readonly" style={{ flex: 1 }}>
+                    {(() => {
+                      const student = students.find(s => String(s.id) === String(paymentForm.studentId));
+                      return student ? `${student.first_name} ${student.last_name} - כיתה ${student.grade}` : 'תלמיד לא נמצא';
+                    })()}
+                  </div>
+                  <button
+                    type="button"
+                    className="bap-sec-btn bap-sec-btn--danger"
+                    onClick={() => setPaymentForm(prev => ({ ...prev, studentId: '' }))}
+                  >
+                    שנה
+                  </button>
+                </div>
+              ) : (
+                <select
+                  className="bap-sec-select"
+                  style={{ width: '100%' }}
+                  value={paymentForm.studentId}
+                  onChange={(e) => {
+                    setPaymentForm(prev => ({ ...prev, studentId: e.target.value }));
+                    loadStudentSchedule(e.target.value);
+                  }}
+                >
+                  <option value="">בחר תלמיד...</option>
+                  {students.map(student => (
+                    <option key={student.id} value={student.id}>
+                      {student?.first_name} {student?.last_name || ''} - כיתה {student.grade} (יתרה: ₪{(student.balance || 0).toFixed(2)})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
 
-            {/* מידע שיטת תשלום */}
             {schoolData?.enable_monthly_package && paymentForm.studentId && (
-              <div style={{
-                background: '#e3f2fd', padding: '1rem', borderRadius: '12px',
-                marginBottom: '1rem', textAlign: 'center'
-              }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#1976d2' }}>
+              <div style={{ background: 'var(--soft)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', textAlign: 'center' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: 'var(--blue)' }}>
                   📅 חבילה חודשית - {new Date().toLocaleString('he-IL', { month: 'long' })}
                 </p>
                 {selectedStudentSchedule ? (
                   <>
-                    <p style={{ margin: '0 0 0.5rem 0', color: '#555', fontSize: '0.9rem' }}>
+                    <p style={{ margin: '0 0 0.5rem 0', color: 'var(--muted)', fontSize: '0.9rem' }}>
                       {selectedStudentSchedule.days_count} ימים × ₪{selectedStudentSchedule.meal_price} = ₪{(selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)}
                     </p>
                     <button
                       type="button"
+                      className="bap-sec-btn bap-sec-btn--primary"
                       onClick={() => setPaymentForm(prev => ({
                         ...prev,
                         amount: (selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)
                       }))}
-                      style={{
-                        padding: '0.5rem 1.5rem', background: '#1976d2', color: 'white',
-                        border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'
-                      }}
                     >
                       שלם ₪{(selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)}
                     </button>
                   </>
                 ) : (
-                  <p style={{ fontSize: '0.85rem', color: '#888', margin: 0 }}>
+                  <p style={{ fontSize: '0.85rem', color: 'var(--muted)', margin: 0 }}>
                     לא הוגדר לוח ארוחות לשכבה זו החודש
                   </p>
                 )}
@@ -2141,192 +1080,115 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
             )}
 
             {schoolData?.enable_daily_payment && (
-              <div style={{
-                background: '#f3e5f5', padding: '1rem', borderRadius: '12px',
-                marginBottom: '1rem', textAlign: 'center'
-              }}>
-                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
+              <div style={{ background: 'var(--green2)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', textAlign: 'center' }}>
+                <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: 'var(--green)' }}>
                   📆 תשלום יומי - ₪{schoolData.daily_meal_price} לארוחה
                 </p>
                 <button
                   type="button"
-                  onClick={() => setPaymentForm(prev => ({...prev, amount: schoolData.daily_meal_price?.toFixed(2)}))}
-                  style={{
-                    padding: '0.5rem 1.5rem', background: '#7b1fa2', color: 'white',
-                    border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'
-                  }}
+                  className="bap-sec-btn bap-sec-btn--success"
+                  onClick={() => setPaymentForm(prev => ({ ...prev, amount: schoolData.daily_meal_price?.toFixed(2) }))}
                 >
                   שלם ₪{schoolData.daily_meal_price} לארוחה אחת
                 </button>
               </div>
             )}
 
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{
-                display: 'block', fontSize: '1rem', fontWeight: '600',
-                color: '#333', marginBottom: '0.5rem', textAlign: 'right'
-              }}>סכום (ש״ח)</label>
+            <div className="bap-sec-field">
+              <label>סכום (ש״ח)</label>
               <input
                 type="number"
+                className="bap-sec-input"
                 value={paymentForm.amount}
-                onChange={(e) => setPaymentForm(prev => ({...prev, amount: e.target.value}))}
+                onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
                 placeholder="הכנס סכום..."
-                style={{
-                  width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
-                  borderRadius: '12px', fontSize: '1rem', transition: 'all 0.3s',
-                  boxSizing: 'border-box', textAlign: 'right'
-                }}
                 step="0.50"
               />
             </div>
 
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{
-                display: 'block', fontSize: '1rem', fontWeight: '600',
-                color: '#333', marginBottom: '0.5rem', textAlign: 'right'
-              }}>אמצעי תשלום</label>
-              <div style={{
-                display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem'
-              }}>
-                <div
-                  onClick={() => setPaymentForm(prev => ({...prev, paymentMethod: 'cash'}))}
-                  style={{
-                    padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '12px',
-                    cursor: 'pointer', transition: 'all 0.3s', textAlign: 'center',
-                    fontSize: '0.9rem', fontWeight: '600',
-                    borderColor: paymentForm.paymentMethod === 'cash' ? '#667eea' : '#e0e0e0',
-                    background: paymentForm.paymentMethod === 'cash' ? '#f3f4ff' : 'white',
-                    color: paymentForm.paymentMethod === 'cash' ? '#667eea' : '#666'
-                  }}
+            <div className="bap-sec-field">
+              <label>אמצעי תשלום</label>
+              <div className="bap-sec-method-grid">
+                <button
+                  type="button"
+                  className={`bap-sec-method-option ${paymentForm.paymentMethod === 'cash' ? 'active' : ''}`}
+                  onClick={() => setPaymentForm(prev => ({ ...prev, paymentMethod: 'cash' }))}
                 >
                   מזומן
-                </div>
-                <div
-                  onClick={() => setPaymentForm(prev => ({...prev, paymentMethod: 'check'}))}
-                  style={{
-                    padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '12px',
-                    cursor: 'pointer', transition: 'all 0.3s', textAlign: 'center',
-                    fontSize: '0.9rem', fontWeight: '600',
-                    borderColor: paymentForm.paymentMethod === 'check' ? '#667eea' : '#e0e0e0',
-                    background: paymentForm.paymentMethod === 'check' ? '#f3f4ff' : 'white',
-                    color: paymentForm.paymentMethod === 'check' ? '#667eea' : '#666'
-                  }}
+                </button>
+                <button
+                  type="button"
+                  className={`bap-sec-method-option ${paymentForm.paymentMethod === 'check' ? 'active' : ''}`}
+                  onClick={() => setPaymentForm(prev => ({ ...prev, paymentMethod: 'check' }))}
                 >
                   שיק
-                </div>
-                <div
-                  onClick={() => setPaymentForm(prev => ({...prev, paymentMethod: 'bit'}))}
-                  style={{
-                    padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '12px',
-                    cursor: 'pointer', transition: 'all 0.3s', textAlign: 'center',
-                    fontSize: '0.9rem', fontWeight: '600',
-                    borderColor: paymentForm.paymentMethod === 'bit' ? '#667eea' : '#e0e0e0',
-                    background: paymentForm.paymentMethod === 'bit' ? '#f3f4ff' : 'white',
-                    color: paymentForm.paymentMethod === 'bit' ? '#667eea' : '#666'
-                  }}
+                </button>
+                <button
+                  type="button"
+                  className={`bap-sec-method-option ${paymentForm.paymentMethod === 'bit' ? 'active' : ''}`}
+                  onClick={() => setPaymentForm(prev => ({ ...prev, paymentMethod: 'bit' }))}
                 >
                   ביט
-                </div>
-                <div
-                  onClick={() => setPaymentForm(prev => ({...prev, paymentMethod: 'adjustment'}))}
-                  style={{
-                    padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '12px',
-                    cursor: 'pointer', transition: 'all 0.3s', textAlign: 'center',
-                    fontSize: '0.9rem', fontWeight: '600',
-                    borderColor: paymentForm.paymentMethod === 'adjustment' ? '#667eea' : '#e0e0e0',
-                    background: paymentForm.paymentMethod === 'adjustment' ? '#f3f4ff' : 'white',
-                    color: paymentForm.paymentMethod === 'adjustment' ? '#667eea' : '#666'
-                  }}
+                </button>
+                <button
+                  type="button"
+                  className={`bap-sec-method-option ${paymentForm.paymentMethod === 'adjustment' ? 'active' : ''}`}
+                  onClick={() => setPaymentForm(prev => ({ ...prev, paymentMethod: 'adjustment' }))}
                 >
                   התאמה
-                </div>
+                </button>
               </div>
             </div>
 
             {paymentForm.paymentMethod === 'check' && (
               <>
-                <div style={{ marginBottom: '2rem' }}>
-                  <label style={{
-                    display: 'block', fontSize: '1rem', fontWeight: '600',
-                    color: '#333', marginBottom: '0.5rem', textAlign: 'right'
-                  }}>מספר שיק</label>
+                <div className="bap-sec-field">
+                  <label>מספר שיק</label>
                   <input
                     type="text"
+                    className="bap-sec-input"
                     value={paymentForm.checkNumber}
-                    onChange={(e) => setPaymentForm(prev => ({...prev, checkNumber: e.target.value}))}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, checkNumber: e.target.value }))}
                     placeholder="הכנס מספר שיק..."
-                    style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
-                      borderRadius: '12px', fontSize: '1rem', transition: 'all 0.3s',
-                      boxSizing: 'border-box', textAlign: 'right'
-                    }}
                   />
                 </div>
-                
-                <div style={{ marginBottom: '2rem' }}>
-                  <label style={{
-                    display: 'block', fontSize: '1rem', fontWeight: '600',
-                    color: '#333', marginBottom: '0.5rem', textAlign: 'right'
-                  }}>בנק</label>
+
+                <div className="bap-sec-field">
+                  <label>בנק</label>
                   <input
                     type="text"
+                    className="bap-sec-input"
                     value={paymentForm.bankName}
-                    onChange={(e) => setPaymentForm(prev => ({...prev, bankName: e.target.value}))}
+                    onChange={(e) => setPaymentForm(prev => ({ ...prev, bankName: e.target.value }))}
                     placeholder="שם הבנק..."
-                    style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
-                      borderRadius: '12px', fontSize: '1rem', transition: 'all 0.3s',
-                      boxSizing: 'border-box', textAlign: 'right'
-                    }}
                   />
                 </div>
               </>
             )}
 
-            <div style={{ marginBottom: '2rem' }}>
-              <label style={{
-                display: 'block', fontSize: '1rem', fontWeight: '600',
-                color: '#333', marginBottom: '0.5rem', textAlign: 'right'
-              }}>הערות (אופציונלי)</label>
+            <div className="bap-sec-field">
+              <label>הערות (אופציונלי)</label>
               <textarea
+                className="bap-sec-textarea"
                 value={paymentForm.notes}
-                onChange={(e) => setPaymentForm(prev => ({...prev, notes: e.target.value}))}
+                onChange={(e) => setPaymentForm(prev => ({ ...prev, notes: e.target.value }))}
                 placeholder="הערות נוספות..."
-                style={{
-                  width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
-                  borderRadius: '12px', fontSize: '1rem', transition: 'all 0.3s',
-                  boxSizing: 'border-box', textAlign: 'right', minHeight: '80px',
-                  resize: 'vertical'
-                }}
               />
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-              <button
-                onClick={() => setShowAddPayment(false)}
-                style={{
-                  padding: '0.75rem 2rem', borderRadius: '25px', border: 'none',
-                  cursor: 'pointer', fontSize: '1rem', fontWeight: '600',
-                  transition: 'all 0.3s', background: '#f5f5f5', color: '#666'
-                }}
-              >
+            <div className="bap-sec-modal-actions">
+              <button className="bap-sec-btn bap-sec-btn--secondary" onClick={() => setShowAddPayment(false)}>
                 ביטול
               </button>
-              
+
               <button
+                className="bap-sec-btn bap-sec-btn--primary"
                 onClick={handleAddPayment}
-                style={{
-                  padding: '0.75rem 2rem', borderRadius: '25px', border: 'none',
-                  cursor: 'pointer', fontSize: '1rem', fontWeight: '600',
-                  transition: 'all 0.3s', 
-                  background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                  color: 'white', boxShadow: '0 4px 12px rgba(102, 126, 234, 0.3)',
-                  opacity: (!paymentForm.studentId || !paymentForm.amount) ? 0.5 : 1
-                }}
                 disabled={!paymentForm.studentId || !paymentForm.amount}
               >
                 שמור תשלום
               </button>
+            </div>
             </div>
           </div>
         </div>
@@ -2334,622 +1196,321 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
 
       {/* מודל פרטי תלמיד */}
       {showStudentDetails && selectedStudent && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)', display: 'flex',
-          alignItems: 'center', justifyContent: 'center',
-          zIndex: 1000, padding: '1rem'
-        }}>
-          <div style={{
-            background: 'white', borderRadius: '20px', padding: '2.5rem',
-            maxWidth: '700px', width: '100%', maxHeight: '90vh',
-            overflowY: 'auto', boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-          }}>
-            <h3 style={{
-              fontSize: '1.8rem', fontWeight: 'bold', color: '#333',
-              marginBottom: '2rem', textAlign: 'center',
-              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem'
-            }}>
-              <User size={28} />
-              פרטי תלמיד - {selectedStudent?.first_name} {selectedStudent?.last_name || ''}
-            </h3>
-
-            <div style={{
-              display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem',
-              marginBottom: '2rem'
-            }}>
-              <div style={{
-                background: '#f8f9fa', padding: '1.5rem', borderRadius: '12px'
-              }}>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#555' }}>מידע כספי</h4>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>יתרה נוכחית:</strong>
-                  <span style={{
-                    fontWeight: 'bold', fontSize: '1.2rem', marginLeft: '0.5rem',
-                    color: selectedStudent.balance >= 0 ? '#4CAF50' : '#f44336'
-                  }}>
+        <div className="bap-sec-modal-overlay">
+          <div className="bap-sec-modal">
+            <div className="bap-sec-modal-head">
+              <h3 className="bap-sec-modal-title bap-sec-modal-title--center">
+                <User size={26} />
+                פרטי תלמיד - {selectedStudent?.first_name} {selectedStudent?.last_name || ''}
+              </h3>
+              <button type="button" className="bap-sec-modal-close" onClick={() => setShowStudentDetails(false)} aria-label="סגירת חלון פרטי תלמיד">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="bap-sec-modal-scroll">
+            <div className="bap-sec-detail-grid">
+              <div className="bap-sec-detail-box">
+                <h4>מידע כספי</h4>
+                <div>
+                  <strong>יתרה נוכחית:</strong>{' '}
+                  <span className={`bap-sec-money bap-sec-money--${selectedStudent.balance >= 0 ? 'positive' : 'negative'}`}>
                     ₪{(selectedStudent.balance || 0).toFixed(2)}
                   </span>
                 </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>הוצאות חודשיות:</strong> ₪{(selectedStudent.monthlySpent || 0).toFixed(2)}
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>סה״כ הפקדות:</strong> ₪{(selectedStudent.totalDeposits || 0).toFixed(2)}
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>סטטוס:</strong>
-                  <span style={{
-                    marginLeft: '0.5rem', padding: '0.25rem 0.75rem', borderRadius: '12px',
-                    fontSize: '0.8rem', fontWeight: '600',
-                    background: selectedStudent.status === 'active' ? '#e8f5e8' :
-                               selectedStudent.status === 'debt' ? '#ffebee' : '#fff3e0',
-                    color: selectedStudent.status === 'active' ? '#2e7d32' :
-                          selectedStudent.status === 'debt' ? '#c62828' : '#f57c00'
-                  }}>
-                    {selectedStudent.status === 'active' ? 'פעיל' :
-                     selectedStudent.status === 'debt' ? 'חוב' : 'יתרה נמוכה'}
-                  </span>
+                <div><strong>הוצאות חודשיות:</strong> ₪{(selectedStudent.monthlySpent || 0).toFixed(2)}</div>
+                <div><strong>סה״כ הפקדות:</strong> ₪{(selectedStudent.totalDeposits || 0).toFixed(2)}</div>
+                <div>
+                  <strong>סטטוס:</strong>{' '}
+                  <StatusBadge tone={studentStatusTone(selectedStudent.status)}>
+                    {studentStatusLabel(selectedStudent.status)}
+                  </StatusBadge>
                 </div>
               </div>
 
-              <div style={{
-                background: '#f8f9fa', padding: '1.5rem', borderRadius: '12px'
-              }}>
-                <h4 style={{ margin: '0 0 1rem 0', color: '#555' }}>פרטי קשר</h4>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>טלפון הורה:</strong> {selectedStudent.users?.phone}
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>טלפון תלמיד:</strong> {selectedStudent.student_phone || 'לא מוגדר'}
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>מייל הורה:</strong> {selectedStudent.users?.email}
-                </div>
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>קשר חירום:</strong> {selectedStudent.emergencyContact}
-                </div>
+              <div className="bap-sec-detail-box">
+                <h4>פרטי קשר</h4>
+                <div><strong>טלפון הורה:</strong> {selectedStudent.users?.phone}</div>
+                <div><strong>טלפון תלמיד:</strong> {selectedStudent.student_phone || 'לא מוגדר'}</div>
+                <div><strong>מייל הורה:</strong> {selectedStudent.users?.email}</div>
+                <div><strong>קשר חירום:</strong> {selectedStudent.emergencyContact}</div>
               </div>
             </div>
 
-            <div style={{
-              background: '#f8f9fa', padding: '1.5rem', borderRadius: '12px',
-              marginBottom: '2rem'
-            }}>
-              <h4 style={{ margin: '0 0 1rem 0', color: '#555' }}>פעילות אחרונה</h4>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>כניסה אחרונה:</strong> {selectedStudent.lastActivity}
-              </div>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>ארוחה אחרונה:</strong> {selectedStudent.lastMeal}
-              </div>
-              <div style={{ marginBottom: '0.5rem' }}>
-                <strong>תאריך הרשמה:</strong> {selectedStudent.joinDate}
-              </div>
+            <div className="bap-sec-detail-box" style={{ marginBottom: '2rem' }}>
+              <h4>פעילות אחרונה</h4>
+              <div><strong>כניסה אחרונה:</strong> {selectedStudent.lastActivity}</div>
+              <div><strong>ארוחה אחרונה:</strong> {selectedStudent.lastMeal}</div>
+              <div><strong>תאריך הרשמה:</strong> {selectedStudent.joinDate}</div>
               {selectedStudent.pin && (
-                <div style={{ marginBottom: '0.5rem' }}>
-                  <strong>קוד PIN לקיוסק:</strong> {selectedStudent.pin}
-                </div>
+                <div><strong>קוד PIN לקיוסק:</strong> {selectedStudent.pin}</div>
               )}
               {selectedStudent.notes && (
-                <div style={{ marginTop: '1rem', padding: '1rem', background: '#fff3e0', borderRadius: '8px' }}>
+                <div style={{ marginTop: '1rem', padding: '1rem', background: '#fdf1e2', borderRadius: '8px' }}>
                   <strong>הערות:</strong> {selectedStudent.notes}
                 </div>
               )}
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+            <div className="bap-sec-modal-actions">
               <button
+                className="bap-sec-btn bap-sec-btn--success"
                 onClick={() => {
                   setShowStudentDetails(false);
                   setShowAddPayment(true);
-                  setPaymentForm(prev => ({...prev, studentId: selectedStudent.id.toString()}));
-                }}
-                style={{
-                  padding: '0.75rem 2rem', borderRadius: '25px', border: 'none',
-                  cursor: 'pointer', fontSize: '1rem', fontWeight: '600',
-                  transition: 'all 0.3s', 
-                  background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                  color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                  setPaymentForm(prev => ({ ...prev, studentId: selectedStudent.id.toString() }));
                 }}
               >
                 <Wallet size={16} />
                 הוסף תשלום
               </button>
-              
+
               <button
+                className="bap-sec-btn bap-sec-btn--warn"
                 onClick={() => alert('יופק כרטיס QR חדש לתלמיד')}
-                style={{
-                  padding: '0.75rem 2rem', borderRadius: '25px', border: 'none',
-                  cursor: 'pointer', fontSize: '1rem', fontWeight: '600',
-                  transition: 'all 0.3s', 
-                  background: 'linear-gradient(135deg, #FF9800, #f57c00)',
-                  color: 'white', display: 'flex', alignItems: 'center', gap: '0.5rem'
-                }}
               >
                 <QrCode size={16} />
                 QR חדש
               </button>
 
-              
-<button
-  onClick={() => loadParentDetails(selectedStudent.id)}
-  style={{
-    background: 'linear-gradient(135deg, #FF9800, #f57c00)',
-    color: 'white',
-    border: 'none',
-    padding: '0.75rem 1.5rem',
-    borderRadius: '25px',
-    cursor: 'pointer',
-    fontWeight: '600',
-    fontSize: '0.9rem',
-    marginLeft: '1rem'
-  }}
->
-  פרטי הורה
-</button>
-
-              
               <button
-                onClick={() => setShowStudentDetails(false)}
-                style={{
-                  padding: '0.75rem 2rem', borderRadius: '25px', border: 'none',
-                  cursor: 'pointer', fontSize: '1rem', fontWeight: '600',
-                  transition: 'all 0.3s', background: '#f5f5f5', color: '#666'
-                }}
+                className="bap-sec-btn bap-sec-btn--warn"
+                onClick={() => loadParentDetails(selectedStudent.id)}
               >
+                פרטי הורה
+              </button>
+
+              <button className="bap-sec-btn bap-sec-btn--secondary" onClick={() => setShowStudentDetails(false)}>
                 סגור
               </button>
+            </div>
             </div>
           </div>
         </div>
       )}
 
+      {showParentDetails && parentDetails && (
+        <div className="bap-sec-modal-overlay">
+          <div className="bap-sec-modal" style={{ maxWidth: 500 }}>
+            <div className="bap-sec-modal-head" style={{ borderBottom: '2px solid var(--line)', paddingBottom: '1rem', marginBottom: 0 }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem' }}>פרטי הורה</h2>
+              <button type="button" className="bap-sec-modal-close" onClick={() => setShowParentDetails(false)} aria-label="סגירת חלון פרטי הורה">
+                <X size={20} />
+              </button>
+            </div>
+            <div className="bap-sec-modal-scroll">
 
-{showParentDetails && parentDetails && (
-  <div style={{
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    width: '100%',
-    height: '100%',
-    background: 'rgba(0, 0, 0, 0.7)',
-    display: 'flex',
-    alignItems: 'center',
-    justifyContent: 'center',
-    zIndex: 1000
-  }}>
-    <div style={{
-      background: 'white',
-      borderRadius: '20px',
-      padding: '2rem',
-      width: '500px',
-      maxHeight: '80vh',
-      overflowY: 'auto',
-      boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-    }}>
-      <div style={{
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '2rem',
-        borderBottom: '2px solid #f0f0f0',
-        paddingBottom: '1rem'
-      }}>
-        <h2 style={{
-          margin: 0,
-          color: '#333',
-          fontSize: '1.5rem'
-        }}>
-          פרטי הורה
-        </h2>
-        <button
-          onClick={() => setShowParentDetails(false)}
-          style={{
-            background: 'none',
-            border: 'none',
-            fontSize: '1.5rem',
-            cursor: 'pointer',
-            color: '#999'
-          }}
-        >
-          ×
-        </button>
-      </div>
+            <div className="bap-sec-detail-box" style={{ marginBottom: '1.5rem', marginTop: '1.5rem' }}>
+              <h4>פרטי קשר</h4>
+              <div><strong>שם:</strong> {parentDetails.name}</div>
+              <div><strong>אימייל:</strong> {parentDetails.email}</div>
+              <div><strong>טלפון:</strong> {parentDetails.phone}</div>
+            </div>
 
-      <div style={{
-        background: '#f8f9fa',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        marginBottom: '1.5rem'
-      }}>
-        <h3 style={{ margin: '0 0 1rem 0', color: '#555' }}>
-          פרטי קשר
-        </h3>
-        <div style={{ marginBottom: '1rem' }}>
-          <strong>שם:</strong> {parentDetails.name}
-        </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <strong>אימייל:</strong> {parentDetails.email}
-        </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <strong>טלפון:</strong> {parentDetails.phone}
-        </div>
-      </div>
+            <div className="bap-sec-detail-box" style={{ marginBottom: '1.5rem', background: '#fdf1e2' }}>
+              <h4 style={{ color: 'var(--orange)' }}>פרטי גישה למערכת</h4>
+              <div><strong>אימייל כניסה:</strong> {parentDetails.email}</div>
+              <div>
+                <strong>סיסמה נוכחית:</strong>{' '}
+                <span style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: 'var(--blue)' }}>
+                  {parentDetails.password}
+                </span>
+              </div>
+            </div>
 
-      <div style={{
-        background: '#fff3cd',
-        padding: '1.5rem',
-        borderRadius: '12px',
-        marginBottom: '1.5rem',
-        border: '1px solid #ffeaa7'
-      }}>
-        <h3 style={{ margin: '0 0 1rem 0', color: '#856404' }}>
-          פרטי גישה למערכת
-        </h3>
-        <div style={{ marginBottom: '1rem' }}>
-          <strong>אימייל כניסה:</strong> {parentDetails.email}
-        </div>
-        <div style={{ marginBottom: '1rem' }}>
-          <strong>סיסמה נוכחית:</strong> 
-          <span style={{
-            fontFamily: 'monospace',
-            fontSize: '1.1rem',
-            color: '#2196F3',
-            marginRight: '0.5rem'
-          }}>
-            {parentDetails.password}
-          </span>
-        </div>
-      </div>
-
-      <div style={{
-        display: 'flex',
-        gap: '1rem',
-        justifyContent: 'center'
-      }}>
-        <button
-          onClick={() => alert('יצירת סיסמה חדשה - בפיתוח')}
-          style={{
-            background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-            color: 'white',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '25px',
-            cursor: 'pointer',
-            fontWeight: '600'
-          }}
-        >
-          צור סיסמה חדשה
-        </button>
-        <button
-          onClick={() => alert('שליחת פרטי גישה מחדש - בפיתוח')}
-          style={{
-            background: 'linear-gradient(135deg, #2196F3, #1976D2)',
-            color: 'white',
-            border: 'none',
-            padding: '0.75rem 1.5rem',
-            borderRadius: '25px',
-            cursor: 'pointer',
-            fontWeight: '600'
-          }}
-        >
-          שלח פרטי גישה מחדש
-        </button>
-      </div>
-    </div>
-  </div>
-)}
-
-      {/* מודל Super Admin Panel */}
-{showAdminPanel && (
-  <div style={{
-    position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-    background: 'rgba(0, 0, 0, 0.8)', display: 'flex',
-    alignItems: 'center', justifyContent: 'center',
-    zIndex: 1000, padding: '1rem'
-  }}>
-    <div style={{
-      background: 'white', borderRadius: '20px', padding: '2.5rem',
-      maxWidth: '600px', width: '100%', maxHeight: '90vh',
-      overflowY: 'auto', boxShadow: '0 20px 60px rgba(0, 0, 0, 0.3)'
-    }}>
-      {!isAdminAuthenticated ? (
-        // טופס סיסמה
-        <>
-          <h3 style={{
-            fontSize: '1.8rem', fontWeight: 'bold', color: '#333',
-            marginBottom: '2rem', textAlign: 'center'
-          }}>
-            הגדרות מתקדמות
-          </h3>
-          
-          <div style={{ marginBottom: '2rem' }}>
-            <label style={{
-              display: 'block', fontSize: '1rem', fontWeight: '600',
-              color: '#333', marginBottom: '0.5rem', textAlign: 'right'
-            }}>סיסמת Super Admin</label>
-            <input
-              type="password"
-              value={adminPassword}
-              onChange={(e) => setAdminPassword(e.target.value)}
-              style={{
-                width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
-                borderRadius: '12px', fontSize: '1rem', transition: 'all 0.3s',
-                boxSizing: 'border-box', textAlign: 'right'
-              }}
-              placeholder="הכנס סיסמה..."
-            />
+            <div className="bap-sec-modal-actions">
+              <button className="bap-sec-btn bap-sec-btn--success" onClick={() => alert('יצירת סיסמה חדשה - בפיתוח')}>
+                צור סיסמה חדשה
+              </button>
+              <button className="bap-sec-btn bap-sec-btn--primary" onClick={() => alert('שליחת פרטי גישה מחדש - בפיתוח')}>
+                שלח פרטי גישה מחדש
+              </button>
+            </div>
+            </div>
           </div>
-          
-          <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-            <button
-              onClick={() => {
-                setShowAdminPanel(false);
-                setAdminPassword('');
-              }}
-              style={{
-                padding: '0.75rem 2rem', borderRadius: '25px', border: 'none',
-                cursor: 'pointer', fontSize: '1rem', fontWeight: '600',
-                transition: 'all 0.3s', background: '#f5f5f5', color: '#666'
-              }}
-            >
-              ביטול
-            </button>
-            
-            <button
-              onClick={async () => {
-                try {
-                  const response = await fetch('https://api.bonapp.dev/api/admin/auth', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ password: adminPassword })
-                  });
-                  const result = await response.json();
-
-                  if (result.success) {
-                    setToken(result.token);
-                    setIsAdminAuthenticated(true);
-                    setAdminPassword('');
-                  } else {
-                    alert('סיסמה שגויה');
-                  }
-                } catch (error) {
-                  alert('שגיאה בחיבור לשרת');
-                }
-              }}
-              style={{
-                padding: '0.75rem 2rem', borderRadius: '25px', border: 'none',
-                cursor: 'pointer', fontSize: '1rem', fontWeight: '600',
-                transition: 'all 0.3s', 
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
-                color: 'white'
-              }}
-            >
-              כניסה
-            </button>
-          </div>
-        </>
-      ) : (
-        // פאנל יצירת בית ספר
-        <div>
-  <h3 style={{
-    fontSize: '1.8rem', fontWeight: 'bold', color: '#333',
-    marginBottom: '2rem', textAlign: 'center'
-  }}>
-    Super Admin Panel
-  </h3>
-  
-  {/* טופס יצירת בית ספר */}
-  <div style={{ marginBottom: '2rem' }}>
-    <div style={{ marginBottom: '1rem' }}>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', textAlign: 'right' }}>שם בית הספר *</label>
-      <input type="text" placeholder="בית ספר אורט כפר סבא" style={{
-        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px',
-        fontSize: '1rem', textAlign: 'right', boxSizing: 'border-box'
-      }} />
-    </div>
-    
-    <div style={{ marginBottom: '1rem' }}>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', textAlign: 'right' }}>כתובת</label>
-      <input type="text" placeholder="רחוב הרצל 123, כפר סבא" style={{
-        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px',
-        fontSize: '1rem', textAlign: 'right', boxSizing: 'border-box'
-      }} />
-    </div>
-    
-    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
-      <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', textAlign: 'right' }}>איש קשר</label>
-        <input type="text" placeholder="מנהל ראשי" style={{
-          width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px',
-          fontSize: '1rem', textAlign: 'right', boxSizing: 'border-box'
-        }} />
-      </div>
-      <div>
-        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', textAlign: 'right' }}>טלפון</label>
-        <input type="tel" placeholder="09-1234567" style={{
-          width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px',
-          fontSize: '1rem', textAlign: 'right', boxSizing: 'border-box'
-        }} />
-      </div>
-    </div>
-    
-    <div style={{ marginBottom: '2rem' }}>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', textAlign: 'right' }}>מייל</label>
-      <input type="email" placeholder="office@school.co.il" style={{
-        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px',
-        fontSize: '1rem', textAlign: 'left', boxSizing: 'border-box'
-      }} />
-    </div>
-  </div>
-  
-  <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
-    <button style={{
-      padding: '0.75rem 2rem', borderRadius: '25px', border: 'none', cursor: 'pointer',
-      fontSize: '1rem', fontWeight: '600', background: '#f5f5f5', color: '#666'
-    }}
-    onClick={() => {
-      setShowAdminPanel(false);
-      setIsAdminAuthenticated(false);
-    }}>
-      סגור
-    </button>
-    
-    <button style={{
-      padding: '0.75rem 2rem', borderRadius: '25px', border: 'none', cursor: 'pointer',
-      fontSize: '1rem', fontWeight: '600', background: '#4CAF50', color: 'white'
-    }}>
-      צור בית ספר
-    </button>
-  </div>
-</div>
-
+        </div>
       )}
-    </div>
-  </div>
-)}
+
+      {/* מודל Super Admin Panel - ללא שינוי לוגיקה, עיצוב בלבד */}
+      {showAdminPanel && (
+        <div className="bap-sec-modal-overlay">
+          <div className="bap-sec-modal">
+            {!isAdminAuthenticated ? (
+              <>
+                <div className="bap-sec-modal-head">
+                  <h3 className="bap-sec-modal-title bap-sec-modal-title--center">הגדרות מתקדמות</h3>
+                  <button
+                    type="button"
+                    className="bap-sec-modal-close"
+                    aria-label="סגירת חלון הגדרות מתקדמות"
+                    onClick={() => { setShowAdminPanel(false); setAdminPassword(''); }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="bap-sec-modal-scroll">
+
+                <div className="bap-sec-field">
+                  <label>סיסמת Super Admin</label>
+                  <input
+                    type="password"
+                    className="bap-sec-input"
+                    value={adminPassword}
+                    onChange={(e) => setAdminPassword(e.target.value)}
+                    placeholder="הכנס סיסמה..."
+                  />
+                </div>
+
+                <div className="bap-sec-modal-actions">
+                  <button
+                    className="bap-sec-btn bap-sec-btn--secondary"
+                    onClick={() => {
+                      setShowAdminPanel(false);
+                      setAdminPassword('');
+                    }}
+                  >
+                    ביטול
+                  </button>
+
+                  <button
+                    className="bap-sec-btn bap-sec-btn--primary"
+                    onClick={async () => {
+                      try {
+                        const response = await fetch('https://api.bonapp.dev/api/admin/auth', {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ password: adminPassword })
+                        });
+                        const result = await response.json();
+
+                        if (result.success) {
+                          setToken(result.token);
+                          setIsAdminAuthenticated(true);
+                          setAdminPassword('');
+                        } else {
+                          alert('סיסמה שגויה');
+                        }
+                      } catch (error) {
+                        alert('שגיאה בחיבור לשרת');
+                      }
+                    }}
+                  >
+                    כניסה
+                  </button>
+                </div>
+                </div>
+              </>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden', height: '100%' }}>
+                <div className="bap-sec-modal-head">
+                  <h3 className="bap-sec-modal-title bap-sec-modal-title--center">Super Admin Panel</h3>
+                  <button
+                    type="button"
+                    className="bap-sec-modal-close"
+                    aria-label="סגירת חלון Super Admin"
+                    onClick={() => { setShowAdminPanel(false); setIsAdminAuthenticated(false); }}
+                  >
+                    <X size={20} />
+                  </button>
+                </div>
+                <div className="bap-sec-modal-scroll">
+
+                <div style={{ marginBottom: '2rem' }}>
+                  <div className="bap-sec-field">
+                    <label>שם בית הספר *</label>
+                    <input type="text" className="bap-sec-input" placeholder="בית ספר אורט כפר סבא" />
+                  </div>
+
+                  <div className="bap-sec-field">
+                    <label>כתובת</label>
+                    <input type="text" className="bap-sec-input" placeholder="רחוב הרצל 123, כפר סבא" />
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="bap-sec-field">
+                      <label>איש קשר</label>
+                      <input type="text" className="bap-sec-input" placeholder="מנהל ראשי" />
+                    </div>
+                    <div className="bap-sec-field">
+                      <label>טלפון</label>
+                      <input type="tel" className="bap-sec-input" placeholder="09-1234567" />
+                    </div>
+                  </div>
+
+                  <div className="bap-sec-field">
+                    <label>מייל</label>
+                    <input type="email" className="bap-sec-input" placeholder="office@school.co.il" style={{ textAlign: 'left' }} />
+                  </div>
+                </div>
+
+                <div className="bap-sec-modal-actions">
+                  <button
+                    className="bap-sec-btn bap-sec-btn--secondary"
+                    onClick={() => {
+                      setShowAdminPanel(false);
+                      setIsAdminAuthenticated(false);
+                    }}
+                  >
+                    סגור
+                  </button>
+
+                  <button className="bap-sec-btn bap-sec-btn--success">
+                    צור בית ספר
+                  </button>
+                </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* מודל הצגת דוח */}
       {showReportModal && currentReport && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.7)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 9999,
-          padding: '2rem'
-        }}>
-          <div style={{
-            background: 'white',
-            borderRadius: '20px',
-            padding: '2.5rem',
-            maxWidth: '1200px',
-            width: '100%',
-            maxHeight: '90vh',
-            overflow: 'hidden',
-            display: 'flex',
-            flexDirection: 'column',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-          }}>
-            {/* כותרת */}
-            <div style={{
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              marginBottom: '2rem',
-              paddingBottom: '1rem',
-              borderBottom: '2px solid #e0e0e0'
-            }}>
-              <h2 style={{
-                fontSize: '1.8rem',
-                fontWeight: 'bold',
-                color: '#333',
-                margin: 0,
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem'
-              }}>
-                <FileText size={32} />
+        <div className="bap-sec-modal-overlay">
+          <div className="bap-sec-modal bap-sec-modal--wide">
+            <div className="bap-sec-modal-head" style={{ paddingBottom: '1rem', marginBottom: 0, borderBottom: '2px solid var(--line)', flexShrink: 0 }}>
+              <h2 className="bap-sec-modal-title" style={{ margin: 0 }}>
+                <FileText size={28} />
                 {reportType}
               </h2>
-              
+
               <button
+                type="button"
+                className="bap-sec-modal-close"
                 onClick={() => {
                   setShowReportModal(false);
                   setCurrentReport(null);
                   setReportType('');
                 }}
-                style={{
-                  background: '#f8f9fa',
-                  border: 'none',
-                  borderRadius: '50%',
-                  width: '40px',
-                  height: '40px',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
+                aria-label="סגירת חלון דוח"
               >
-                <X size={24} />
+                <X size={22} />
               </button>
             </div>
 
-            {/* סיכום */}
-            <div style={{
-              background: '#f8f9fa',
-              padding: '1rem',
-              borderRadius: '12px',
-              marginBottom: '1.5rem',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
+            <div style={{ padding: '1.5rem 2.25rem 2.25rem', display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
+            <div style={{ background: 'var(--paper)', padding: '1rem', borderRadius: '12px', marginBottom: '1.5rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexShrink: 0 }}>
               <div>
-                <span style={{ fontWeight: '600', color: '#666' }}>סה"כ רשומות: </span>
-                <span style={{ fontSize: '1.2rem', fontWeight: 'bold', color: '#667eea' }}>
-                  {currentReport.length}
-                </span>
+                <span style={{ fontWeight: 600, color: 'var(--muted)' }}>סה"כ רשומות: </span>
+                <span style={{ fontSize: '1.2rem', fontWeight: 700, color: 'var(--blue)' }}>{currentReport.length}</span>
               </div>
-              <div style={{ fontSize: '0.9rem', color: '#666' }}>
-                {new Date().toLocaleDateString('he-IL')}
-              </div>
+              <div style={{ fontSize: '0.9rem', color: 'var(--muted)' }}>{new Date().toLocaleDateString('he-IL')}</div>
             </div>
 
-            {/* טבלה */}
-            <div style={{
-              flex: 1,
-              overflow: 'auto',
-              marginBottom: '1.5rem'
-            }}>
-              <table style={{
-                width: '100%',
-                borderCollapse: 'collapse',
-                fontSize: '0.95rem'
-              }}>
-                <thead style={{
-                  position: 'sticky',
-                  top: 0,
-                  background: '#667eea',
-                  color: 'white',
-                  zIndex: 10
-                }}>
+            <div style={{ flex: 1, overflow: 'auto', marginBottom: '1.5rem' }}>
+              <table>
+                <thead style={{ position: 'sticky', top: 0, background: 'var(--blue)', color: '#fff', zIndex: 10 }}>
                   <tr>
                     {currentReport.length > 0 && Object.keys(currentReport[0]).map(key => (
-                      <th key={key} style={{
-                        padding: '1rem',
-                        textAlign: 'right',
-                        fontWeight: '600',
-                        borderBottom: '2px solid #764ba2'
-                      }}>
-                        {key}
-                      </th>
+                      <th key={key} style={{ color: '#fff', borderBottom: '2px solid var(--navy)' }}>{key}</th>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {currentReport.map((row, index) => (
-                    <tr key={index} style={{
-                      background: index % 2 === 0 ? 'white' : '#f8f9fa',
-                      transition: 'background 0.2s'
-                    }}
-                    onMouseEnter={(e) => e.currentTarget.style.background = '#e3f2fd'}
-                    onMouseLeave={(e) => e.currentTarget.style.background = index % 2 === 0 ? 'white' : '#f8f9fa'}
-                    >
+                    <tr key={index}>
                       {Object.values(row).map((value, i) => (
-                        <td key={i} style={{
-                          padding: '1rem',
-                          borderBottom: '1px solid #e0e0e0',
-                          color: '#333'
-                        }}>
-                          {value}
-                        </td>
+                        <td key={i}>{value}</td>
                       ))}
                     </tr>
                   ))}
@@ -2957,58 +1518,28 @@ payment.payment_method === 'credit_card' ? 'כרטיס אשראי' : 'התאמה
               </table>
             </div>
 
-            {/* כפתורים */}
-            <div style={{
-              display: 'flex',
-              gap: '1rem',
-              justifyContent: 'flex-end'
-            }}>
+            <div className="bap-sec-modal-actions bap-sec-modal-actions--end" style={{ flexShrink: 0 }}>
               <button
+                className="bap-sec-btn bap-sec-btn--secondary"
                 onClick={() => {
                   setShowReportModal(false);
                   setCurrentReport(null);
                   setReportType('');
                 }}
-                style={{
-                  padding: '1rem 2rem',
-                  borderRadius: '12px',
-                  border: '2px solid #e0e0e0',
-                  background: 'white',
-                  color: '#666',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer'
-                }}
               >
                 סגור
               </button>
-              
-              <button
-                onClick={downloadReport}
-                style={{
-                  padding: '1rem 2rem',
-                  borderRadius: '12px',
-                  border: 'none',
-                  background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                  color: 'white',
-                  fontSize: '1rem',
-                  fontWeight: '600',
-                  cursor: 'pointer',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)'
-                }}
-              >
-                <Download size={20} />
+
+              <button className="bap-sec-btn bap-sec-btn--success" onClick={downloadReport}>
+                <Download size={18} />
                 הורד Excel
               </button>
+            </div>
             </div>
           </div>
         </div>
       )}
-
-    </div>
+    </>
   );
 };
 

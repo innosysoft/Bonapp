@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Trash2, Save, Calendar } from 'lucide-react';
+import { Plus, Trash2, Save, Calendar, X } from 'lucide-react';
 import { authFetch } from '../auth';
+import PageHeader from './secretary/PageHeader';
+import EmptyState from './secretary/EmptyState';
+import IconButton from './secretary/IconButton';
+import './secretary/secretary.css';
 
 const GradeGroupsTab = ({ schoolId }) => {
   const [groups, setGroups] = useState([]);
@@ -45,7 +49,7 @@ const [promoting, setPromoting] = useState(false);
     if (schoolId) loadGroups();
   }, [schoolId]);
 
-  
+
 
   const addGroup = async () => {
     if (!newGroupName.trim()) return;
@@ -213,7 +217,7 @@ console.log('action:', data.action);
 
  const saveSchedule = async () => {
     if (!selectedGroup) return;
-    const daysInMonth = studyDays.filter(d => 
+    const daysInMonth = studyDays.filter(d =>
       d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)
     ).length;
     try {
@@ -240,74 +244,45 @@ console.log('action:', data.action);
   };
 
   console.log('GradeGroupsTab schoolId:', schoolId);
-  if (!schoolId) return <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>טוען נתוני בית ספר...</div>;
-  if (loading) return <div style={{ textAlign: 'center', padding: '2rem' }}>טוען...</div>;
+  if (!schoolId) return <div className="bap-sec"><EmptyState description="טוען נתוני בית ספר..." /></div>;
+  if (loading) return <div className="bap-sec"><EmptyState description="טוען..." /></div>;
 
   return (
-    <div style={{ direction: 'rtl' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', flexWrap: 'wrap', gap: '1rem' }}>
-        <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333', margin: 0 }}>
-          ניהול שכבות
-        </h2>
-        {groups.length > 0 && (
-          <button
-            onClick={openPromoteModal}
-            style={{
-              background: 'linear-gradient(135deg, #FF9800, #F57C00)', color: 'white', border: 'none',
-              padding: '0.75rem 1.5rem', borderRadius: '8px', cursor: 'pointer', fontWeight: '600',
-              display: 'flex', alignItems: 'center', gap: '0.5rem'
-            }}
-          >
-            🎓 העלאת שנה
-          </button>
-        )}
-      </div>
+    <div className="bap-sec">
+      <PageHeader
+        title="ניהול שכבות"
+        actions={
+          groups.length > 0 && (
+            <button className="bap-sec-btn bap-sec-btn--warn" onClick={openPromoteModal}>
+              🎓 העלאת שנה
+            </button>
+          )
+        }
+      />
 
-      {message && (
-        <div style={{
-          background: '#e8f5e9', color: '#2e7d32', padding: '1rem',
-          borderRadius: '8px', marginBottom: '1rem', fontWeight: '600'
-        }}>
-          {message}
-        </div>
-      )}
+      {message && <div className="bap-sec-message">{message}</div>}
 
       {/* הוספת שכבה */}
-      <div style={{
-        background: 'white', padding: '1.5rem', borderRadius: '16px',
-        boxShadow: '0 4px 16px rgba(0,0,0,0.05)', marginBottom: '2rem'
-      }}>
-        <h3 style={{ margin: '0 0 1rem 0', color: '#555' }}>הוסף שכבה חדשה</h3>
+      <div className="bap-sec-settings-card" style={{ maxWidth: 'none' }}>
+        <h3>הוסף שכבה חדשה</h3>
         <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
           <input
             type="text"
+            className="bap-sec-input"
             placeholder="שם השכבה (לדוגמה: כיתות א'-ב')"
             value={newGroupName}
             onChange={(e) => setNewGroupName(e.target.value)}
-            style={{
-              flex: 1, padding: '0.75rem 1rem', borderRadius: '8px',
-              border: '2px solid #e0e0e0', fontSize: '1rem', minWidth: '200px'
-            }}
+            style={{ flex: 1, minWidth: 200 }}
           />
           <input
             type="text"
+            className="bap-sec-input"
             placeholder="תיאור (אופציונלי)"
             value={newGroupDesc}
             onChange={(e) => setNewGroupDesc(e.target.value)}
-            style={{
-              flex: 1, padding: '0.75rem 1rem', borderRadius: '8px',
-              border: '2px solid #e0e0e0', fontSize: '1rem', minWidth: '200px'
-            }}
+            style={{ flex: 1, minWidth: 200 }}
           />
-          <button
-            onClick={addGroup}
-            style={{
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
-              color: 'white', border: 'none', padding: '0.75rem 1.5rem',
-              borderRadius: '8px', cursor: 'pointer', fontWeight: '600',
-              display: 'flex', alignItems: 'center', gap: '0.5rem'
-            }}
-          >
+          <button className="bap-sec-btn bap-sec-btn--primary" onClick={addGroup}>
             <Plus size={18} />
             הוסף שכבה
           </button>
@@ -316,78 +291,61 @@ console.log('action:', data.action);
 
       <div style={{ display: 'grid', gridTemplateColumns: selectedGroup ? '1fr 1fr' : '1fr', gap: '2rem' }}>
         {/* רשימת שכבות */}
-        <div style={{
-          background: 'white', padding: '1.5rem', borderRadius: '16px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.05)'
-        }}>
-          <h3 style={{ margin: '0 0 1rem 0', color: '#555' }}>שכבות קיימות</h3>
+        <div className="bap-sec-settings-card" style={{ maxWidth: 'none', marginBottom: 0 }}>
+          <h3>שכבות קיימות</h3>
           {groups.length === 0 ? (
-            <p style={{ color: '#999', textAlign: 'center', padding: '2rem' }}>
-              אין שכבות עדיין
-            </p>
+            <EmptyState description="אין שכבות עדיין" />
           ) : (
             groups.map(group => (
-              <div key={group.id} style={{
-                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-                padding: '1rem', borderRadius: '8px', marginBottom: '0.5rem',
-                background: selectedGroup?.id === group.id ? '#f0f0ff' : '#f8f9fa',
-                border: selectedGroup?.id === group.id ? '2px solid #667eea' : '2px solid transparent',
-                cursor: 'pointer'
-              }}
+              <div
+                key={group.id}
+                className={`bap-sec-group-row ${selectedGroup?.id === group.id ? 'active' : ''}`}
                 onClick={() => loadSchedule(group)}
               >
                 <div>
-                  <p style={{ margin: 0, fontWeight: '600', color: '#333' }}>{group.name}</p>
-                  {group.description && (
-                    <p style={{ margin: 0, fontSize: '0.85rem', color: '#666' }}>{group.description}</p>
-                  )}
+                  <p>{group.name}</p>
+                  {group.description && <span>{group.description}</span>}
                 </div>
-                <button
+                <IconButton
+                  variant="danger"
+                  title="מחק שכבה"
+                  ariaLabel="מחק שכבה"
                   onClick={(e) => { e.stopPropagation(); deleteGroup(group.id); }}
-                  style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#f44336', padding: '0.25rem'
-                  }}
                 >
                   <Trash2 size={18} />
-                </button>
+                </IconButton>
               </div>
             ))
           )}
         </div>
 
        {/* לוח ארוחות לחודש */}
-        {selectedGroup && <div style={{
-          background: 'white', padding: '1.5rem', borderRadius: '16px',
-          boxShadow: '0 4px 16px rgba(0,0,0,0.05)'
-        }}>
-          <h3 style={{ margin: '0 0 1rem 0', color: '#555' }}>
-            <Calendar size={20} style={{ marginLeft: '0.5rem' }} />
-            ימי ארוחה - {monthNames[currentMonth]} {currentYear}
-          </h3>
+        {selectedGroup && (
+          <div className="bap-sec-settings-card" style={{ maxWidth: 'none', marginBottom: 0 }}>
+            <h3>
+              <Calendar size={20} style={{ marginLeft: '0.5rem' }} />
+              ימי ארוחה - {monthNames[currentMonth]} {currentYear}
+            </h3>
 
-          
             <div>
-              <p style={{ color: '#667eea', fontWeight: '600', marginBottom: '1rem' }}>
+              <p style={{ color: 'var(--blue)', fontWeight: 600, marginBottom: '1rem' }}>
                 שכבה: {selectedGroup.name}
               </p>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {studyDays.length > 0 && schedule.meal_price && (
-                  <div style={{
-                    background: '#e8f5e9', padding: '1rem', borderRadius: '8px', textAlign: 'center'
-                  }}>
-                    <p style={{ margin: 0, color: '#2e7d32', fontWeight: '600', fontSize: '1.2rem' }}>
+                  <div style={{ background: 'var(--green2)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
+                    <p style={{ margin: 0, color: '#2e7d32', fontWeight: 600, fontSize: '1.2rem' }}>
                       {studyDays.filter(d => d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)).length} ימים × ₪{schedule.meal_price} = ₪{(studyDays.filter(d => d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)).length * schedule.meal_price).toFixed(2)}
                     </p>
                   </div>
                 )}
 
-{/* לוח שנה לסימון ימי לימוד */}
+                {/* לוח שנה לסימון ימי לימוד */}
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '600' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', color: 'var(--muted)', fontWeight: 600 }}>
                     📅 סמן ימי לימוד - {monthNames[calendarMonth]} {calendarYear}
                   </label>
-                  <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <div className="bap-sec-calendar-nav">
                     <button onClick={() => {
                       const d = new Date(calendarYear, calendarMonth - 2, 1);
                       const newMonth = d.getMonth() + 1;
@@ -395,10 +353,10 @@ console.log('action:', data.action);
                       setCalendarMonth(newMonth);
                       setCalendarYear(newYear);
                       loadStudyDays(selectedGroup.id, newMonth, newYear);
-                    }} style={{ padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer' }}>
+                    }}>
                       ◀
                     </button>
-                    <span style={{ flex: 1, textAlign: 'center', fontWeight: '600' }}>
+                    <span style={{ flex: 1, textAlign: 'center', fontWeight: 600 }}>
                       {monthNames[calendarMonth]} {calendarYear}
                     </span>
                     <button onClick={() => {
@@ -408,30 +366,30 @@ console.log('action:', data.action);
                       setCalendarMonth(newMonth);
                       setCalendarYear(newYear);
                       loadStudyDays(selectedGroup.id, newMonth, newYear);
-                    }} style={{ padding: '0.25rem 0.75rem', borderRadius: '6px', border: '1px solid #ddd', cursor: 'pointer' }}>
+                    }}>
                       ▶
                     </button>
                   </div>
-                  
+
                   {/* כותרות ימים */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px', marginBottom: '2px' }}>
+                  <div className="bap-sec-calendar-grid" style={{ marginBottom: 2 }}>
                     {['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(d => (
-                      <div key={d} style={{ textAlign: 'center', fontSize: '0.75rem', color: '#999', padding: '4px' }}>{d}</div>
+                      <div key={d} className="bap-sec-calendar-head">{d}</div>
                     ))}
                   </div>
-                  
+
                   {/* ימי החודש */}
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: '2px' }}>
+                  <div className="bap-sec-calendar-grid">
                     {(() => {
                       const firstDay = new Date(calendarYear, calendarMonth - 1, 1).getDay();
                       const daysInMonth = new Date(calendarYear, calendarMonth, 0).getDate();
                       const cells = [];
-                      
+
                       // תאי ריקים בהתחלה
                       for (let i = 0; i < firstDay; i++) {
                         cells.push(<div key={`empty-${i}`} />);
                       }
-                      
+
                       // ימי החודש
                       for (let day = 1; day <= daysInMonth; day++) {
                         const dateStr = `${calendarYear}-${String(calendarMonth).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -439,22 +397,12 @@ console.log('action:', data.action);
                         const dayOfWeek = new Date(calendarYear, calendarMonth - 1, day).getDay();
                         const isFriday = dayOfWeek === 5;
                         const isSaturday = dayOfWeek === 6;
-                        
+
                         cells.push(
                           <div
                             key={day}
                             onClick={() => !isSaturday && toggleStudyDay(dateStr)}
-                            style={{
-                              textAlign: 'center',
-                              padding: '6px 2px',
-                              borderRadius: '6px',
-                              cursor: isSaturday ? 'default' : 'pointer',
-                              background: isStudyDay ? '#4CAF50' : isSaturday ? '#f5f5f5' : isFriday ? '#fff3e0' : 'white',
-                              color: isStudyDay ? 'white' : isSaturday ? '#ccc' : '#333',
-                              border: `1px solid ${isStudyDay ? '#4CAF50' : '#e0e0e0'}`,
-                              fontSize: '0.85rem',
-                              fontWeight: isStudyDay ? '600' : 'normal'
-                            }}
+                            className={`bap-sec-day-cell ${isStudyDay ? 'study' : ''} ${isSaturday ? 'saturday' : ''} ${isFriday ? 'friday' : ''}`}
                           >
                             {day}
                           </div>
@@ -463,61 +411,54 @@ console.log('action:', data.action);
                       return cells;
                     })()}
                   </div>
-                  <p style={{ fontSize: '0.8rem', color: '#999', marginTop: '0.5rem' }}>
+                  <p style={{ fontSize: '0.8rem', color: 'var(--muted)', marginTop: '0.5rem' }}>
                     ירוק = יום לימוד | לחץ להוסיף/להסיר
                   </p>
                 </div>
 
-
-                <button
-                  onClick={saveSchedule}
-                  style={{
-                    background: 'linear-gradient(135deg, #4CAF50, #45a049)',
-                    color: 'white', border: 'none', padding: '1rem',
-                    borderRadius: '8px', cursor: 'pointer', fontWeight: '600',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
-                  }}
-                >
+                <button className="bap-sec-btn bap-sec-btn--success" onClick={saveSchedule}>
                   <Save size={18} />
                   שמור לוח ארוחות
                 </button>
               </div>
             </div>
-          
-        </div>}
+          </div>
+        )}
       </div>
 
       {showPromoteModal && (
-        <div style={{
-          position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
-          background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center',
-          justifyContent: 'center', zIndex: 2000, padding: '1rem'
-        }}>
-          <div style={{
-            background: 'white', borderRadius: '20px', padding: '2rem',
-            maxWidth: '550px', width: '100%', maxHeight: '85vh', overflowY: 'auto',
-            boxShadow: '0 20px 60px rgba(0,0,0,0.3)'
-          }}>
-            <h3 style={{ margin: '0 0 0.5rem 0', color: '#333' }}>🎓 העלאת שנה</h3>
-            <p style={{ color: '#666', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
+        <div className="bap-sec-modal-overlay">
+          <div className="bap-sec-modal">
+            <div className="bap-sec-modal-head" style={{ paddingBottom: 0 }}>
+              <h3 style={{ margin: '0 0 0.5rem 0' }}>🎓 העלאת שנה</h3>
+              <button
+                type="button"
+                className="bap-sec-modal-close"
+                aria-label="סגירת חלון העלאת שנה"
+                onClick={() => setShowPromoteModal(false)}
+                disabled={promoting}
+              >
+                <X size={20} />
+              </button>
+            </div>
+            <div className="bap-sec-modal-scroll">
+            <p style={{ color: 'var(--muted)', fontSize: '0.9rem', marginBottom: '1.5rem' }}>
               עבור כל שכבה, בחרו לאן עוברים התלמידים שבה. שכבות שלא נבחר להן יעד יישארו ללא שינוי.
             </p>
 
             <div style={{ display: 'grid', gap: '1rem', marginBottom: '2rem' }}>
               {groups.map(group => (
-                <div key={group.id} style={{
-                  display: 'flex', alignItems: 'center', gap: '1rem',
-                  padding: '0.75rem', background: '#f8f9fa', borderRadius: '10px'
-                }}>
+                <div key={group.id} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', background: 'var(--paper)', borderRadius: '10px' }}>
                   <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: '600', color: '#333' }}>{group.name}</div>
-                    <div style={{ fontSize: '0.8rem', color: '#999' }}>{groupStudentCounts[group.id] || 0} תלמידים</div>
+                    <div style={{ fontWeight: 600 }}>{group.name}</div>
+                    <div style={{ fontSize: '0.8rem', color: 'var(--muted)' }}>{groupStudentCounts[group.id] || 0} תלמידים</div>
                   </div>
-                  <div style={{ fontSize: '1.2rem', color: '#999' }}>←</div>
+                  <div style={{ fontSize: '1.2rem', color: 'var(--muted)' }}>←</div>
                   <select
+                    className="bap-sec-select"
+                    style={{ flex: 1 }}
                     value={promoteMapping[group.id] || ''}
                     onChange={(e) => setPromoteMapping(prev => ({ ...prev, [group.id]: e.target.value }))}
-                    style={{ flex: 1, padding: '0.6rem', borderRadius: '8px', border: '2px solid #e0e0e0', fontSize: '0.9rem' }}
                   >
                     <option value="">-- ללא שינוי --</option>
                     {groups.filter(g => g.id !== group.id).map(g => (
@@ -529,28 +470,14 @@ console.log('action:', data.action);
               ))}
             </div>
 
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                onClick={() => setShowPromoteModal(false)}
-                disabled={promoting}
-                style={{
-                  flex: 1, padding: '1rem', borderRadius: '12px', border: '2px solid #e0e0e0',
-                  background: 'white', color: '#666', fontWeight: '600', cursor: promoting ? 'not-allowed' : 'pointer'
-                }}
-              >
+            <div className="bap-sec-modal-actions">
+              <button className="bap-sec-btn bap-sec-btn--secondary" onClick={() => setShowPromoteModal(false)} disabled={promoting}>
                 ביטול
               </button>
-              <button
-                onClick={executePromotion}
-                disabled={promoting}
-                style={{
-                  flex: 1, padding: '1rem', borderRadius: '12px', border: 'none',
-                  background: promoting ? '#ccc' : 'linear-gradient(135deg, #FF9800, #F57C00)',
-                  color: 'white', fontWeight: '600', cursor: promoting ? 'not-allowed' : 'pointer'
-                }}
-              >
+              <button className="bap-sec-btn bap-sec-btn--warn" onClick={executePromotion} disabled={promoting}>
                 {promoting ? 'מבצע...' : 'בצע העלאת שנה'}
               </button>
+            </div>
             </div>
           </div>
         </div>
