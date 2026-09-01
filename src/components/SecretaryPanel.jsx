@@ -306,6 +306,12 @@ const loadStudentSchedule = async (studentId) => {
       // הסר מהרשימה
       setPendingRegistrations(prev => prev.filter(r => r.id !== registrationId));
 
+      // רענן את "כל ההרשמות" כדי שהסטטוס המעודכן (אושר/נדחה) יוצג שם מיד, ולא יישאר תקוע
+      // על "ממתין לאישור מזכירה" עד לריענון הדף.
+      getAllRegistrations(currentUser.school_id).then(allRegistrationsData => {
+        if (allRegistrationsData.success) setAllRegistrations(allRegistrationsData.registrations);
+      }).catch(() => {});
+
       if (approve) {
   // רענן את רשימת התלמידים
   const schoolData = await getSchoolStudents(currentUser.school_id);
