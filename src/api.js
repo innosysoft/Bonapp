@@ -368,3 +368,59 @@ export const deleteStudent = async (studentId) => {
     throw error;
   }
 };
+
+// מייצר סיסמה חדשה למשתמש (הורה/איש צוות) ושולח אותה במייל - מזכירה/מנהל בלבד
+export const resetUserPassword = async (userId) => {
+  try {
+    const response = await authFetch(`${API_URL}/users/${userId}/reset-password`, {
+      method: 'POST'
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Reset user password error:', error);
+    throw error;
+  }
+};
+
+// מייצר קוד PIN חדש לתלמיד (זיהוי בקיוסק העצמאי) - מזכירה/מנהל בלבד
+export const regenerateStudentPin = async (studentId) => {
+  try {
+    const response = await authFetch(`${API_URL}/students/${studentId}/regenerate-pin`, {
+      method: 'POST'
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Regenerate student PIN error:', error);
+    throw error;
+  }
+};
+
+// שולח מייל עם קישור לאיפוס סיסמה (מסך כניסה, ללא התחברות)
+export const forgotPassword = async (email) => {
+  try {
+    const response = await fetch(`${API_URL}/forgot-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    throw error;
+  }
+};
+
+// קובע סיסמה חדשה לפי טוקן איפוס (מסך /reset-password, ללא התחברות)
+export const resetPasswordWithToken = async (token, password) => {
+  try {
+    const response = await fetch(`${API_URL}/reset-password`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token, password })
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Reset password with token error:', error);
+    throw error;
+  }
+};

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getParentData, getTransactions, generateQRCode, deleteStudent } from '../api';
-import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools } from '../api';
+import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools, resetUserPassword, regenerateStudentPin } from '../api';
 import { setToken, authFetch } from '../auth';
 import * as XLSX from 'xlsx';
 import GradeGroupsTab from './GradeGroupsTab';
@@ -40,6 +40,9 @@ const [schools, setSchools] = useState([]);
 const [transactions, setTransactions] = useState([]);
 const [parentDetails, setParentDetails] = useState(null);
 const [showParentDetails, setShowParentDetails] = useState(false);
+const [passwordResetInfo, setPasswordResetInfo] = useState(null); // { newPassword, emailSent } - מוצג אחרי איפוס סיסמה
+const [resettingPassword, setResettingPassword] = useState(false);
+const [regeneratingPin, setRegeneratingPin] = useState(false);
   const [paymentForm, setPaymentForm] = useState({
 
 
@@ -389,12 +392,49 @@ const loadParentDetails = async (studentId) => {
     const result = await getParentDetails(studentId);
     if (result.success) {
       setParentDetails(result.parent);
+      setPasswordResetInfo(null);
       setShowParentDetails(true);
     } else {
       alert('לא נמצאו פרטי הורה לתלמיד זה');
     }
   } catch (error) {
     alert('שגיאה בטעינת פרטי הורה');
+  }
+};
+
+const handleResetParentPassword = async () => {
+  if (!parentDetails?.id) return;
+  setResettingPassword(true);
+  setPasswordResetInfo(null);
+  try {
+    const result = await resetUserPassword(parentDetails.id);
+    if (result.success) {
+      setPasswordResetInfo({ newPassword: result.newPassword, emailSent: result.emailSent });
+    } else {
+      alert(result.message || 'שגיאה באיפוס סיסמה');
+    }
+  } catch (error) {
+    alert('שגיאה באיפוס סיסמה');
+  } finally {
+    setResettingPassword(false);
+  }
+};
+
+const handleRegeneratePin = async () => {
+  if (!selectedStudent?.id) return;
+  if (!window.confirm('ליצור קוד PIN חדש לתלמיד? הקוד הקודם יפסיק לעבוד.')) return;
+  setRegeneratingPin(true);
+  try {
+    const result = await regenerateStudentPin(selectedStudent.id);
+    if (result.success) {
+      setSelectedStudent(prev => ({ ...prev, pin: result.pin }));
+    } else {
+      alert(result.message || 'שגיאה ביצירת קוד PIN');
+    }
+  } catch (error) {
+    alert('שגיאה ביצירת קוד PIN');
+  } finally {
+    setRegeneratingPin(false);
   }
 };
 
@@ -1241,9 +1281,18 @@ const downloadReport = () => {
               <div><strong>כניסה אחרונה:</strong> {selectedStudent.lastActivity}</div>
               <div><strong>ארוחה אחרונה:</strong> {selectedStudent.lastMeal}</div>
               <div><strong>תאריך הרשמה:</strong> {selectedStudent.joinDate}</div>
-              {selectedStudent.pin && (
-                <div><strong>קוד PIN לקיוסק:</strong> {selectedStudent.pin}</div>
-              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '.75rem', flexWrap: 'wrap' }}>
+                <span><strong>קוד PIN לקיוסק:</strong> {selectedStudent.pin || 'לא הוגדר'}</span>
+                <button
+                  type="button"
+                  className="bap-sec-btn bap-sec-btn--secondary"
+                  style={{ height: 32, padding: '0 .75rem', fontSize: '.85rem' }}
+                  onClick={handleRegeneratePin}
+                  disabled={regeneratingPin}
+                >
+                  {regeneratingPin ? 'יוצר...' : selectedStudent.pin ? 'צור PIN חדש' : 'צור PIN'}
+                </button>
+              </div>
               {selectedStudent.notes && (
                 <div style={{ marginTop: '1rem', padding: '1rem', background: '#fdf1e2', borderRadius: '8px' }}>
                   <strong>הערות:</strong> {selectedStudent.notes}
@@ -1293,7 +1342,7 @@ const downloadReport = () => {
           <div className="bap-sec-modal" style={{ maxWidth: 500 }}>
             <div className="bap-sec-modal-head" style={{ borderBottom: '2px solid var(--line)', paddingBottom: '1rem', marginBottom: 0 }}>
               <h2 style={{ margin: 0, fontSize: '1.5rem' }}>פרטי הורה</h2>
-              <button type="button" className="bap-sec-modal-close" onClick={() => setShowParentDetails(false)} aria-label="סגירת חלון פרטי הורה">
+              <button type="button" className="bap-sec-modal-close" onClick={() => { setShowParentDetails(false); setPasswordResetInfo(null); }} aria-label="סגירת חלון פרטי הורה">
                 <X size={20} />
               </button>
             </div>
@@ -1309,20 +1358,34 @@ const downloadReport = () => {
             <div className="bap-sec-detail-box" style={{ marginBottom: '1.5rem', background: '#fdf1e2' }}>
               <h4 style={{ color: 'var(--orange)' }}>פרטי גישה למערכת</h4>
               <div><strong>אימייל כניסה:</strong> {parentDetails.email}</div>
-              <div>
-                <strong>סיסמה נוכחית:</strong>{' '}
-                <span style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: 'var(--blue)' }}>
-                  {parentDetails.password}
-                </span>
-              </div>
+              <p style={{ margin: '.5rem 0 0', fontSize: '.85rem', color: 'var(--muted)' }}>
+                הסיסמה שמורה במערכת באופן מוצפן ולא ניתן להציג אותה. אפשר ליצור סיסמה חדשה ולשלוח אותה להורה במייל.
+              </p>
             </div>
 
+            {passwordResetInfo && (
+              <div className="bap-sec-detail-box" style={{ marginBottom: '1.5rem', background: 'var(--green2)' }} role="status">
+                <h4 style={{ color: '#2e7d32' }}>סיסמה חדשה נוצרה</h4>
+                <div>
+                  <strong>סיסמה זמנית:</strong>{' '}
+                  <span style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: 'var(--blue)' }}>
+                    {passwordResetInfo.newPassword}
+                  </span>
+                </div>
+                <p style={{ margin: '.5rem 0 0', fontSize: '.85rem', color: 'var(--muted)' }}>
+                  {passwordResetInfo.emailSent
+                    ? 'הסיסמה נשלחה גם במייל להורה.'
+                    : 'לא הצלחנו לשלוח מייל - מומלץ למסור את הסיסמה להורה ישירות.'}
+                </p>
+              </div>
+            )}
+
             <div className="bap-sec-modal-actions">
-              <button className="bap-sec-btn bap-sec-btn--success" onClick={() => alert('יצירת סיסמה חדשה - בפיתוח')}>
-                צור סיסמה חדשה
+              <button className="bap-sec-btn bap-sec-btn--success" onClick={handleResetParentPassword} disabled={resettingPassword}>
+                {resettingPassword ? 'יוצר...' : 'צור סיסמה חדשה'}
               </button>
-              <button className="bap-sec-btn bap-sec-btn--primary" onClick={() => alert('שליחת פרטי גישה מחדש - בפיתוח')}>
-                שלח פרטי גישה מחדש
+              <button className="bap-sec-btn bap-sec-btn--primary" onClick={handleResetParentPassword} disabled={resettingPassword}>
+                {resettingPassword ? 'שולח...' : 'שלח פרטי גישה מחדש'}
               </button>
             </div>
             </div>

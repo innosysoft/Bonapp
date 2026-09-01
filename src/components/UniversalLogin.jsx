@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { loginUser } from '../api';
+import { loginUser, forgotPassword } from '../api';
 import { setToken } from '../auth';
 import { useNavigate } from 'react-router-dom';
-import { User, Lock, Eye, EyeOff, Home, AlertCircle, Check } from 'lucide-react';
+import { User, Lock, Eye, EyeOff, Home, AlertCircle, Check, Mail } from 'lucide-react';
 
 // עיצוב מסך הכניסה - מבוסס על דגם bonapp-login-design.html שאושר.
 // לוגיקת ההתחברות (state, handleLogin, handleInputChange, ניתוב לפי תפקיד) נשמרה
@@ -17,6 +17,32 @@ const UniversalLogin = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+
+  // מצב "שכחתי סיסמה" - מסך קטן נפרד, לא נוגע בלוגיקת ההתחברות הרגילה
+  const [mode, setMode] = useState('login'); // 'login' | 'forgot'
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotMessage, setForgotMessage] = useState('');
+  const [forgotError, setForgotError] = useState('');
+
+  const handleForgotSubmit = async (e) => {
+    e.preventDefault();
+    setForgotError('');
+    setForgotMessage('');
+    if (!forgotEmail) {
+      setForgotError('נא להזין כתובת אימייל');
+      return;
+    }
+    setForgotLoading(true);
+    try {
+      const result = await forgotPassword(forgotEmail);
+      setForgotMessage(result.message || 'אם קיים חשבון עם כתובת האימייל שסופקה, נשלח אליו מייל עם קישור לאיפוס סיסמה');
+    } catch (error) {
+      setForgotError('שגיאה בשליחת הבקשה. נסה שוב.');
+    } finally {
+      setForgotLoading(false);
+    }
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -129,6 +155,8 @@ default:
         .bap-login .new a{color:var(--blue);font-weight:700}
         .bap-login .secure{display:flex;gap:8px;align-items:center;justify-content:center;color:var(--muted);font-size:12px;margin-top:28px}
         .bap-login .form-footer{font-size:12px;color:#8a9da7;text-align:center;margin-top:24px}
+        .bap-login .forgot-link{background:none;border:0;padding:0;color:var(--blue);font-size:13px;font-weight:600;cursor:pointer}
+        .bap-login .back-link{background:none;border:0;padding:0;color:var(--blue);font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:4px;margin-bottom:18px}
         .bap-login .message{display:flex;align-items:flex-start;gap:8px;padding:12px 14px;border-radius:10px;margin-bottom:18px;font-size:14px;line-height:1.5}
         .bap-login .message.error{background:#fdecea;color:#a83236;border:1px solid #f3c8c9}
         .bap-login .message.success{background:var(--soft);color:#3f6b1f;border:1px solid #d7e8cb}
@@ -172,6 +200,63 @@ default:
           </header>
 
           <div className="form-wrap">
+            {mode === 'forgot' ? (
+              <>
+                <button type="button" className="back-link" onClick={() => { setMode('login'); setForgotError(''); setForgotMessage(''); }}>
+                  ‹ חזרה להתחברות
+                </button>
+                <h1 style={{ fontSize: 32 }}>איפוס סיסמה</h1>
+                <p className="intro">הזינו את כתובת האימייל של החשבון, ונשלח אליכם קישור לקביעת סיסמה חדשה.</p>
+
+                {forgotError && (
+                  <div className="message error" role="alert">
+                    <AlertCircle size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+                    <span>{forgotError}</span>
+                  </div>
+                )}
+                {forgotMessage && (
+                  <div className="message success" role="status">
+                    <Check size={18} style={{ flexShrink: 0, marginTop: '1px' }} />
+                    <span>{forgotMessage}</span>
+                  </div>
+                )}
+
+                {!forgotMessage && (
+                  <form onSubmit={handleForgotSubmit} noValidate>
+                    <div className="field">
+                      <div className="field-head">
+                        <label htmlFor="forgot-email">אימייל</label>
+                      </div>
+                      <div className="input-wrap">
+                        <input
+                          id="forgot-email"
+                          type="email"
+                          name="forgotEmail"
+                          autoComplete="email"
+                          value={forgotEmail}
+                          onChange={(e) => setForgotEmail(e.target.value)}
+                          placeholder="הכניסו את כתובת האימייל שלכם"
+                          disabled={forgotLoading}
+                        />
+                        <Mail size={18} className="input-icon" />
+                      </div>
+                    </div>
+
+                    <button type="submit" className="login-btn" disabled={forgotLoading}>
+                      {forgotLoading ? (
+                        <>
+                          <span className="spinner" />
+                          שולח...
+                        </>
+                      ) : (
+                        'שליחת קישור לאיפוס'
+                      )}
+                    </button>
+                  </form>
+                )}
+              </>
+            ) : (
+              <>
             <div className="kicker">טוב לראות אותך שוב</div>
             <h1>כניסה למערכת</h1>
             <p className="intro">הזינו את פרטי ההתחברות כדי להמשיך לחשבון שלכם.</p>
@@ -212,6 +297,13 @@ default:
               <div className="field">
                 <div className="field-head">
                   <label htmlFor="login-password">סיסמה</label>
+                  <button
+                    type="button"
+                    className="forgot-link"
+                    onClick={() => { setMode('forgot'); setForgotEmail(formData.username.includes('@') ? formData.username : ''); setForgotMessage(''); setForgotError(''); }}
+                  >
+                    שכחתי סיסמה
+                  </button>
                 </div>
                 <div className="input-wrap">
                   <input
@@ -252,6 +344,8 @@ default:
             <div className="new">
               עדיין אין לכם חשבון? <a href="/register" onClick={(e) => { e.preventDefault(); navigate('/register'); }}>רישום הורה חדש</a>
             </div>
+              </>
+            )}
 
             <div className="secure">✓ החיבור מאובטח והמידע שלכם נשמר בבטחה</div>
           </div>

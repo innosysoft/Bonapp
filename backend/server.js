@@ -6,6 +6,7 @@ const { createClient } = require('@supabase/supabase-js');
 const bcrypt = require('bcrypt');
 const QRCode = require('qrcode');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 require('dotenv').config();
 const {
   generateToken,
@@ -369,7 +370,104 @@ app.post('/api/login', authLimiter, async (req, res) => {
   }
 });
 
+// שולח מייל עם קישור לאיפוס סיסמה, אם קיים משתמש עם האימייל שסופק.
+// תמיד מחזיר תשובת הצלחה גנרית (בלי לחשוף אם האימייל קיים במערכת או לא).
+app.post('/api/forgot-password', authLimiter, async (req, res) => {
+  const genericResponse = {
+    success: true,
+    message: 'אם קיים חשבון עם כתובת האימייל שסופקה, נשלח אליו מייל עם קישור לאיפוס סיסמה'
+  };
+  try {
+    const { email } = req.body;
+    if (!email) {
+      return res.status(400).json({ success: false, message: 'חסרה כתובת אימייל' });
+    }
 
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name')
+      .ilike('email', email)
+      .maybeSingle();
+
+    if (!user) {
+      return res.json(genericResponse);
+    }
+
+    const resetToken = crypto.randomBytes(32).toString('hex');
+    const resetTokenExpires = new Date(Date.now() + 60 * 60 * 1000); // שעה אחת
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ reset_token: resetToken, reset_token_expires: resetTokenExpires.toISOString() })
+      .eq('id', user.id);
+
+    if (updateError) throw updateError;
+
+    const resetLink = `${APP_URL}/reset-password?token=${resetToken}`;
+    try {
+      await transporter.sendMail({
+        from: EMAIL_FROM,
+        to: user.email,
+        subject: 'איפוס סיסמה - מערכת ארוחות בית הספר',
+        html: `
+          <div dir="rtl" style="font-family: Arial; text-align: right;">
+            <h2>שלום ${user.first_name || ''} ${user.last_name || ''},</h2>
+            <p>התקבלה בקשה לאיפוס הסיסמה שלך במערכת ארוחות בית הספר.</p>
+            <p><a href="${resetLink}" style="background: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">קבע/י סיסמה חדשה</a></p>
+            <p style="color: #666; font-size: 0.9rem;">הקישור תקף לשעה אחת. אם לא ביקשת איפוס סיסמה, אפשר להתעלם מהודעה זו.</p>
+            <p>בברכה,<br>צוות בית הספר</p>
+          </div>
+        `
+      });
+    } catch (mailError) {
+      console.error('Forgot-password email sending error:', mailError);
+    }
+
+    res.json(genericResponse);
+  } catch (error) {
+    console.error('Forgot password error:', error);
+    // גם בשגיאת שרת לא חושפים אם האימייל קיים - מחזירים את אותה תשובה גנרית.
+    res.json(genericResponse);
+  }
+});
+
+// קובע סיסמה חדשה לפי טוקן איפוס תקין ולא פג-תוקף.
+app.post('/api/reset-password', authLimiter, async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ success: false, message: 'חסרים נתונים' });
+    }
+    if (password.length < 6) {
+      return res.status(400).json({ success: false, message: 'הסיסמה חייבת להכיל לפחות 6 תווים' });
+    }
+
+    const { data: user, error } = await supabase
+      .from('users')
+      .select('id, reset_token_expires')
+      .eq('reset_token', token)
+      .maybeSingle();
+
+    if (error || !user || !user.reset_token_expires || new Date(user.reset_token_expires) < new Date()) {
+      return res.status(400).json({ success: false, message: 'קישור לא תקין או שפג תוקפו, יש לבקש קישור חדש' });
+    }
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password_hash: hashedPassword, reset_token: null, reset_token_expires: null })
+      .eq('id', user.id);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true, message: 'הסיסמה עודכנה בהצלחה' });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה באיפוס הסיסמה' });
+  }
+});
 
 // ===== SCHOOLS =====
 
@@ -710,10 +808,71 @@ app.put('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin
     res.json({ success: true, user });
   } catch (error) {
     console.error('Update user error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'שגיאה בעדכון משתמש' 
+    res.status(500).json({
+      success: false,
+      message: 'שגיאה בעדכון משתמש'
     });
+  }
+});
+
+// מזכירה/מנהל מייצרים סיסמה חדשה אקראית עבור משתמש (הורה או איש צוות) ושולחים אותה במייל.
+// אין דרך לשחזר סיסמה קיימת (נשמרת רק כ-hash) - זו תמיד יצירת סיסמה חדשה, לא שחזור.
+app.post('/api/users/:userId/reset-password', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getUserSchoolId), async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('id, email, first_name, last_name, role')
+      .eq('id', userId)
+      .single();
+
+    if (userError || !user) {
+      return res.status(404).json({ success: false, message: 'משתמש לא נמצא' });
+    }
+
+    const newPassword = Math.random().toString(36).slice(-8);
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+    const { error: updateError } = await supabase
+      .from('users')
+      .update({ password_hash: hashedPassword })
+      .eq('id', userId);
+
+    if (updateError) throw updateError;
+
+    let emailSent = false;
+    if (user.email) {
+      try {
+        await transporter.sendMail({
+          from: EMAIL_FROM,
+          to: user.email,
+          subject: 'סיסמה חדשה למערכת ארוחות בית הספר',
+          html: `
+            <div dir="rtl" style="font-family: Arial; text-align: right;">
+              <h2>שלום ${user.first_name || ''} ${user.last_name || ''},</h2>
+              <p>סיסמה חדשה הונפקה עבור חשבונך במערכת ארוחות בית הספר.</p>
+              <div style="background: #f0f8ff; padding: 15px; border-radius: 8px; margin: 20px 0;">
+                <h3>פרטי הגישה שלך:</h3>
+                <p><strong>אימייל:</strong> ${user.email}</p>
+                <p><strong>סיסמה חדשה:</strong> ${newPassword}</p>
+              </div>
+              <p><a href="${APP_URL}/login" style="background: #4CAF50; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">היכנסו למערכת</a></p>
+              <p style="color: #666; font-size: 0.9rem;">אם לא ביקשת איפוס סיסמה, פנה/י למזכירות בית הספר.</p>
+              <p>בברכה,<br>צוות בית הספר</p>
+            </div>
+          `
+        });
+        emailSent = true;
+      } catch (mailError) {
+        console.error('Reset-password email sending error:', mailError);
+      }
+    }
+
+    res.json({ success: true, newPassword, emailSent });
+  } catch (error) {
+    console.error('Reset password error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה באיפוס סיסמה' });
   }
 });
 
@@ -1200,13 +1359,47 @@ app.post('/api/students/:studentId/send-qr-email', authenticateToken, requireSel
 });
     
     res.json({ success: true, message: 'המייל נשלח בהצלחה' });
-    
+
   } catch (error) {
     console.error('Send email error:', error);
-    res.status(500).json({ 
-      success: false, 
-      message: 'שגיאה בשליחת מייל: ' + error.message 
+    res.status(500).json({
+      success: false,
+      message: 'שגיאה בשליחת מייל: ' + error.message
     });
+  }
+});
+
+// מייצר קוד PIN חדש לתלמיד (זיהוי בקיוסק העצמאי) - מחליף את הקיים, אם היה כזה.
+app.post('/api/students/:studentId/regenerate-pin', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getStudentSchoolId), async (req, res) => {
+  try {
+    const { studentId } = req.params;
+
+    const { data: student, error: studentError } = await supabase
+      .from('students')
+      .select('id, school_id')
+      .eq('id', studentId)
+      .single();
+
+    if (studentError || !student) {
+      return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+
+    const pin = await generateUniqueStudentPin(student.school_id);
+    if (!pin) {
+      return res.status(500).json({ success: false, message: 'לא ניתן היה ליצור קוד PIN פנוי, נסה שוב' });
+    }
+
+    const { error: updateError } = await supabase
+      .from('students')
+      .update({ pin })
+      .eq('id', studentId);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true, pin });
+  } catch (error) {
+    console.error('Regenerate PIN error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה ביצירת קוד PIN' });
   }
 });
 
@@ -1517,10 +1710,10 @@ app.get('/api/student/:studentId/parent', authenticateToken, requireRole('secret
     res.json({
       success: true,
       parent: {
-        name: parent.name,
+        id: parent.id,
+        name: `${parent.first_name || ''} ${parent.last_name || ''}`.trim(),
         email: parent.email,
-        phone: parent.phone,
-        password: parent.password
+        phone: parent.phone
       }
     });
 

@@ -3,6 +3,7 @@ import LandingPage from './components/LandingPage';
 import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
 import MainHomepage from './components/MainHomepage';
 import UniversalLogin from './components/UniversalLogin';
+import ResetPasswordPage from './components/ResetPasswordPage';
 import ParentRegistrationForm from './components/ParentRegistrationForm';
 import ParentLogin from './components/ParentLogin';
 import ParentDashboard from './components/ParentDashboard';
@@ -51,6 +52,7 @@ function App() {
           
           {/* כניסה משותפת - המערכת תזהה את סוג המשתמש */}
           <Route path="/login" element={<UniversalLogin />} />
+          <Route path="/reset-password" element={<ResetPasswordPage />} />
           
           {/* הרשמת הורים חדשים */}
           <Route path="/register" element={<ParentRegistrationForm />} />
