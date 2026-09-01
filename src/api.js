@@ -154,6 +154,23 @@ export const handleRegistrationAction = async (registrationId, action, reason = 
   }
 };
 
+export const checkParentEmail = async (email) => {
+  try {
+    const response = await fetch(`${API_URL}/check-parent-email/${encodeURIComponent(email)}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Check parent email error:', error);
+    throw error;
+  }
+};
+
 export const verifyRegistration = async (token) => {
   try {
     const response = await fetch(`${API_URL}/verify-registration/${token}`, {

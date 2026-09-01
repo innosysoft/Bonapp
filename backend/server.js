@@ -374,6 +374,26 @@ app.post('/api/login', authLimiter, async (req, res) => {
   }
 });
 
+// בדיקה בלבד (ללא תופעות לוואי) האם כבר קיים חשבון הורה עם המייל הזה - נקראת מטופס
+// ההרשמה כדי להזהיר את ההורה מראש, לפני שהוא ממלא סיסמה חדשה שלא תשמש בפועל
+// (במקרה הזה הילד/ה מתווספים לחשבון הקיים, בדיוק כמו בזרימת האישור הידני הישנה).
+app.get('/api/check-parent-email/:email', async (req, res) => {
+  try {
+    const { email } = req.params;
+    const { data: existingParent } = await supabase
+      .from('users')
+      .select('id')
+      .ilike('email', email)
+      .eq('role', 'parent')
+      .maybeSingle();
+
+    res.json({ success: true, exists: !!existingParent });
+  } catch (error) {
+    console.error('Check parent email error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בבדיקת כתובת מייל' });
+  }
+});
+
 // שולח מייל עם קישור לאיפוס סיסמה, אם קיים משתמש עם האימייל שסופק.
 // תמיד מחזיר תשובת הצלחה גנרית (בלי לחשוף אם האימייל קיים במערכת או לא).
 app.post('/api/forgot-password', authLimiter, async (req, res) => {
@@ -2103,6 +2123,7 @@ app.post('/api/pending-registrations', async (req, res) => {
       parent_email,
       children_data,
       password,
+      auto_verify,
       status = 'pending'
     } = req.body;
 
@@ -2113,9 +2134,12 @@ app.post('/api/pending-registrations', async (req, res) => {
       });
     }
 
-    // כשההורה בחר סיסמה (זרימת ההרשמה הנוכחית) - האימות מתבצע ישירות במייל,
-    // בלי לעבור דרך תור האישור של המזכירה. קריאות ישנות שלא שולחות סיסמה
+    // כשהבקשה מגיעה מטופס ההרשמה הנוכחי (auto_verify) - האימות מתבצע ישירות במייל,
+    // בלי לעבור דרך תור האישור של המזכירה. קריאות ישנות שלא שולחות auto_verify
     // ממשיכות להתנהג בדיוק כמו קודם (status='pending', ממתין לאישור ידני).
+    // סיסמה היא אופציונלית בזרימה הזו: אם למייל כבר יש חשבון הורה קיים, הטופס לא
+    // אוסף סיסמה חדשה (אין טעם - היא לא תשמש), אז password_hash יישאר ריק כאן ויושלם
+    // בזמן האימות בפועל אם יידרש (ראו GET /api/verify-registration/:token).
     let insertPayload = {
       school_id,
       parent_name,
@@ -2127,11 +2151,11 @@ app.post('/api/pending-registrations', async (req, res) => {
     };
 
     let verificationToken = null;
-    if (password) {
-      if (password.length < 6) {
+    if (auto_verify) {
+      if (password && password.length < 6) {
         return res.status(400).json({ success: false, message: 'הסיסמה חייבת להכיל לפחות 6 תווים' });
       }
-      const passwordHash = await bcrypt.hash(password, 10);
+      const passwordHash = password ? await bcrypt.hash(password, 10) : null;
       verificationToken = crypto.randomBytes(32).toString('hex');
       const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 שעות
 
@@ -2269,6 +2293,10 @@ app.get('/api/verify-registration/:token', async (req, res) => {
       const firstName = nameParts[0] || '';
       const lastName = nameParts.slice(1).join(' ') || '';
 
+      // מקרה קצה: הטופס לא אסף סיסמה (כי חשב שהמייל כבר קיים) אבל בפועל אין הורה קיים -
+      // נייצר סיסמה אקראית כדי שהחשבון עדיין יהיה שמיש (בדיוק כמו בזרימת האישור הידני הישנה).
+      const passwordHash = registration.password_hash || await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
+
       const { data: newParent, error: userError } = await supabase
         .from('users')
         .insert({
@@ -2276,7 +2304,7 @@ app.get('/api/verify-registration/:token', async (req, res) => {
           phone: registration.parent_phone,
           first_name: firstName,
           last_name: lastName,
-          password_hash: registration.password_hash,
+          password_hash: passwordHash,
           role: 'parent',
           school_id: registration.school_id
         })

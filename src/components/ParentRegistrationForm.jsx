@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Mail, Phone, School, UserPlus, ArrowRight, Upload, Camera, Settings, Shield, AlertCircle, Bell, Check, X, FileText } from 'lucide-react';
-import { getSchools } from '../api';
+import { getSchools, checkParentEmail } from '../api';
 
 const ParentRegistrationForm = () => {
   const [formData, setFormData] = useState({
@@ -63,6 +63,21 @@ const ParentRegistrationForm = () => {
   const [errors, setErrors] = useState({});
 
   const [schools, setSchools] = useState([]);
+  const [emailExists, setEmailExists] = useState(null); // null=לא נבדק, true/false=תוצאת בדיקה
+  const [checkingEmail, setCheckingEmail] = useState(false);
+
+  const handleEmailBlur = async () => {
+    if (!formData.email || !formData.email.includes('@')) return;
+    setCheckingEmail(true);
+    try {
+      const result = await checkParentEmail(formData.email);
+      setEmailExists(result.success ? !!result.exists : null);
+    } catch (error) {
+      setEmailExists(null);
+    } finally {
+      setCheckingEmail(false);
+    }
+  };
 
 useEffect(() => {
   const loadSchools = async () => {
@@ -192,6 +207,7 @@ const loadSchoolGroups = async (schoolId) => {
   };
 
   const isPasswordValid = () => {
+    if (emailExists === true) return true; // חשבון קיים - לא נדרשת סיסמה חדשה
     return formData.password &&
            formData.password.length >= 6 &&
            formData.password === formData.confirmPassword;
@@ -242,6 +258,7 @@ const loadSchoolGroups = async (schoolId) => {
           parent_phone: formData.phone,
           parent_email: formData.email,
           password: formData.password,
+          auto_verify: true,
           children_data: JSON.stringify(childrenWithQR)
         })
       });
@@ -451,7 +468,8 @@ const loadSchoolGroups = async (schoolId) => {
         type="email"
         required
         value={formData.email}
-        onChange={(e) => setFormData({...formData, email: e.target.value})}
+        onChange={(e) => { setFormData({...formData, email: e.target.value}); setEmailExists(null); }}
+        onBlur={handleEmailBlur}
         autoComplete="off"
         style={{
           width: '100%',
@@ -464,6 +482,25 @@ const loadSchoolGroups = async (schoolId) => {
         }}
         placeholder="parent@example.com"
       />
+      {checkingEmail && (
+        <p style={{ color: '#888', fontSize: '13px', marginTop: '6px' }}>בודק אם קיים חשבון עם המייל הזה...</p>
+      )}
+      {emailExists === true && (
+        <div style={{
+          marginTop: '10px',
+          padding: '12px 14px',
+          backgroundColor: '#e3f2fd',
+          border: '1px solid #90caf9',
+          borderRadius: '8px',
+          fontSize: '14px',
+          color: '#1565c0',
+          lineHeight: '1.5'
+        }}>
+          כבר יש חשבון הורה עם המייל הזה במערכת. אם ממשיכים, הילד/ה יתווספו לחשבון הקיים ולא ייווצר חשבון חדש
+          (אין צורך למלא סיסמה חדשה - היא לא תשנה את הסיסמה הקיימת). אם שכחתם את הסיסמה, אפשר לאפס אותה
+          {' '}<a href="/login" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', fontWeight: 600 }}>בדף הכניסה</a>.
+        </div>
+      )}
     </div>
 
     {/* סיסמה */}
