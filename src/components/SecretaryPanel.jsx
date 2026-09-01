@@ -487,12 +487,45 @@ const generateReport = (type) => {
     weekly: 'דוח שבועי',
     monthly: 'דוח חודשי',
     students: 'דוח תלמידים',
-    debts: 'דוח חובות'
+    debts: 'דוח חובות',
+    paymentStatus: 'דוח סטטוס תשלומים'
   };
 
   let reportData = [];
 
   switch(type) {
+    case 'paymentStatus': {
+      // סוג התשלום האחרון של כל תלמיד - transactions כבר ממוינות מהחדש לישן,
+      // אז הערך הראשון שנתקלים בו לכל student_id הוא גם האחרון כרונולוגית.
+      const lastPaymentTypeByStudent = {};
+      transactions.forEach(t => {
+        if (t.type === 'payment' && t.student_id && !(t.student_id in lastPaymentTypeByStudent)) {
+          lastPaymentTypeByStudent[t.student_id] = t.payment_type;
+        }
+      });
+
+      let monthlyCount = 0, dailyUsedCount = 0, dailyRemainingCount = 0, noPaymentCount = 0;
+      students.forEach(student => {
+        const paymentType = lastPaymentTypeByStudent[student.id];
+        if (paymentType === 'monthly') {
+          monthlyCount++;
+        } else if (paymentType === 'daily' || paymentType === 'balance') {
+          if ((student.balance || 0) > 0) dailyRemainingCount++;
+          else dailyUsedCount++;
+        } else {
+          noPaymentCount++;
+        }
+      });
+
+      reportData = [
+        { 'קטגוריה': 'שילמו חודשי', 'כמות תלמידים': monthlyCount },
+        { 'קטגוריה': 'שילמו בודדת וניצלו את היתרה', 'כמות תלמידים': dailyUsedCount },
+        { 'קטגוריה': 'שילמו בודדת ועוד לא ניצלו', 'כמות תלמידים': dailyRemainingCount },
+        { 'קטגוריה': 'לא שילמו כלל', 'כמות תלמידים': noPaymentCount },
+        { 'קטגוריה': 'סה"כ תלמידים', 'כמות תלמידים': students.length }
+      ];
+      break;
+    }
     case 'students':
       reportData = students.map(student => ({
         'שם מלא': `${student?.first_name} ${student?.last_name || ''}`,
@@ -1010,6 +1043,16 @@ const downloadReport = () => {
                 <button className="bap-sec-btn bap-sec-btn--success" onClick={() => generateReport('students')}>
                   <Download size={16} />
                   הורד דוח תלמידים
+                </button>
+              </div>
+
+              <div className="bap-sec-report-card">
+                <div className="bap-sec-report-icon"><CreditCard size={36} style={{ color: 'var(--green)' }} /></div>
+                <h3>דוח סטטוס תשלומים</h3>
+                <p>כמה תלמידים משלמים חודשי, כמה משלמים בודד וניצלו את היתרה, וכמה עוד לא</p>
+                <button className="bap-sec-btn bap-sec-btn--success" onClick={() => generateReport('paymentStatus')}>
+                  <Download size={16} />
+                  הצג דוח סטטוס תשלומים
                 </button>
               </div>
 
