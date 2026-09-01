@@ -154,6 +154,74 @@ export const handleRegistrationAction = async (registrationId, action, reason = 
   }
 };
 
+export const verifyRegistration = async (token) => {
+  try {
+    const response = await fetch(`${API_URL}/verify-registration/${token}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Verify registration error:', error);
+    throw error;
+  }
+};
+
+export const getAllRegistrations = async (schoolId) => {
+  try {
+    const response = await authFetch(`${API_URL}/all-registrations/${schoolId}`, {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Get all registrations error:', error);
+    throw error;
+  }
+};
+
+export const blockParentFamily = async (parentId) => {
+  try {
+    const response = await authFetch(`${API_URL}/parents/${parentId}/block`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Block parent family error:', error);
+    throw error;
+  }
+};
+
+export const unblockParentFamily = async (parentId) => {
+  try {
+    const response = await authFetch(`${API_URL}/parents/${parentId}/unblock`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      }
+    });
+
+    const data = await response.json();
+    return data;
+  } catch (error) {
+    console.error('Unblock parent family error:', error);
+    throw error;
+  }
+};
+
 export const getSchools = async () => {
   try {
     const response = await fetch(`${API_URL}/schools`, {

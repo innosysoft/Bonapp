@@ -4,6 +4,7 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-route
 import MainHomepage from './components/MainHomepage';
 import UniversalLogin from './components/UniversalLogin';
 import ResetPasswordPage from './components/ResetPasswordPage';
+import VerifyRegistrationPage from './components/VerifyRegistrationPage';
 import ParentRegistrationForm from './components/ParentRegistrationForm';
 import ParentLogin from './components/ParentLogin';
 import ParentDashboard from './components/ParentDashboard';
@@ -56,6 +57,7 @@ function App() {
           
           {/* הרשמת הורים חדשים */}
           <Route path="/register" element={<ParentRegistrationForm />} />
+          <Route path="/verify-registration" element={<VerifyRegistrationPage />} />
           
           {/* דשבורדים לכל סוג משתמש */}
           <Route path="/parent-dashboard" element={<ParentDashboard />} />

@@ -349,6 +349,10 @@ app.post('/api/login', authLimiter, async (req, res) => {
       return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
     }
 
+    if (user.status === 'blocked') {
+      return res.status(401).json({ success: false, message: 'החשבון חסום. יש לפנות למזכירות בית הספר.' });
+    }
+
     const token = generateToken({ id: user.id, role: user.role, school_id: user.school_id });
 
     res.json({
@@ -687,7 +691,7 @@ app.get('/api/school-students/:schoolId', authenticateToken, requireRole('kitche
       .from('students')
       .select(`
         *,
-        users (first_name, last_name, phone, email)
+        users (first_name, last_name, phone, email, status)
       `)
       .eq('school_id', schoolId)
       .order('first_name');
@@ -2098,6 +2102,7 @@ app.post('/api/pending-registrations', async (req, res) => {
       parent_phone,
       parent_email,
       children_data,
+      password,
       status = 'pending'
     } = req.body;
 
@@ -2108,17 +2113,40 @@ app.post('/api/pending-registrations', async (req, res) => {
       });
     }
 
+    // כשההורה בחר סיסמה (זרימת ההרשמה הנוכחית) - האימות מתבצע ישירות במייל,
+    // בלי לעבור דרך תור האישור של המזכירה. קריאות ישנות שלא שולחות סיסמה
+    // ממשיכות להתנהג בדיוק כמו קודם (status='pending', ממתין לאישור ידני).
+    let insertPayload = {
+      school_id,
+      parent_name,
+      parent_phone,
+      parent_email,
+      children_data,
+      status,
+      created_at: new Date().toISOString()
+    };
+
+    let verificationToken = null;
+    if (password) {
+      if (password.length < 6) {
+        return res.status(400).json({ success: false, message: 'הסיסמה חייבת להכיל לפחות 6 תווים' });
+      }
+      const passwordHash = await bcrypt.hash(password, 10);
+      verificationToken = crypto.randomBytes(32).toString('hex');
+      const verificationTokenExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 שעות
+
+      insertPayload = {
+        ...insertPayload,
+        status: 'pending_verification',
+        password_hash: passwordHash,
+        verification_token: verificationToken,
+        verification_token_expires: verificationTokenExpires.toISOString()
+      };
+    }
+
     const { data: registration, error } = await supabase
       .from('pending_registrations')
-      .insert({
-        school_id,
-        parent_name,
-        parent_phone,
-        parent_email,
-        children_data,
-        status,
-        created_at: new Date().toISOString()
-      })
+      .insert(insertPayload)
       .select()
       .single();
 
@@ -2159,7 +2187,7 @@ app.post('/api/pending-registrations', async (req, res) => {
                 <p><strong>אימייל:</strong> ${parent_email || '-'}</p>
               </div>
               ${childrenHtml ? `<p><strong>ילדים:</strong></p><ul>${childrenHtml}</ul>` : ''}
-              <p>יש לאשר או לדחות את ההרשמה בפאנל המזכירה.</p>
+              <p>${verificationToken ? 'ההורה קיבל קישור לאימות אוטומטי במייל. החשבון ייווצר ברגע שיאמת.' : 'יש לאשר או לדחות את ההרשמה בפאנל המזכירה.'}</p>
             </div>
           `
         });
@@ -2168,12 +2196,166 @@ app.post('/api/pending-registrations', async (req, res) => {
       }
     })();
 
+    // מייל אימות להורה - נשלח רק בזרימה החדשה (כשנשלחה סיסמה). לא נחסם על תשובת ה-API.
+    if (verificationToken) {
+      (async () => {
+        try {
+          const verifyLink = `${APP_URL}/verify-registration?token=${verificationToken}`;
+          await transporter.sendMail({
+            from: EMAIL_FROM,
+            to: parent_email,
+            subject: 'אימות הרשמה - BonApp',
+            html: `
+              <div dir="rtl" style="font-family: Arial; text-align: right;">
+                <h2>שלום ${parent_name},</h2>
+                <p>תודה שנרשמת למערכת BonApp. כדי להשלים את ההרשמה ולהפעיל את החשבון, יש ללחוץ על הקישור הבא:</p>
+                <p><a href="${verifyLink}" style="background: #75a843; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px;">אימות ההרשמה</a></p>
+                <p style="color: #666; font-size: 0.9rem;">הקישור תקף ל-24 שעות. אם לא נרשמת למערכת, אפשר להתעלם מהודעה זו.</p>
+                <p>בברכה,<br>צוות BonApp</p>
+              </div>
+            `
+          });
+        } catch (emailError) {
+          console.error('Registration verification email error:', emailError.message);
+        }
+      })();
+    }
+
   } catch (error) {
     console.error('Registration creation error:', error);
     res.status(500).json({
       success: false,
       message: 'שגיאה בשמירת ההרשמה'
     });
+  }
+});
+
+// מאמת הרשמת הורה לפי טוקן שנשלח במייל, ויוצר בפועל את חשבון ההורה + התלמידים
+// (בדיוק אותה לוגיקת יצירה כמו באישור הידני של המזכירה למטה - QR, PIN, שיוך לשכבה, סנכרון רב-מסר).
+app.get('/api/verify-registration/:token', async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    const { data: registration, error: getError } = await supabase
+      .from('pending_registrations')
+      .select('*')
+      .eq('verification_token', token)
+      .eq('status', 'pending_verification')
+      .maybeSingle();
+
+    if (getError || !registration) {
+      return res.status(400).json({ success: false, message: 'קישור האימות אינו תקין' });
+    }
+
+    if (new Date(registration.verification_token_expires) < new Date()) {
+      return res.status(400).json({ success: false, message: 'קישור האימות פג תוקף. יש להירשם מחדש.' });
+    }
+
+    const children = JSON.parse(registration.children_data);
+
+    const { data: existingParent } = await supabase
+      .from('users')
+      .select('id, email')
+      .eq('email', registration.parent_email)
+      .eq('role', 'parent')
+      .maybeSingle();
+
+    let parentId;
+
+    if (existingParent) {
+      parentId = existingParent.id;
+    } else {
+      const nameParts = registration.parent_name.split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const { data: newParent, error: userError } = await supabase
+        .from('users')
+        .insert({
+          email: registration.parent_email,
+          phone: registration.parent_phone,
+          first_name: firstName,
+          last_name: lastName,
+          password_hash: registration.password_hash,
+          role: 'parent',
+          school_id: registration.school_id
+        })
+        .select()
+        .single();
+
+      if (userError) {
+        console.error('Error creating parent user (verify):', userError);
+        throw userError;
+      }
+
+      parentId = newParent.id;
+    }
+
+    const { data: registrationGroups } = await supabase
+      .from('grade_groups')
+      .select('id, name')
+      .eq('school_id', registration.school_id);
+    const groupNameById = new Map((registrationGroups || []).map(g => [g.id, g.name]));
+
+    const studentsToCreate = children.map(child => ({
+      school_id: registration.school_id,
+      parent_id: parentId,
+      first_name: child.firstName,
+      last_name: child.lastName,
+      grade: (child.group_id && groupNameById.get(child.group_id)) || child.grade || '',
+      group_id: child.group_id || null,
+      balance: 0.0,
+      student_phone: child.phone,
+      status: 'active'
+    }));
+
+    const { data: createdStudents, error: studentsError } = await supabase
+      .from('students')
+      .insert(studentsToCreate)
+      .select();
+
+    if (studentsError) {
+      throw studentsError;
+    }
+
+    for (const student of createdStudents) {
+      const qrCode = `STU_${student.id.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
+      await supabase
+        .from('student_qr_codes')
+        .insert({
+          student_id: student.id,
+          qr_code: qrCode,
+          status: 'active'
+        });
+
+      const studentPin = await generateUniqueStudentPin(student.school_id);
+      if (studentPin) {
+        await supabase.from('students').update({ pin: studentPin }).eq('id', student.id);
+      }
+    }
+
+    await supabase
+      .from('pending_registrations')
+      .update({
+        status: 'verified',
+        password_hash: null,
+        verification_token: null,
+        verification_token_expires: null
+      })
+      .eq('id', registration.id);
+
+    ravMesserAddSubscriber(
+      registration.parent_email,
+      registration.parent_name,
+      registration.parent_phone,
+      RAVMESSER_LIST_ID_PARENTS
+    ).catch(err => console.error('RavMesser sync error:', err.message));
+
+    res.json({ success: true, message: 'ההרשמה אומתה בהצלחה! אפשר להתחבר עכשיו.' });
+
+  } catch (error) {
+    console.error('Registration verification error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה באימות ההרשמה' });
   }
 });
 
@@ -2339,6 +2521,114 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
   } catch (error) {
     console.error('Registration action error:', error);
     res.status(500).json({ success: false, message: 'שגיאה בעיבוד הרשמה' });
+  }
+});
+
+// כל ההרשמות (כל הסטטוסים) - לתצוגת המזכירה, בנוסף לתור האישור הידני הישן
+// שממשיך להציג רק status='pending' דרך /api/pending-registrations/:schoolId.
+app.get('/api/all-registrations/:schoolId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+
+    const { data: registrations, error } = await supabase
+      .from('pending_registrations')
+      .select('*')
+      .eq('school_id', schoolId)
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw error;
+    }
+
+    res.json({ success: true, registrations: registrations || [] });
+
+  } catch (error) {
+    console.error('All registrations error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת הרשמות' });
+  }
+});
+
+// חוסם/מבטל חסימה של משפחה שלמה (הורה + כל התלמידים שלו) - לא מוחק נתונים,
+// רק מונע כניסה למערכת (users.status) וסריקה בקופה/קיוסק (students.status).
+app.post('/api/parents/:parentId/block', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+  try {
+    const { parentId } = req.params;
+
+    const { data: parent, error: getError } = await supabase
+      .from('users')
+      .select('id, school_id, role')
+      .eq('id', parentId)
+      .eq('role', 'parent')
+      .maybeSingle();
+
+    if (getError || !parent) {
+      return res.status(404).json({ success: false, message: 'הורה לא נמצא' });
+    }
+
+    if (req.user.role !== 'super_admin' && String(parent.school_id) !== String(req.user.school_id)) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה להורה זה' });
+    }
+
+    const { error: userError } = await supabase
+      .from('users')
+      .update({ status: 'blocked' })
+      .eq('id', parentId);
+
+    if (userError) throw userError;
+
+    const { error: studentsError } = await supabase
+      .from('students')
+      .update({ status: 'inactive' })
+      .eq('parent_id', parentId);
+
+    if (studentsError) throw studentsError;
+
+    res.json({ success: true, message: 'המשפחה נחסמה' });
+
+  } catch (error) {
+    console.error('Block family error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בחסימת המשפחה' });
+  }
+});
+
+app.post('/api/parents/:parentId/unblock', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+  try {
+    const { parentId } = req.params;
+
+    const { data: parent, error: getError } = await supabase
+      .from('users')
+      .select('id, school_id, role')
+      .eq('id', parentId)
+      .eq('role', 'parent')
+      .maybeSingle();
+
+    if (getError || !parent) {
+      return res.status(404).json({ success: false, message: 'הורה לא נמצא' });
+    }
+
+    if (req.user.role !== 'super_admin' && String(parent.school_id) !== String(req.user.school_id)) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה להורה זה' });
+    }
+
+    const { error: userError } = await supabase
+      .from('users')
+      .update({ status: 'active' })
+      .eq('id', parentId);
+
+    if (userError) throw userError;
+
+    const { error: studentsError } = await supabase
+      .from('students')
+      .update({ status: 'active' })
+      .eq('parent_id', parentId);
+
+    if (studentsError) throw studentsError;
+
+    res.json({ success: true, message: 'החסימה בוטלה' });
+
+  } catch (error) {
+    console.error('Unblock family error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בביטול חסימה' });
   }
 });
 

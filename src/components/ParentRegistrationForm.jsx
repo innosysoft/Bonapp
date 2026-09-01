@@ -186,9 +186,15 @@ const loadSchoolGroups = async (schoolId) => {
   };
 
   const isStep3Valid = () => {
-    return formData.agreements.terms && 
-           formData.agreements.privacy && 
+    return formData.agreements.terms &&
+           formData.agreements.privacy &&
            formData.agreements.schoolPolicy;
+  };
+
+  const isPasswordValid = () => {
+    return formData.password &&
+           formData.password.length >= 6 &&
+           formData.password === formData.confirmPassword;
   };
 
   const getStepColor = (step) => {
@@ -205,6 +211,13 @@ const loadSchoolGroups = async (schoolId) => {
 
   const handleSubmit = async () => {
     if (isSubmitting) return;
+    if (!isPasswordValid()) {
+      alert(!formData.password || formData.password.length < 6
+        ? 'הסיסמה חייבת להכיל לפחות 6 תווים'
+        : 'הסיסמאות אינן תואמות');
+      setCurrentStep(1);
+      return;
+    }
     setIsSubmitting(true);
 
     // יצירת קוד זיהוי משפחה ייחודי
@@ -228,8 +241,8 @@ const loadSchoolGroups = async (schoolId) => {
           parent_name: formData.familyName + ' ' + formData.parentFirstName, // שלב שם משפחה ושם פרטי
           parent_phone: formData.phone,
           parent_email: formData.email,
-          children_data: JSON.stringify(childrenWithQR),
-          status: 'pending'
+          password: formData.password,
+          children_data: JSON.stringify(childrenWithQR)
         })
       });
 
@@ -1217,8 +1230,24 @@ const loadSchoolGroups = async (schoolId) => {
                 lineHeight: '1.6'
               }}>
                 תודה על ההרשמה למערכת ארוחות בית הספר.<br />
-                פרטי החשבון שלכם נשמרו במערכת.
+                שלחנו מייל לאימות לכתובת <strong>{formData.email}</strong>.
               </p>
+
+              <div style={{
+                backgroundColor: '#e3f2fd',
+                border: '2px solid #2196f3',
+                borderRadius: '12px',
+                padding: '18px 22px',
+                margin: '0 auto 30px',
+                maxWidth: '500px',
+                textAlign: 'right',
+                fontSize: '15px',
+                color: '#1565c0',
+                lineHeight: '1.6'
+              }}>
+                <strong>לא מוצאים את המייל?</strong> בדקו גם בתיקיית הספאם / דואר זבל.
+                לוחצים על הקישור שבמייל כדי להשלים את ההרשמה - החשבון יופעל באופן מיידי.
+              </div>
 
               {/* קוד זיהוי משפחה */}
               <div style={{
@@ -1347,7 +1376,7 @@ const loadSchoolGroups = async (schoolId) => {
                       minWidth: '25px'
                     }}>1</div>
                     <div>
-                      <strong>SMS עם קוד אימות:</strong> בתוך כמה דקות תקבלו הודעת SMS עם קוד אימות לטלפון {formData.phone}
+                      <strong>מייל אימות:</strong> שלחנו לכתובת {formData.email} מייל עם קישור לאימות ההרשמה (בדקו גם בספאם)
                     </div>
                   </div>
 
@@ -1366,7 +1395,7 @@ const loadSchoolGroups = async (schoolId) => {
                       minWidth: '25px'
                     }}>2</div>
                     <div>
-                      <strong>אישור בית הספר:</strong> לאחר האימות, החשבון יעבור לאישור מזכירת בית הספר (עד 24 שעות)
+                      <strong>הפעלה מיידית:</strong> לחיצה על הקישור מפעילה את החשבון מיד - בלי המתנה לאישור
                     </div>
                   </div>
 
@@ -1385,7 +1414,7 @@ const loadSchoolGroups = async (schoolId) => {
                       minWidth: '25px'
                     }}>3</div>
                     <div>
-                      <strong>כניסה למערכת:</strong> לאחר האישור תוכלו להיכנס למערכת ולהתחיל להשתמש בכל התכונות
+                      <strong>כניסה למערכת:</strong> לאחר האימות תוכלו להיכנס עם המייל והסיסמה שקבעתם
                     </div>
                   </div>
 
@@ -1514,21 +1543,21 @@ const loadSchoolGroups = async (schoolId) => {
             )}
             
             <button
-              onClick={currentStep === 3 ? handleSubmit : handleNext}
+              onClick={currentStep === 1 ? (isPasswordValid() ? handleNext : undefined) : currentStep === 3 ? handleSubmit : handleNext}
 
-              disabled={currentStep === 2 ? !isStep2Valid() : currentStep === 3 ? (!isStep3Valid() || isSubmitting) : false}
+              disabled={currentStep === 1 ? !isPasswordValid() : currentStep === 2 ? !isStep2Valid() : currentStep === 3 ? (!isStep3Valid() || isSubmitting) : false}
 
 
 
               style={{
                 padding: '12px 30px',
-                backgroundColor: (currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? '#2196f3' : '#ccc',
+                backgroundColor: (currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? '#2196f3' : '#ccc',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '16px',
                 fontWeight: '600',
-                cursor: (currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? 'pointer' : 'not-allowed',
+                cursor: (currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? 'pointer' : 'not-allowed',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px',
@@ -1536,12 +1565,12 @@ const loadSchoolGroups = async (schoolId) => {
                 transition: 'all 0.3s ease'
               }}
               onMouseOver={(e) => {
-                if ((currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
+                if ((currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
                   e.target.style.backgroundColor = '#1976d2';
                 }
               }}
               onMouseOut={(e) => {
-                if ((currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
+                if ((currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
                   e.target.style.backgroundColor = '#2196f3';
                 }
               }}

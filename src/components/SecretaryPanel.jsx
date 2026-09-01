@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getParentData, getTransactions, generateQRCode, deleteStudent } from '../api';
-import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools, resetUserPassword, regenerateStudentPin } from '../api';
+import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools, resetUserPassword, regenerateStudentPin, getAllRegistrations, blockParentFamily, unblockParentFamily } from '../api';
 import { setToken, authFetch } from '../auth';
 import * as XLSX from 'xlsx';
 import GradeGroupsTab from './GradeGroupsTab';
@@ -105,6 +105,12 @@ if (registrationsData.success) {
   setPendingRegistrations(registrationsData.registrations);
 }
 
+// טען את כל ההרשמות (כולל ממתינות לאימות מייל / מאומתות) לתצוגת המזכירה
+const allRegistrationsData = await getAllRegistrations(currentUser.school_id);
+if (allRegistrationsData.success) {
+  setAllRegistrations(allRegistrationsData.registrations);
+}
+
 // חשב סטטיסטיקות אמיתיות
       const today = new Date().toISOString().split('T')[0];
       const todayTransactions = transactionsData.transactions?.filter(t =>
@@ -155,6 +161,10 @@ const [loading, setLoading] = useState(true);
 const [pendingRegistrations, setPendingRegistrations] = useState([
 
   ]);
+
+  // כל ההרשמות (כולל אימות מייל אוטומטי) - לתצוגה + חסימת משפחה
+  const [allRegistrations, setAllRegistrations] = useState([]);
+  const [blockingParentId, setBlockingParentId] = useState(null);
 
   // ניהול צוות
   const [staffUsers, setStaffUsers] = useState([]);
@@ -385,6 +395,38 @@ document.body.appendChild(detailsDiv);
     alert('שגיאה בעיבוד הרשמה. נסה שוב.');
   }
 };
+
+  // מוצא את פרטי ההורה (users.id + users.status) של הרשמה מאומתת לפי מייל, מתוך רשימת התלמידים שכבר נטענה
+  const getParentInfoForRegistration = (registration) => {
+    const match = students.find(s => s.users?.email && s.users.email === registration.parent_email);
+    if (!match) return null;
+    return { parentId: match.parent_id, isBlocked: match.users?.status === 'blocked' };
+  };
+
+  const handleToggleBlockFamily = async (registration, isCurrentlyBlocked, parentId) => {
+    const confirmMsg = isCurrentlyBlocked
+      ? `לבטל את החסימה של משפחת ${registration.parent_name}?`
+      : `לחסום את משפחת ${registration.parent_name}? ההורה והתלמידים לא יוכלו להיכנס למערכת עד ביטול החסימה.`;
+    if (!window.confirm(confirmMsg)) return;
+
+    setBlockingParentId(parentId);
+    try {
+      const result = isCurrentlyBlocked
+        ? await unblockParentFamily(parentId)
+        : await blockParentFamily(parentId);
+
+      if (result.success) {
+        const schoolData = await getSchoolStudents(currentUser.school_id);
+        if (schoolData.success) setStudents(schoolData.students);
+      } else {
+        alert(result.message || 'שגיאה בעדכון סטטוס המשפחה');
+      }
+    } catch (error) {
+      alert('שגיאה בעדכון סטטוס המשפחה. נסה שוב.');
+    } finally {
+      setBlockingParentId(null);
+    }
+  };
 
 // הוסף פונקציה לטעינת פרטי הורה:
 const loadParentDetails = async (studentId) => {
@@ -885,6 +927,63 @@ const downloadReport = () => {
                 })}
               </div>
             )}
+
+            <div style={{ marginTop: '40px' }}>
+              <PageHeader
+                icon={<UserCheck size={28} />}
+                title="כל ההרשמות"
+                description="כולל הרשמות שאומתו אוטומטית במייל, בלי לעבור דרך תור האישור"
+              />
+
+              {!allRegistrations || allRegistrations.length === 0 ? (
+                <EmptyState
+                  icon={<CheckCircle size={48} />}
+                  title="אין הרשמות"
+                  description="עדיין לא התקבלו הרשמות"
+                />
+              ) : (
+                <div className="bap-sec-reg-grid">
+                  {allRegistrations.map(registration => {
+                    const statusInfo = {
+                      pending: { label: 'ממתין לאישור מזכירה', tone: 'warning' },
+                      pending_verification: { label: 'ממתין לאימות מייל', tone: 'warning' },
+                      verified: { label: 'אומת - חשבון פעיל', tone: 'success' },
+                      approved: { label: 'אושר', tone: 'success' },
+                      rejected: { label: 'נדחה', tone: 'danger' }
+                    }[registration.status] || { label: registration.status, tone: 'neutral' };
+
+                    const parentInfo = getParentInfoForRegistration(registration);
+                    const canBlock = (registration.status === 'verified' || registration.status === 'approved') && parentInfo;
+
+                    return (
+                      <div key={registration.id} className="bap-sec-reg-card">
+                        <div className="bap-sec-reg-head">
+                          <div>
+                            <h3>{registration.parent_name}</h3>
+                            <p>{registration.parent_phone} • {registration.parent_email}</p>
+                            <p>הוגש: {new Date(registration.created_at).toLocaleString('he-IL')}</p>
+                          </div>
+
+                          <div className="bap-sec-reg-actions" style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '8px' }}>
+                            <StatusBadge tone={statusInfo.tone}>{statusInfo.label}</StatusBadge>
+                            {parentInfo?.isBlocked && <StatusBadge tone="danger">משפחה חסומה</StatusBadge>}
+                            {canBlock && (
+                              <button
+                                className={`bap-sec-btn ${parentInfo.isBlocked ? 'bap-sec-btn--success' : 'bap-sec-btn--danger'}`}
+                                disabled={blockingParentId === parentInfo.parentId}
+                                onClick={() => handleToggleBlockFamily(registration, parentInfo.isBlocked, parentInfo.parentId)}
+                              >
+                                {parentInfo.isBlocked ? 'בטל חסימה' : 'חסום משפחה'}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </>
         )}
 
