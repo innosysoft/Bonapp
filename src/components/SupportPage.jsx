@@ -123,6 +123,44 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
           </div>
         )}
 
+        {/* מדריך מהיר */}
+        <div style={{ marginBottom: '3rem' }}>
+          <h2 style={{ fontSize: '1.8rem', color: '#333', marginBottom: '1.5rem' }}>🚀 מדריך מהיר</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: '1.5rem' }}>
+            <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>🔑</div>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#333' }}>התחברות למערכת</h3>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#666', lineHeight: 1.6 }}>
+                נכנסים לדף הכניסה עם כתובת המייל והסיסמה שנרשמתם איתם. שכחתם סיסמה? לוחצים על "שכחתי סיסמה" במסך הכניסה ומקבלים קישור לאיפוס במייל.
+              </p>
+            </div>
+
+            <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>💳</div>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#333' }}>ביצוע תשלום</h3>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#666', lineHeight: 1.6 }}>
+                בפאנל ההורה בוחרים את הילד/ה ולוחצים על "הוספת יתרה". אפשר לבחור תשלום חודשי קבוע או תשלום בודד, לפי מה שהבית ספר מאפשר.
+              </p>
+            </div>
+
+            <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>📱</div>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#333' }}>הורדת ברקוד לילד</h3>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#666', lineHeight: 1.6 }}>
+                בפאנל ההורה, בכרטיס הילד/ה לוחצים על סמל ה-QR ואז על "הורדה" - הקוד נשמר כתמונה שאפשר להדפיס. יש גם קוד PIN אישי שאפשר להקליד בקופה בלי לסרוק.
+              </p>
+            </div>
+
+            <div style={{ background: 'white', borderRadius: '12px', padding: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
+              <div style={{ fontSize: '2rem', marginBottom: '0.5rem' }}>⬇️</div>
+              <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem', color: '#333' }}>אפליקציה לטלפון</h3>
+              <p style={{ margin: 0, fontSize: '0.9rem', color: '#666', lineHeight: 1.6 }}>
+                פותחים את bonapp.dev בדפדפן הטלפון, ובתפריט הדפדפן בוחרים "הוסף למסך הבית". כך האתר נפתח כמו אפליקציה רגילה, בלי צורך בהתקנה מחנות אפליקציות.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* שאלות ותשובות */}
         <h2 style={{ fontSize: '1.8rem', color: '#333', marginBottom: '1.5rem' }}>❓ שאלות נפוצות</h2>
         {faqs.map((section, si) => (
