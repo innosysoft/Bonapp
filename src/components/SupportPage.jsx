@@ -80,9 +80,9 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
     <div className="bap-support">
       <style>{`
         .bap-support{
-          --navy:#17324a;--blue:#667eea;--purple:#764ba2;--green:#75a843;
-          --paper:#f6f8fc;--white:#fff;--muted:#607482;--line:#dce6e9;--dark-text:#2c3345;
-          font-family:'Heebo',Arial,sans-serif;color:var(--dark-text);background:var(--paper);
+          --navy:#17324a;--blue:#356b8c;--green:#75a843;
+          --paper:#f4f7f7;--white:#fff;--muted:#607482;--line:#dce6e9;
+          font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--paper);
           min-height:100vh;
         }
         .bap-support *{box-sizing:border-box}
@@ -93,7 +93,7 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
         /* היירו */
         .bap-support .hero{
           position:relative;overflow:hidden;
-          background:linear-gradient(135deg,var(--blue),var(--purple));
+          background:linear-gradient(135deg,var(--blue),var(--navy));
           color:#fff;text-align:center;padding:36px 16px 44px;
         }
         .bap-support .hero::before,.bap-support .hero::after{
@@ -117,7 +117,7 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
         .bap-support a:focus-visible{outline:3px solid #b7e39a;outline-offset:2px}
 
         .bap-support .section{padding:44px 0}
-        .bap-support .section-title{font-size:clamp(22px,2.6vw,28px);color:var(--dark-text);margin:0 0 22px;font-weight:800}
+        .bap-support .section-title{font-size:clamp(22px,2.6vw,28px);color:var(--navy);margin:0 0 22px;font-weight:800}
 
         /* סרטונים */
         .bap-support .videos-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:24px}
@@ -131,14 +131,14 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
         .bap-support .video-frame-wrap{position:relative;width:100%;aspect-ratio:16/9;overflow:hidden;background:#0e2636}
         .bap-support .video-frame-wrap iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
         .bap-support .video-body{padding:18px;flex:1;display:flex;flex-direction:column;gap:6px}
-        .bap-support .video-body h3{margin:0;font-size:16px;color:var(--dark-text)}
+        .bap-support .video-body h3{margin:0;font-size:16px;color:var(--navy)}
         .bap-support .video-body p{margin:0;font-size:14px;color:var(--muted);line-height:1.55}
 
         /* מדריך מהיר */
         .bap-support .guide-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:20px}
         .bap-support .guide-card{background:#fff;border-radius:16px;padding:22px;box-shadow:0 4px 18px rgba(23,50,74,.08)}
         .bap-support .guide-card .emoji{font-size:30px;margin-bottom:8px}
-        .bap-support .guide-card h3{margin:0 0 8px;font-size:16px;color:var(--dark-text)}
+        .bap-support .guide-card h3{margin:0 0 8px;font-size:16px;color:var(--navy)}
         .bap-support .guide-card p{margin:0;font-size:14px;color:var(--muted);line-height:1.6}
 
         /* שאלות נפוצות */
@@ -148,20 +148,20 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
         .bap-support .faq-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 4px 18px rgba(23,50,74,.08)}
         .bap-support .faq-cat-title{
           display:flex;align-items:center;gap:8px;font-size:16px;font-weight:700;color:var(--blue);
-          margin:0 0 14px;padding:.6rem .9rem;background:#f0f2ff;border-radius:10px;
+          margin:0 0 14px;padding:.6rem .9rem;background:#eaf3f7;border-radius:10px;
         }
         .bap-support .faq-item{background:var(--paper);border:1px solid var(--line);border-radius:10px;margin-bottom:10px;overflow:hidden}
         .bap-support .faq-item:last-child{margin-bottom:0}
         .bap-support .faq-q{
           width:100%;padding:14px 16px;background:none;border:none;text-align:right;cursor:pointer;
-          font-size:15px;font-weight:600;color:var(--dark-text);display:flex;justify-content:space-between;align-items:center;gap:10px;
+          font-size:15px;font-weight:600;color:var(--navy);display:flex;justify-content:space-between;align-items:center;gap:10px;
         }
         .bap-support .faq-q .chev{color:var(--blue);flex-shrink:0}
         .bap-support .faq-a{padding:0 16px 16px;color:var(--muted);line-height:1.65;font-size:14.5px}
 
         /* יצירת קשר */
         .bap-support .cta{
-          background:linear-gradient(135deg,var(--blue),var(--purple));border-radius:20px;
+          background:linear-gradient(135deg,var(--blue),var(--navy));border-radius:20px;
           padding:40px 28px;text-align:center;color:#fff;
         }
         .bap-support .cta h2{margin:0 0 10px;font-size:clamp(22px,2.6vw,28px)}
@@ -172,7 +172,7 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
           display:inline-flex;align-items:center;gap:.5rem;
         }
         .bap-support .btn-primary{background:#fff;color:var(--blue)}
-        .bap-support .btn-primary:hover{background:#f2f4ff}
+        .bap-support .btn-primary:hover{background:#eaf3f7}
         .bap-support .btn-whatsapp{background:#25D366;color:#fff}
         .bap-support .btn-whatsapp:hover{background:#20bd5a}
         .bap-support .cta-success{background:rgba(255,255,255,.18);border-radius:14px;padding:2rem;max-width:420px;margin:0 auto}
