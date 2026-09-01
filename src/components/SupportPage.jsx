@@ -276,7 +276,7 @@ const [ticket, setTicket] = useState({ name: '', phone: '', email: '', message: 
                   return (
                     <div key={ii} className="faq-item">
                       <button
-                        onClick={() => setOpenFaq(faqKey)}
+                        onClick={() => setOpenFaq(current => current === faqKey ? null : faqKey)}
                         aria-expanded={isOpen}
                         aria-controls={answerId}
                         className="faq-q"
