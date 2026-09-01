@@ -2346,6 +2346,9 @@ app.get('/api/verify-registration/:token', async (req, res) => {
       throw studentsError;
     }
 
+    // תשובת האימות היא ההזדמנות היחידה להציג QR/PIN לכל תלמיד ולינק לאפליקציית המובייל -
+    // אחרי זה הטוקן מתאפס ולא ניתן לקרוא לנקודת הקצה הזו שוב עבור אותה הרשמה.
+    const studentsResult = [];
     for (const student of createdStudents) {
       const qrCode = `STU_${student.id.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
       await supabase
@@ -2360,6 +2363,41 @@ app.get('/api/verify-registration/:token', async (req, res) => {
       if (studentPin) {
         await supabase.from('students').update({ pin: studentPin }).eq('id', student.id);
       }
+
+      let qrImage = null;
+      try {
+        qrImage = await QRCode.toDataURL(qrCode, { width: 300, margin: 2, color: { dark: '#000000', light: '#FFFFFF' } });
+      } catch (qrError) {
+        console.error('QR image generation error (verify):', qrError.message);
+      }
+
+      studentsResult.push({
+        id: student.id,
+        name: `${student.first_name} ${student.last_name || ''}`.trim(),
+        qrCode,
+        qrImage,
+        pin: studentPin || null
+      });
+    }
+
+    // קישור לאפליקציית המובייל (אותה טבלה ולוגיקה כמו POST /api/mobile/generate-parent-token,
+    // רק בלי לדרוש התחברות - ההורה עוד לא התחבר בשלב הזה).
+    let mobileUrl = null;
+    try {
+      const mobileToken = crypto.randomBytes(32).toString('hex');
+      const { error: mobileTokenError } = await supabase
+        .from('parent_mobile_tokens')
+        .insert({
+          parent_id: parentId,
+          token: mobileToken,
+          created_at: new Date().toISOString(),
+          expires_at: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString()
+        });
+      if (!mobileTokenError) {
+        mobileUrl = `${APP_URL}/mobile/parent/${mobileToken}`;
+      }
+    } catch (mobileError) {
+      console.error('Mobile token generation error (verify):', mobileError.message);
     }
 
     await supabase
@@ -2379,7 +2417,13 @@ app.get('/api/verify-registration/:token', async (req, res) => {
       RAVMESSER_LIST_ID_PARENTS
     ).catch(err => console.error('RavMesser sync error:', err.message));
 
-    res.json({ success: true, message: 'ההרשמה אומתה בהצלחה! אפשר להתחבר עכשיו.' });
+    res.json({
+      success: true,
+      message: 'ההרשמה אומתה בהצלחה! אפשר להתחבר עכשיו.',
+      parentEmail: registration.parent_email,
+      mobileUrl,
+      students: studentsResult
+    });
 
   } catch (error) {
     console.error('Registration verification error:', error);
