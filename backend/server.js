@@ -1165,12 +1165,40 @@ app.post('/api/students/:studentId/photo', authenticateToken, requireSelfOrStaff
     if (updateError) throw updateError;
     
     res.json({ success: true, photoUrl: urlData.publicUrl });
-    
+
   } catch (error) {
     console.error('Upload photo error:', error);
     res.status(500).json({ success: false, message: 'שגיאה בהעלאת תמונה' });
   }
 });
+
+// מעלה תמונת base64 (data URL, כפי שנשלחת מטופס ההרשמה) ל-Storage עבור תלמיד ומעדכנת
+// photo_url - אותה לוגיקה בדיוק כמו POST /api/students/:studentId/photo למעלה, כדי שתמונה
+// שהועלתה בהרשמה תוצג בדיוק כמו תמונה שהועלתה בכל דרך אחרת (למשל בקופה). התמונה היא תוספת -
+// כישלון בהעלאה שלה לא אמור לחסום את יצירת התלמיד/ההרשמה עצמם, ולכן רק נרשם ללוג.
+const uploadStudentPhoto = async (studentId, photoDataUrl) => {
+  if (!photoDataUrl) return;
+  try {
+    const base64Data = photoDataUrl.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+    const fileName = `${studentId}_${Date.now()}.jpg`;
+
+    const { error: uploadError } = await supabase.storage
+      .from('student-photos')
+      .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage.from('student-photos').getPublicUrl(fileName);
+
+    const { error: updateError } = await supabase
+      .from('students')
+      .update({ photo_url: urlData.publicUrl })
+      .eq('id', studentId);
+    if (updateError) throw updateError;
+  } catch (error) {
+    console.error('Upload student photo error (registration):', error.message);
+  }
+};
 
 // ===== QR CODES =====
 
@@ -2349,7 +2377,8 @@ app.get('/api/verify-registration/:token', async (req, res) => {
     // תשובת האימות היא ההזדמנות היחידה להציג QR/PIN לכל תלמיד ולינק לאפליקציית המובייל -
     // אחרי זה הטוקן מתאפס ולא ניתן לקרוא לנקודת הקצה הזו שוב עבור אותה הרשמה.
     const studentsResult = [];
-    for (const student of createdStudents) {
+    for (let i = 0; i < createdStudents.length; i++) {
+      const student = createdStudents[i];
       const qrCode = `STU_${student.id.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
       await supabase
         .from('student_qr_codes')
@@ -2363,6 +2392,8 @@ app.get('/api/verify-registration/:token', async (req, res) => {
       if (studentPin) {
         await supabase.from('students').update({ pin: studentPin }).eq('id', student.id);
       }
+
+      await uploadStudentPhoto(student.id, children[i]?.photoPreview);
 
       let qrImage = null;
       try {
@@ -2526,7 +2557,8 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
       }
 
       // יצירת QR codes ו-PIN לכל התלמידים
-      for (const student of createdStudents) {
+      for (let i = 0; i < createdStudents.length; i++) {
+        const student = createdStudents[i];
         const qrCode = `STU_${student.id.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
         await supabase
           .from('student_qr_codes')
@@ -2540,6 +2572,8 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
         if (studentPin) {
           await supabase.from('students').update({ pin: studentPin }).eq('id', student.id);
         }
+
+        await uploadStudentPhoto(student.id, children[i]?.photoPreview);
       }
 
       await supabase

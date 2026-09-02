@@ -150,14 +150,45 @@ const loadSchoolGroups = async (schoolId) => {
     }));
   };
 
-  const handlePhotoUpload = (index, file) => {
-    if (file) {
+  // מקטין ודוחס תמונה בצד הדפדפן לפני השליחה - תמונת מצלמה גולמית (לרוב כמה MB)
+  // עלולה להיחסם ע"י מגבלת גודל הבקשה של השרת; לאחר הדחיסה זה בד"כ כמה עשרות KB.
+  const compressImage = (file, maxDimension = 800, quality = 0.7) => {
+    return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        updateChild(index, 'photoPreview', e.target.result);
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) {
+              height = Math.round(height * (maxDimension / width));
+              width = maxDimension;
+            } else {
+              width = Math.round(width * (maxDimension / height));
+              height = maxDimension;
+            }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('שגיאה בטעינת התמונה'));
+        img.src = e.target.result;
       };
+      reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
       reader.readAsDataURL(file);
-      updateChild(index, 'photo', file);
+    });
+  };
+
+  const handlePhotoUpload = async (index, file) => {
+    if (!file) return;
+    try {
+      const compressed = await compressImage(file);
+      updateChild(index, 'photoPreview', compressed);
+    } catch (error) {
+      alert('שגיאה בעיבוד התמונה. נסו תמונה אחרת.');
     }
   };
 
