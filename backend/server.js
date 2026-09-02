@@ -1855,8 +1855,8 @@ app.get('/api/student/:studentId/parent', authenticateToken, requireRole('secret
 // this endpoint is for staff recording a cash payment (or other manual adjustment).
 app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getStudentSchoolId), async (req, res) => {
   try {
-    const { studentId, amount, paymentMethod } = req.body;
-    
+    const { studentId, amount, paymentMethod, paymentType, year: targetYear, month: targetMonth } = req.body;
+
     if (!studentId || !amount || amount <= 0) {
       return res.status(400).json({ success: false, message: 'נתונים לא תקינים' });
     }
@@ -1892,11 +1892,26 @@ app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 
         amount: parseFloat(amount),
         description: `הוספת כסף - ${paymentMethod}`,
         payment_method: paymentMethod,
+        payment_type: paymentType || 'balance',
         transaction_date: new Date().toISOString()
       });
 
     if (transactionError) {
       console.error('Transaction insert error:', transactionError);
+    }
+
+    // תשלום מזומן/צ'ק/ביט שסומן במפורש כ"חודשי" ע"י המזכירה - נרשם גם בטבלת התשלומים
+    // החודשיים, בדיוק כמו תשלום עצמאי דרך Grow, כדי שהתלמיד יוצג כ"שולם" החודש.
+    if (paymentType === 'monthly') {
+      const now = new Date();
+      const year = targetYear || now.getFullYear();
+      const month = targetMonth || (now.getMonth() + 1);
+      await supabase
+        .from('monthly_payments')
+        .upsert(
+          { student_id: studentId, school_id: student.school_id, year, month },
+          { onConflict: 'student_id,year,month', ignoreDuplicates: true }
+        );
     }
 
     res.json({

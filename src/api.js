@@ -50,14 +50,14 @@ export const getParentData = async (userId) => {
   }
 };
 
-export const addMoney = async (studentId, amount, paymentMethod) => {
+export const addMoney = async (studentId, amount, paymentMethod, paymentType) => {
   try {
     const response = await authFetch(`${API_URL}/add-money`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ studentId, amount, paymentMethod })
+      body: JSON.stringify({ studentId, amount, paymentMethod, paymentType })
     });
 
     const data = await response.json();

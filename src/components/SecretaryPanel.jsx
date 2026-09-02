@@ -51,7 +51,9 @@ const [regeneratingPin, setRegeneratingPin] = useState(false);
     paymentMethod: 'cash',
     checkNumber: '',
     bankName: '',
-    notes: ''
+    notes: '',
+    // 'monthly' | 'daily' | null (סכום פתוח) - נקבע ע"י כפתורי הבחירה למטה, מתאפס אם הסכום נערך ידנית
+    paymentType: null
   });
 
   // סטטיסטיקות דשבורד בזמן אמת
@@ -252,7 +254,7 @@ const loadStudentSchedule = async (studentId) => {
   const handleAddPayment = async () => {
   if (paymentForm.studentId && paymentForm.amount && parseFloat(paymentForm.amount) > 0) {
     try {
-      const result = await addMoney(paymentForm.studentId, parseFloat(paymentForm.amount), paymentForm.paymentMethod);
+      const result = await addMoney(paymentForm.studentId, parseFloat(paymentForm.amount), paymentForm.paymentMethod, paymentForm.paymentType);
 
       if (result.success) {
         // עדכן את יתרת התלמיד ב-state המקומי
@@ -278,7 +280,7 @@ const loadStudentSchedule = async (studentId) => {
         setShowAddPayment(false);
         setPaymentForm({
           studentId: '', amount: '', paymentMethod: 'cash',
-          checkNumber: '', bankName: '', notes: ''
+          checkNumber: '', bankName: '', notes: '', paymentType: null
         });
 
       } else {
@@ -1239,9 +1241,12 @@ const downloadReport = () => {
             </div>
 
             {schoolData?.enable_monthly_package && paymentForm.studentId && (
-              <div style={{ background: 'var(--soft)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', textAlign: 'center' }}>
+              <div style={{
+                background: 'var(--soft)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', textAlign: 'center',
+                border: paymentForm.paymentType === 'monthly' ? '2px solid var(--blue)' : '2px solid transparent'
+              }}>
                 <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: 'var(--blue)' }}>
-                  📅 חבילה חודשית - {new Date().toLocaleString('he-IL', { month: 'long' })}
+                  📅 תשלום עבור חודש {new Date().toLocaleString('he-IL', { month: 'long' })}
                 </p>
                 {selectedStudentSchedule ? (
                   <>
@@ -1253,10 +1258,11 @@ const downloadReport = () => {
                       className="bap-sec-btn bap-sec-btn--primary"
                       onClick={() => setPaymentForm(prev => ({
                         ...prev,
-                        amount: (selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)
+                        amount: (selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2),
+                        paymentType: 'monthly'
                       }))}
                     >
-                      שלם ₪{(selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)}
+                      {paymentForm.paymentType === 'monthly' ? '✓ ' : ''}שלם ₪{(selectedStudentSchedule.days_count * selectedStudentSchedule.meal_price).toFixed(2)}
                     </button>
                   </>
                 ) : (
@@ -1268,27 +1274,30 @@ const downloadReport = () => {
             )}
 
             {schoolData?.enable_daily_payment && (
-              <div style={{ background: 'var(--green2)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', textAlign: 'center' }}>
+              <div style={{
+                background: 'var(--green2)', padding: '1rem', borderRadius: '12px', marginBottom: '1rem', textAlign: 'center',
+                border: paymentForm.paymentType === 'daily' ? '2px solid var(--green)' : '2px solid transparent'
+              }}>
                 <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: 'var(--green)' }}>
-                  📆 תשלום יומי - ₪{schoolData.daily_meal_price} לארוחה
+                  📆 תשלום עבור ארוחה - ₪{schoolData.daily_meal_price} לארוחה
                 </p>
                 <button
                   type="button"
                   className="bap-sec-btn bap-sec-btn--success"
-                  onClick={() => setPaymentForm(prev => ({ ...prev, amount: schoolData.daily_meal_price?.toFixed(2) }))}
+                  onClick={() => setPaymentForm(prev => ({ ...prev, amount: schoolData.daily_meal_price?.toFixed(2), paymentType: 'daily' }))}
                 >
-                  שלם ₪{schoolData.daily_meal_price} לארוחה אחת
+                  {paymentForm.paymentType === 'daily' ? '✓ ' : ''}שלם ₪{schoolData.daily_meal_price} לארוחה אחת
                 </button>
               </div>
             )}
 
             <div className="bap-sec-field">
-              <label>סכום (ש״ח)</label>
+              <label>{paymentForm.paymentType ? 'סכום (ש״ח)' : 'סכום פתוח (ש״ח)'}</label>
               <input
                 type="number"
                 className="bap-sec-input"
                 value={paymentForm.amount}
-                onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value }))}
+                onChange={(e) => setPaymentForm(prev => ({ ...prev, amount: e.target.value, paymentType: null }))}
                 placeholder="הכנס סכום..."
                 step="0.50"
               />
