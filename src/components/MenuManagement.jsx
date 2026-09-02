@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMenuItems, addMenuItem, updateMenuItem, deleteMenuItem, getSchools } from '../api';
+import { getMenuItems, addMenuItem, updateMenuItem, deleteMenuItem, getSchools, addMenuItemAddon, deleteMenuItemAddon } from '../api';
 import { authFetch } from '../auth';
 import { Plus, Edit2, Trash2, Check, X, ChefHat, ArrowRight, LogOut, QrCode } from 'lucide-react';
 
@@ -18,6 +18,9 @@ const MenuManagement = () => {
 const [savingPrices, setSavingPrices] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
+  const [newAddonName, setNewAddonName] = useState('');
+  const [newAddonPrice, setNewAddonPrice] = useState('');
+  const [savingAddon, setSavingAddon] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     category: '',
@@ -259,6 +262,48 @@ const handleMenuTypeChange = async (newType) => {
     });
     setImageFile(null);
     setImagePreview(item.image_url || '');
+  };
+
+  // מעדכן גם את editingItem וגם את הרשימה הראשית menuItems, כדי שהתוספות יישארו מסונכרנות
+  // בשני המקומות בלי לטעון מחדש מהשרת בכל שינוי.
+  const applyAddonsUpdate = (itemId, updateFn) => {
+    setEditingItem(prev => prev && prev.id === itemId ? { ...prev, addons: updateFn(prev.addons || []) } : prev);
+    setMenuItems(prev => prev.map(mi => mi.id === itemId ? { ...mi, addons: updateFn(mi.addons || []) } : mi));
+  };
+
+  const handleAddAddon = async () => {
+    if (!newAddonName.trim() || !editingItem) return;
+    setSavingAddon(true);
+    try {
+      const result = await addMenuItemAddon(editingItem.id, {
+        name: newAddonName.trim(),
+        price_delta: parseFloat(newAddonPrice) || 0
+      });
+      if (result.success) {
+        applyAddonsUpdate(editingItem.id, (addons) => [...addons, result.addon]);
+        setNewAddonName('');
+        setNewAddonPrice('');
+      } else {
+        alert(result.message || 'שגיאה בהוספת תוספת');
+      }
+    } catch (error) {
+      alert('שגיאה בהוספת תוספת');
+    } finally {
+      setSavingAddon(false);
+    }
+  };
+
+  const handleDeleteAddon = async (addonId) => {
+    try {
+      const result = await deleteMenuItemAddon(addonId);
+      if (result.success) {
+        applyAddonsUpdate(editingItem.id, (addons) => addons.filter(a => a.id !== addonId));
+      } else {
+        alert(result.message || 'שגיאה במחיקת תוספת');
+      }
+    } catch (error) {
+      alert('שגיאה במחיקת תוספת');
+    }
   };
 
   const resetForm = () => {
@@ -977,6 +1022,58 @@ const handleMenuTypeChange = async (newType) => {
         <span>פריט זמין למכירה</span>
       </label>
     </div>
+
+    {editingItem && (
+      <div style={{ ...styles.formGroup, background: '#f8f9fa', padding: '1rem', borderRadius: '10px' }}>
+        <label style={styles.label}>תוספות (אופציונלי)</label>
+        <p style={{ fontSize: '0.85rem', color: '#888', margin: '0 0 0.75rem 0' }}>
+          כשיש למוצר תוספות, לחיצה עליו בקיוסק תפתח מסך בחירה במקום להוסיף ישר לעגלה
+        </p>
+
+        {(editingItem.addons || []).map(addon => (
+          <div key={addon.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', background: 'white', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
+            <span style={{ flex: 1 }}>{addon.name}</span>
+            {parseFloat(addon.price_delta) > 0 && (
+              <span style={{ color: '#2e7d32', fontWeight: '600' }}>+₪{parseFloat(addon.price_delta).toFixed(2)}</span>
+            )}
+            <button
+              type="button"
+              onClick={() => handleDeleteAddon(addon.id)}
+              style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}
+              aria-label={`מחק תוספת ${addon.name}`}
+            >
+              ×
+            </button>
+          </div>
+        ))}
+
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+          <input
+            type="text"
+            value={newAddonName}
+            onChange={(e) => setNewAddonName(e.target.value)}
+            placeholder="שם תוספת (למשל: טחינה)"
+            style={{ ...styles.input, flex: 2 }}
+          />
+          <input
+            type="number"
+            step="0.1"
+            value={newAddonPrice}
+            onChange={(e) => setNewAddonPrice(e.target.value)}
+            placeholder="תוספת מחיר"
+            style={{ ...styles.input, flex: 1 }}
+          />
+          <button
+            type="button"
+            onClick={handleAddAddon}
+            disabled={savingAddon || !newAddonName.trim()}
+            style={{ ...styles.saveButton, padding: '0.6rem 1rem' }}
+          >
+            הוסף
+          </button>
+        </div>
+      </div>
+    )}
   </>
 ) : (
   // טופס לתפריט יומי

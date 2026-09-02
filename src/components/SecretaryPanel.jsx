@@ -1157,6 +1157,7 @@ const downloadReport = () => {
                   <select className="bap-sec-select" style={{ width: '100%' }} value={newStaff.role} onChange={e => setNewStaff({ ...newStaff, role: e.target.value })}>
                     <option value="secretary">מזכירה</option>
                     <option value="kitchen">מנהל מטבח</option>
+                    <option value="production">ייצור (מטבח)</option>
                     <option value="admin">מנהל בית ספר</option>
                   </select>
                   <button className="bap-sec-btn bap-sec-btn--success" onClick={addStaffUser}>
@@ -1173,7 +1174,7 @@ const downloadReport = () => {
                     <div>
                       <p style={{ fontWeight: 600, color: 'var(--navy)' }}>{user.first_name} {user.last_name}</p>
                       <p style={{ fontSize: '0.85rem', color: 'var(--muted)' }}>
-                        {user.email} · {user.role === 'secretary' ? 'מזכירה' : user.role === 'kitchen' ? 'מנהל מטבח' : user.role === 'admin' ? 'מנהל בית ספר' : user.role}
+                        {user.email} · {user.role === 'secretary' ? 'מזכירה' : user.role === 'kitchen' ? 'מנהל מטבח' : user.role === 'production' ? 'ייצור (מטבח)' : user.role === 'admin' ? 'מנהל בית ספר' : user.role}
                       </p>
                     </div>
                     <IconButton variant="danger" title="מחק איש צוות" ariaLabel="מחק איש צוות" onClick={() => deleteStaffUser(user.id)}>

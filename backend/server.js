@@ -278,6 +278,15 @@ const getMenuItemSchoolId = async (req) => {
   return data?.school_id;
 };
 
+const getAddonSchoolId = async (req) => {
+  const { data } = await supabase
+    .from('menu_item_addons')
+    .select('menu_items(school_id)')
+    .eq('id', req.params.addonId)
+    .single();
+  return data?.menu_items?.school_id;
+};
+
 // A 4-digit PIN, unique among students of the same school, for self-service kiosk identification.
 const generateUniqueStudentPin = async (schoolId) => {
   for (let attempt = 0; attempt < 20; attempt++) {
@@ -753,7 +762,7 @@ app.get('/api/schools/:schoolId/users', authenticateToken, requireRole('secretar
   }
 });
 
-const STAFF_ASSIGNABLE_ROLES = ['secretary', 'admin', 'kitchen'];
+const STAFF_ASSIGNABLE_ROLES = ['secretary', 'admin', 'kitchen', 'production'];
 
 app.post('/api/schools/:schoolId/users', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
@@ -2164,20 +2173,45 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
     const paymentType = lastPayment?.payment_type || 'daily';
 
     let chargeAmount;
+    let kitchenOrderItems = [];
     if (school.menu_type === 'items' && Array.isArray(items) && items.length > 0) {
       // תפריט פריטים בודדים - החיוב מחושב מהעגלה בפועל, לא ממחיר קבוע. מחושב מחדש
-      // בשרת לפי המחירים האמיתיים של הפריטים (לא סומכים על total שנשלח מהלקוח).
+      // בשרת לפי המחירים האמיתיים של הפריטים ותוספות (לא סומכים על total שנשלח מהלקוח).
       const itemIds = [...new Set(items.map(i => i.id).filter(Boolean))];
       const { data: realItems } = await supabase
         .from('menu_items')
-        .select('id, price')
+        .select('id, name, price')
         .in('id', itemIds)
         .eq('school_id', student.school_id);
-      const priceById = new Map((realItems || []).map(mi => [mi.id, parseFloat(mi.price) || 0]));
+      const itemById = new Map((realItems || []).map(mi => [mi.id, mi]));
+
+      const addonIds = [...new Set(items.flatMap(i => Array.isArray(i.addonIds) ? i.addonIds : []))];
+      let addonById = new Map();
+      if (addonIds.length > 0) {
+        const { data: realAddons } = await supabase
+          .from('menu_item_addons')
+          .select('id, name, price_delta, menu_item_id')
+          .in('id', addonIds);
+        addonById = new Map((realAddons || []).map(a => [a.id, a]));
+      }
+
       chargeAmount = items.reduce((sum, cartItem) => {
-        const unitPrice = priceById.get(cartItem.id);
+        const menuItem = itemById.get(cartItem.id);
         const qty = parseInt(cartItem.quantity, 10) || 1;
-        return sum + (unitPrice !== undefined ? unitPrice * qty : 0);
+        if (!menuItem) return sum;
+        const selectedAddons = (Array.isArray(cartItem.addonIds) ? cartItem.addonIds : [])
+          .map(id => addonById.get(id))
+          .filter(a => a && a.menu_item_id === cartItem.id);
+        const addonsTotal = selectedAddons.reduce((s, a) => s + (parseFloat(a.price_delta) || 0), 0);
+        const lineTotal = ((parseFloat(menuItem.price) || 0) + addonsTotal) * qty;
+
+        kitchenOrderItems.push({
+          name: menuItem.name,
+          quantity: qty,
+          addons: selectedAddons.map(a => a.name)
+        });
+
+        return sum + lineTotal;
       }, 0);
     } else {
       // תפריט יומי / מנוי - נשאר בדיוק כמו היום: מחיר קבוע לפי בית הספר, לא לפי יום או פריט.
@@ -2186,6 +2220,7 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
       } else {
         chargeAmount = parseFloat(school.daily_meal_price) || 0;
       }
+      kitchenOrderItems = [{ name: 'ארוחת היום', quantity: 1, addons: [] }];
     }
 
 
@@ -2244,7 +2279,7 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
 
     if (updateError) throw updateError;
 
-    const { error: transactionError } = await supabase
+    const { data: newTransaction, error: transactionError } = await supabase
       .from('transactions')
       .insert({
         student_id: studentId,
@@ -2256,20 +2291,98 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
         status: 'completed',
         description: 'רכישה בקופת המזנון',
         transaction_date: new Date().toISOString()
-      });
+      })
+      .select()
+      .single();
 
     if (transactionError) throw transactionError;
+
+    // הזמנה למסך הייצור/מטבח - לא חוסמת את התשלום אם נכשלת (התשלום כבר בוצע בהצלחה).
+    let kitchenOrder = null;
+    try {
+      const { data: koData, error: koError } = await supabase
+        .from('kitchen_orders')
+        .insert({
+          transaction_id: newTransaction?.id || null,
+          school_id: student.school_id,
+          student_name: `${student.first_name} ${student.last_name || ''}`.trim(),
+          items: kitchenOrderItems,
+          status: 'pending'
+        })
+        .select()
+        .single();
+      if (koError) throw koError;
+      kitchenOrder = koData;
+    } catch (koErr) {
+      console.error('Kitchen order creation error:', koErr.message);
+    }
 
     res.json({
       success: true,
       newBalance: newBalance,
       chargeAmount: chargeAmount,
+      orderNumber: kitchenOrder?.order_number || null,
       message: 'רכישה בוצעה בהצלחה'
     });
 
   } catch (error) {
     console.error('Meal purchase error:', error);
     res.status(500).json({ success: false, message: 'שגיאה בעיבוד רכישה' });
+  }
+});
+
+// ===== KITCHEN ORDERS (מסך ייצור/מטבח) =====
+
+// נסקר (poll) ע"י מסך הייצור כל כמה שניות - מחזיר הזמנות ממתינות, מהחדש לישן.
+app.get('/api/schools/:schoolId/kitchen-orders', authenticateToken, requireRole('production', 'kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const status = req.query.status || 'pending';
+
+    const { data: orders, error } = await supabase
+      .from('kitchen_orders')
+      .select('*')
+      .eq('school_id', schoolId)
+      .eq('status', status)
+      .order('created_at', { ascending: true });
+
+    if (error) throw error;
+
+    res.json({ success: true, orders: orders || [] });
+  } catch (error) {
+    console.error('Get kitchen orders error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת הזמנות' });
+  }
+});
+
+app.post('/api/kitchen-orders/:orderId/complete', authenticateToken, requireRole('production', 'kitchen', 'secretary', 'admin'), async (req, res) => {
+  try {
+    const { orderId } = req.params;
+
+    const { data: order, error: getError } = await supabase
+      .from('kitchen_orders')
+      .select('school_id')
+      .eq('id', orderId)
+      .single();
+
+    if (getError || !order) {
+      return res.status(404).json({ success: false, message: 'הזמנה לא נמצאה' });
+    }
+    if (req.user.role !== 'super_admin' && String(order.school_id) !== String(req.user.school_id)) {
+      return res.status(403).json({ success: false, message: 'אין הרשאה להזמנה זו' });
+    }
+
+    const { error } = await supabase
+      .from('kitchen_orders')
+      .update({ status: 'completed', completed_at: new Date().toISOString() })
+      .eq('id', orderId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Complete kitchen order error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בסגירת הזמנה' });
   }
 });
 
@@ -2903,18 +3016,25 @@ app.get('/api/menu-items/:schoolId', authenticateToken, requireSchoolAccess(req 
   try {
     const { schoolId } = req.params;
 
+    // addons מגיעות מחוברות (JOIN) לכל פריט - כך הקיוסק יודע מיד אם ללחיצה על מוצר יש לפתוח
+    // מסך תוספות, בלי בקשה נוספת לכל מוצר. פריט בלי תוספות מוגדרות מחזיר מערך ריק כרגיל.
     const { data: menuItems, error } = await supabase
       .from('menu_items')
-      .select('*')
+      .select('*, menu_item_addons(*)')
       .eq('school_id', schoolId)
       .eq('available', true)
       .order('category, name');
 
     if (error) throw error;
 
+    const formatted = (menuItems || []).map(item => ({
+      ...item,
+      addons: (item.menu_item_addons || []).filter(a => a.available)
+    }));
+
     res.json({
       success: true,
-      menuItems: menuItems || []
+      menuItems: formatted
     });
 
   } catch (error) {
@@ -2989,6 +3109,80 @@ app.delete('/api/menu-items/:itemId', authenticateToken, requireRole('secretary'
   } catch (error) {
     console.error('Delete menu item error:', error);
     res.status(500).json({ success: false, message: 'שגיאה במחיקת פריט' });
+  }
+});
+
+// ===== MENU ITEM ADDONS (תוספות/תת-מוצרים) =====
+
+app.post('/api/menu-items/:itemId/addons', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getMenuItemSchoolId), async (req, res) => {
+  try {
+    const { itemId } = req.params;
+    const { name, price_delta, image_url, available } = req.body;
+
+    if (!name) {
+      return res.status(400).json({ success: false, message: 'חסר שם תוספת' });
+    }
+
+    const { data: addon, error } = await supabase
+      .from('menu_item_addons')
+      .insert([{
+        menu_item_id: itemId,
+        name,
+        price_delta: price_delta || 0,
+        image_url: image_url || null,
+        available: available !== false
+      }])
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, addon });
+  } catch (error) {
+    console.error('Add menu item addon error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בהוספת תוספת' });
+  }
+});
+
+app.put('/api/menu-item-addons/:addonId', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getAddonSchoolId), async (req, res) => {
+  try {
+    const { addonId } = req.params;
+    const { name, price_delta, image_url, available } = req.body;
+
+    const updateData = { name, price_delta, available };
+    if (image_url !== undefined) updateData.image_url = image_url;
+
+    const { data: addon, error } = await supabase
+      .from('menu_item_addons')
+      .update(updateData)
+      .eq('id', addonId)
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    res.json({ success: true, addon });
+  } catch (error) {
+    console.error('Update menu item addon error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בעדכון תוספת' });
+  }
+});
+
+app.delete('/api/menu-item-addons/:addonId', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getAddonSchoolId), async (req, res) => {
+  try {
+    const { addonId } = req.params;
+
+    const { error } = await supabase
+      .from('menu_item_addons')
+      .delete()
+      .eq('id', addonId);
+
+    if (error) throw error;
+
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Delete menu item addon error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה במחיקת תוספת' });
   }
 });
 

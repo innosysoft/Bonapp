@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getMenuItems, processMealPurchase } from '../api';
 import { authFetch } from '../auth';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Lock, ShoppingCart, Plus, Minus, CheckCircle, CreditCard, UtensilsCrossed, Delete } from 'lucide-react';
+import { Lock, ShoppingCart, Plus, Minus, CheckCircle, CreditCard, UtensilsCrossed, Delete, Check, X } from 'lucide-react';
 
 const API_URL = 'https://api.bonapp.dev/api';
 
@@ -157,26 +157,73 @@ const SelfServiceKiosk = () => {
 
   // --- עגלה ---
 
+  // מסך תוספות: כשמוצר עם תוספות נלחץ, נפתח כאן לבחירה (מרובה) לפני שמוסיפים לעגלה בפועל.
+  const [addonItem, setAddonItem] = useState(null);
+  const [selectedAddonIds, setSelectedAddonIds] = useState([]);
+
   const categories = [...new Set(menuItems.filter(i => i.available).map(i => i.category))];
   const itemsInCategory = menuItems.filter(i => i.available && i.category === selectedCategory);
-  const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+  const cartTotal = cart.reduce((sum, c) => sum + (c.price + (c.addonsPrice || 0)) * c.quantity, 0);
   const cartCount = cart.reduce((sum, c) => sum + c.quantity, 0);
 
-  const addToCart = (item) => {
+  // מוצר בלי תוספות מתנהג בדיוק כמו קודם: נכנס לעגלה מיד, שורה אחת לכל מוצר, כמות מצטברת.
+  // מוצר עם תוספות פותח קודם את מסך הבחירה (handleProductTap) - זו הפונקציה שבאמת מכניסה
+  // לעגלה, עם lineKey ייחודי לכל שילוב מוצר+תוספות כדי שאפשר יהיה להזמין אותו מוצר פעמיים
+  // עם תוספות שונות בשתי שורות נפרדות.
+  const addToCart = (item, addons = []) => {
     setPurchaseError('');
+    const lineKey = addons.length > 0
+      ? `${item.id}::${addons.map(a => a.id).sort().join(',')}`
+      : item.id;
+    const addonsPrice = addons.reduce((sum, a) => sum + (parseFloat(a.price_delta) || 0), 0);
+
     setCart(prev => {
-      const existing = prev.find(c => c.id === item.id);
+      const existing = prev.find(c => c.lineKey === lineKey);
       if (existing) {
-        return prev.map(c => c.id === item.id ? { ...c, quantity: c.quantity + 1 } : c);
+        return prev.map(c => c.lineKey === lineKey ? { ...c, quantity: c.quantity + 1 } : c);
       }
-      return [...prev, { id: item.id, name: item.name, price: item.price, quantity: 1 }];
+      return [...prev, {
+        lineKey,
+        id: item.id,
+        name: item.name,
+        price: item.price,
+        quantity: 1,
+        addonIds: addons.map(a => a.id),
+        addonNames: addons.map(a => a.name),
+        addonsPrice
+      }];
     });
   };
 
-  const removeFromCart = (itemId) => {
+  const removeFromCart = (lineKey) => {
     setCart(prev => prev
-      .map(c => c.id === itemId ? { ...c, quantity: c.quantity - 1 } : c)
+      .map(c => c.lineKey === lineKey ? { ...c, quantity: c.quantity - 1 } : c)
       .filter(c => c.quantity > 0));
+  };
+
+  // מגדיל כמות של שורה קיימת בעגלה (כולל תוספות שכבר נבחרו לה) - לא בונה מחדש lineKey.
+  const incrementCartLine = (lineKey) => {
+    setCart(prev => prev.map(c => c.lineKey === lineKey ? { ...c, quantity: c.quantity + 1 } : c));
+  };
+
+  const handleProductTap = (item) => {
+    if (item.addons && item.addons.length > 0) {
+      setSelectedAddonIds([]);
+      setAddonItem(item);
+    } else {
+      addToCart(item);
+    }
+  };
+
+  const toggleAddonId = (addonId) => {
+    setSelectedAddonIds(prev => prev.includes(addonId) ? prev.filter(id => id !== addonId) : [...prev, addonId]);
+  };
+
+  const confirmAddonSelection = () => {
+    const chosen = (addonItem.addons || []).filter(a => selectedAddonIds.includes(a.id));
+    addToCart(addonItem, chosen);
+    setAddonItem(null);
+    setSelectedAddonIds([]);
   };
 
   const remainingDailyLimit = student?.spending_limit
@@ -203,7 +250,7 @@ const SelfServiceKiosk = () => {
     try {
       const result = await processMealPurchase(
         student.id,
-        cart.map(c => ({ id: c.id, quantity: c.quantity })),
+        cart.map(c => ({ id: c.id, quantity: c.quantity, addonIds: c.addonIds || [] })),
         cartTotal
       );
       if (result.success) {
@@ -372,6 +419,21 @@ const SelfServiceKiosk = () => {
         .bap-kiosk .btn-secondary{flex:1;padding:14px;border-radius:10px;border:1px solid var(--line);background:#fff;color:var(--navy);cursor:pointer;font-weight:700}
         .bap-kiosk .btn-primary{flex:1;padding:14px;border-radius:10px;border:0;background:var(--blue);color:#fff;cursor:pointer;font-weight:700}
 
+        .bap-kiosk .addon-modal{background:#fff;border-radius:20px;padding:28px;width:100%;max-width:640px;max-height:85vh;overflow-y:auto;box-shadow:0 20px 60px rgba(0,0,0,.3)}
+        .bap-kiosk .addon-modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:4px}
+        .bap-kiosk .addon-modal-head h3{margin:0;font-size:22px;color:var(--navy)}
+        .bap-kiosk .addon-close{background:var(--paper);border:none;border-radius:50%;width:38px;height:38px;display:grid;place-items:center;cursor:pointer;color:var(--navy)}
+        .bap-kiosk .addon-hint{color:var(--muted);margin:0 0 18px}
+        .bap-kiosk .addon-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:14px;margin-bottom:22px}
+        .bap-kiosk .addon-tile{position:relative;background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;text-align:center}
+        .bap-kiosk .addon-tile.checked{border-color:var(--green);background:var(--green2)}
+        .bap-kiosk .addon-check{position:absolute;top:8px;left:8px;width:24px;height:24px;border-radius:50%;background:var(--green);color:#fff;display:grid;place-items:center}
+        .bap-kiosk .addon-photo{width:64px;height:64px;border-radius:14px;background:#fff;display:grid;place-items:center;color:var(--muted);overflow:hidden}
+        .bap-kiosk .addon-photo img{width:100%;height:100%;object-fit:cover}
+        .bap-kiosk .addon-name{font-weight:700;color:var(--navy)}
+        .bap-kiosk .addon-price{color:var(--green);font-weight:700;font-size:14px}
+        .bap-kiosk .addon-confirm{width:100%;padding:16px;font-size:17px}
+
         @media(max-width:1000px){
           .bap-kiosk .grid{grid-template-columns:repeat(3,1fr)}
           .bap-kiosk .welcome{align-items:flex-start;flex-direction:column;gap:14px}
@@ -530,15 +592,17 @@ const SelfServiceKiosk = () => {
           ) : (
             <section className="grid">
               {itemsInCategory.map(item => {
-                const inCart = cart.find(c => c.id === item.id);
+                const cartLinesForItem = cart.filter(c => c.id === item.id);
+                const totalQtyInCart = cartLinesForItem.reduce((sum, c) => sum + c.quantity, 0);
+                const hasAddons = item.addons && item.addons.length > 0;
                 return (
                   <button
                     key={item.id}
-                    className={`meal ${inCart ? 'selected' : ''}`}
-                    onClick={() => addToCart(item)}
-                    aria-label={`הוסף ${item.name} לעגלה, ₪${item.price.toFixed(2)}${inCart ? `, כבר נבחרו ${inCart.quantity}` : ''}`}
+                    className={`meal ${totalQtyInCart > 0 ? 'selected' : ''}`}
+                    onClick={() => handleProductTap(item)}
+                    aria-label={`${hasAddons ? 'בחר תוספות עבור' : 'הוסף'} ${item.name}, ₪${item.price.toFixed(2)}${totalQtyInCart ? `, כבר נבחרו ${totalQtyInCart}` : ''}`}
                   >
-                    {inCart && <span className="qty">{inCart.quantity}</span>}
+                    {totalQtyInCart > 0 && <span className="qty">{totalQtyInCart}</span>}
                     <div className="meal-photo">
                       {item.image_url ? (
                         <img src={item.image_url} alt="" />
@@ -567,17 +631,20 @@ const SelfServiceKiosk = () => {
         <div className="cart-drawer">
           <h3><ShoppingCart size={18} /> העגלה שלי</h3>
           {cart.map(c => (
-            <div key={c.id} className="cart-row">
+            <div key={c.lineKey} className="cart-row">
               <div>
                 <div className="name">{c.name}</div>
-                <div className="unit">₪{c.price.toFixed(2)} ליחידה</div>
+                {c.addonNames && c.addonNames.length > 0 && (
+                  <div className="unit">+ {c.addonNames.join(', ')}</div>
+                )}
+                <div className="unit">₪{(c.price + (c.addonsPrice || 0)).toFixed(2)} ליחידה</div>
               </div>
               <div className="cart-qty">
-                <button className="qty-btn" onClick={() => removeFromCart(c.id)} aria-label={`הפחת כמות של ${c.name}`}>
+                <button className="qty-btn" onClick={() => removeFromCart(c.lineKey)} aria-label={`הפחת כמות של ${c.name}`}>
                   <Minus size={16} />
                 </button>
                 <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 700, fontSize: 18 }}>{c.quantity}</span>
-                <button className="qty-btn" onClick={() => addToCart(c)} aria-label={`הוסף כמות של ${c.name}`}>
+                <button className="qty-btn" onClick={() => incrementCartLine(c.lineKey)} aria-label={`הוסף כמות של ${c.name}`}>
                   <Plus size={16} />
                 </button>
               </div>
@@ -624,6 +691,46 @@ const SelfServiceKiosk = () => {
       )}
 
       {/* בקשת סיסמת יציאה */}
+      {/* מסך בחירת תוספות - נפתח כשלוחצים על מוצר עם תוספות מוגדרות, לפני הכניסה לעגלה */}
+      {addonItem && (
+        <div className="modal-overlay">
+          <div className="addon-modal">
+            <div className="addon-modal-head">
+              <h3>תוספות ל{addonItem.name}</h3>
+              <button className="addon-close" onClick={() => setAddonItem(null)} aria-label="סגירה">
+                <X size={22} />
+              </button>
+            </div>
+            <p className="addon-hint">אפשר לבחור כמה שרוצים</p>
+            <div className="addon-grid">
+              {addonItem.addons.map(addon => {
+                const checked = selectedAddonIds.includes(addon.id);
+                return (
+                  <button
+                    key={addon.id}
+                    type="button"
+                    className={`addon-tile ${checked ? 'checked' : ''}`}
+                    onClick={() => toggleAddonId(addon.id)}
+                  >
+                    <div className="addon-check">{checked && <Check size={16} />}</div>
+                    <div className="addon-photo">
+                      {addon.image_url ? <img src={addon.image_url} alt="" /> : <UtensilsCrossed size={28} />}
+                    </div>
+                    <div className="addon-name">{addon.name}</div>
+                    {parseFloat(addon.price_delta) > 0 && (
+                      <div className="addon-price">+₪{parseFloat(addon.price_delta).toFixed(2)}</div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+            <button className="btn-primary addon-confirm" onClick={confirmAddonSelection}>
+              הוסף לעגלה
+            </button>
+          </div>
+        </div>
+      )}
+
       {showExitPrompt && (
         <div className="modal-overlay">
           <div className="modal-card">

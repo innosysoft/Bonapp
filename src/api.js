@@ -299,6 +299,72 @@ export const processMealPurchase = async (studentId, items, total, forceOverride
   }
 };
 
+// ===== תוספות/תת-מוצרים לפריטי תפריט =====
+
+export const addMenuItemAddon = async (itemId, addonData) => {
+  try {
+    const response = await authFetch(`${API_URL}/menu-items/${itemId}/addons`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(addonData)
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Add menu item addon error:', error);
+    throw error;
+  }
+};
+
+export const updateMenuItemAddon = async (addonId, addonData) => {
+  try {
+    const response = await authFetch(`${API_URL}/menu-item-addons/${addonId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(addonData)
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Update menu item addon error:', error);
+    throw error;
+  }
+};
+
+export const deleteMenuItemAddon = async (addonId) => {
+  try {
+    const response = await authFetch(`${API_URL}/menu-item-addons/${addonId}`, {
+      method: 'DELETE'
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Delete menu item addon error:', error);
+    throw error;
+  }
+};
+
+// ===== מסך ייצור/מטבח =====
+
+export const getKitchenOrders = async (schoolId, status = 'pending') => {
+  try {
+    const response = await authFetch(`${API_URL}/schools/${schoolId}/kitchen-orders?status=${status}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Get kitchen orders error:', error);
+    throw error;
+  }
+};
+
+export const completeKitchenOrder = async (orderId) => {
+  try {
+    const response = await authFetch(`${API_URL}/kitchen-orders/${orderId}/complete`, {
+      method: 'POST'
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Complete kitchen order error:', error);
+    throw error;
+  }
+};
+
 // Generate QR code for student
 export const generateQRCode = async (studentId) => {
   try {

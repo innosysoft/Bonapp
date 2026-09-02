@@ -93,6 +93,10 @@ const UniversalLogin = () => {
           navigate('/kitchen-scanner');
           break;
 
+        case 'production':
+          navigate('/production-display');
+          break;
+
         case 'secretary':
   navigate('/secretary-panel');
   break;
