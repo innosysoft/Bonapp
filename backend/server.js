@@ -920,6 +920,79 @@ app.delete('/api/users/:userId', authenticateToken, requireRole('secretary', 'ad
 
 // ===== STUDENTS =====
 
+// הורה מוסיף ילד נוסף לחשבון שלו-עצמו, מפאנל ההורה. שונה מ-POST /api/students (מזכירה/אדמין
+// בלבד) - כאן ה-parent_id וה-school_id נלקחים תמיד מהטוקן המחובר, לא מגוף הבקשה, כדי שהורה
+// לא יוכל להוסיף תלמיד תחת חשבון של הורה אחר. אותה לוגיקת יצירה (QR+PIN) כמו שאר זרימות ההרשמה.
+app.post('/api/parent/students', authenticateToken, requireRole('parent'), async (req, res) => {
+  try {
+    const {
+      first_name, last_name, grade, group_id, student_phone, student_id_number,
+      system_access, can_edit_profile, spending_limit, parent_notifications,
+      can_order_for_friends, max_daily_meals
+    } = req.body;
+
+    const parent_id = req.user.id;
+    const school_id = req.user.school_id;
+
+    if (!first_name || (!grade && !group_id)) {
+      return res.status(400).json({ success: false, message: 'חסרים נתונים חובה' });
+    }
+
+    let resolvedGrade = grade || '';
+    if (group_id) {
+      const { data: group } = await supabase
+        .from('grade_groups')
+        .select('name')
+        .eq('id', group_id)
+        .eq('school_id', school_id)
+        .single();
+      if (group) resolvedGrade = group.name;
+    }
+
+    const { data: student, error } = await supabase
+      .from('students')
+      .insert({
+        parent_id,
+        school_id,
+        first_name,
+        last_name: last_name || '',
+        grade: resolvedGrade,
+        group_id: group_id || null,
+        student_phone: student_phone || '',
+        student_id_number: student_id_number || null,
+        system_access: system_access || false,
+        can_edit_profile: can_edit_profile || false,
+        spending_limit: spending_limit || 50,
+        parent_notifications: parent_notifications !== undefined ? parent_notifications : true,
+        can_order_for_friends: can_order_for_friends || false,
+        max_daily_meals: max_daily_meals || 2,
+        balance: 0.0,
+        status: 'active'
+      })
+      .select()
+      .single();
+
+    if (error) throw error;
+
+    const qrCode = `STU_${student.id.substring(0, 8)}_${Date.now().toString().slice(-6)}`;
+    await supabase
+      .from('student_qr_codes')
+      .insert({ student_id: student.id, qr_code: qrCode, status: 'active' });
+
+    const studentPin = await generateUniqueStudentPin(school_id);
+    if (studentPin) {
+      await supabase.from('students').update({ pin: studentPin }).eq('id', student.id);
+      student.pin = studentPin;
+    }
+
+    res.json({ success: true, student, message: 'התלמיד נוסף בהצלחה' });
+
+  } catch (error) {
+    console.error('Parent add student error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בהוספת תלמיד' });
+  }
+});
+
 app.post('/api/students', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
   try {
     const { parent_id, school_id, first_name, last_name, grade, student_phone, student_id_number, system_access, can_edit_profile, spending_limit, parent_notifications, can_order_for_friends, max_daily_meals, group_id } = req.body;
@@ -1951,6 +2024,76 @@ app.get('/api/transactions/:schoolId/recent', authenticateToken, requireRole('ki
     res.status(500).json({ success: false, message: 'שגיאה בטעינת עסקאות' });
   }
 });
+
+// סיכום למסך הבית של המטבח: (א) מכירות אמיתיות של היום מהשרת (לא מונה מקומי שמתאפס
+// ברענון), (ב) דוח היערכות לפני הארוחה - כמה תלמידים על מנוי חודשי (יבואו בלי קשר ליתרה),
+// כמה על תשלום בודד ויש להם יתרה (עשויים לבוא), וסה"כ תלמידים רשומים בבית הספר.
+app.get('/api/schools/:schoolId/kitchen-summary', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const today = new Date().toISOString().split('T')[0];
+
+    const { data: todayMeals, error: mealsError } = await supabase
+      .from('transactions')
+      .select('amount')
+      .eq('school_id', schoolId)
+      .eq('type', 'meal')
+      .gte('transaction_date', `${today}T00:00:00`)
+      .lte('transaction_date', `${today}T23:59:59`);
+    if (mealsError) throw mealsError;
+
+    const todaySales = (todayMeals || []).reduce((sum, t) => sum + (parseFloat(t.amount) || 0), 0);
+    const todayTransactionCount = (todayMeals || []).length;
+    const todayAverageTransaction = todayTransactionCount > 0 ? todaySales / todayTransactionCount : 0;
+
+    const { data: students, error: studentsError } = await supabase
+      .from('students')
+      .select('id, balance')
+      .eq('school_id', schoolId);
+    if (studentsError) throw studentsError;
+
+    const { data: payments, error: paymentsError } = await supabase
+      .from('transactions')
+      .select('student_id, payment_type')
+      .eq('school_id', schoolId)
+      .eq('type', 'payment')
+      .not('transaction_date', 'is', null)
+      .order('transaction_date', { ascending: false });
+    if (paymentsError) throw paymentsError;
+
+    // סוג התשלום האחרון לכל תלמיד - payments כבר ממוינות מהחדש לישן, אז הערך הראשון
+    // שנתקלים בו לכל student_id הוא גם האחרון כרונולוגית.
+    const lastPaymentTypeByStudent = {};
+    (payments || []).forEach(p => {
+      if (p.student_id && !(p.student_id in lastPaymentTypeByStudent)) {
+        lastPaymentTypeByStudent[p.student_id] = p.payment_type;
+      }
+    });
+
+    let monthlyCount = 0;
+    let dailyWithBalanceCount = 0;
+    (students || []).forEach(s => {
+      const paymentType = lastPaymentTypeByStudent[s.id];
+      if (paymentType === 'monthly') monthlyCount++;
+      else if ((paymentType === 'daily' || paymentType === 'balance') && (s.balance || 0) > 0) dailyWithBalanceCount++;
+    });
+
+    res.json({
+      success: true,
+      todaySales,
+      todayTransactionCount,
+      todayAverageTransaction,
+      monthlyCount,
+      dailyWithBalanceCount,
+      totalStudents: (students || []).length
+    });
+
+  } catch (error) {
+    console.error('Kitchen summary error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת סיכום מטבח' });
+  }
+});
+
 app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { studentId, items, total, forceOverride } = req.body;
@@ -2096,6 +2239,7 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
         type: 'meal',
         transaction_type: 'purchase',
         status: 'completed',
+        description: 'רכישה בקופת המזנון',
         transaction_date: new Date().toISOString()
       });
 

@@ -104,9 +104,9 @@ const [newStudent, setNewStudent] = useState({
 
   // הודעות והתראות - דינמיות מנתוני הילדים
 const systemNotifications = [
-  // התראות יתרה נמוכה
+  // התראות יתרה נמוכה - לא רלוונטי למנוי חודשי, שם היתרה לא קובעת אם הילד יכול לאכול
   ...children
-    .filter(child => (child.balance || 0) < 50)
+    .filter(child => child.payment_type !== 'monthly' && (child.balance || 0) < 50)
     .map((child, index) => ({
       id: `balance-${index}`,
       type: 'balance',
@@ -208,14 +208,14 @@ console.log('weeklyMenuData state:', weeklyMenuData);
   }
 }
 
-// טען שכבות בית ספר
-if (data.children && data.children.length > 0) {
-  const groupsResponse = await authFetch(`https://api.bonapp.dev/api/schools/${data.children[0].school_id}/groups`);
+// טען שכבות בית ספר - לפי בית הספר של ההורה המחובר, לא לפי ילד קיים, כדי שזה יעבוד
+// גם כשמוסיפים ילד ראשון (לפני שיש עדיין ילדים בחשבון).
+const parentSchoolId = data.children?.[0]?.school_id || currentUser.school_id;
+if (parentSchoolId) {
+  const groupsResponse = await authFetch(`https://api.bonapp.dev/api/schools/${parentSchoolId}/groups`);
   const groupsData = await groupsResponse.json();
   if (groupsData.success) {
     setSchoolGroups(groupsData.groups);
-    
-
   }
 }
 
@@ -517,8 +517,8 @@ const handleSaveStudent = async () => {
 const handleAddStudent = async () => {
   const currentUser = JSON.parse(localStorage.getItem('currentUser'));
   
-  if (!newStudent.first_name || !newStudent.grade) {
-    alert('נא למלא שם פרטי וכיתה');
+  if (!newStudent.first_name || !newStudent.group_id) {
+    alert('נא למלא שם פרטי ולבחור כיתה');
     return;
   }
 
@@ -3019,23 +3019,29 @@ setTimeout(() => setIsPolling(false), 600000);
                 }}>
                   כיתה *
                 </label>
-                <input
-                  type="text"
-                  value={newStudent.grade}
+                <select
+                  value={newStudent.group_id || ''}
                   onChange={(e) => setNewStudent({
                     ...newStudent,
-                    grade: e.target.value
+                    group_id: e.target.value
                   })}
-                  placeholder="א1, ב3, ג5..."
                   style={{
                     width: '100%',
                     padding: '0.75rem',
                     border: '2px solid #e0e0e0',
                     borderRadius: '8px',
                     fontSize: '1rem',
-                    boxSizing: 'border-box'
+                    boxSizing: 'border-box',
+                    background: 'white'
                   }}
-                />
+                >
+                  <option value="">בחר שכבה</option>
+                  {schoolGroups.map(group => (
+                    <option key={group.id} value={group.id}>
+                      {group.name}
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

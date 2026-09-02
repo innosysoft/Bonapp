@@ -411,6 +411,16 @@ export const getRecentTransactions = async (schoolId, limit = 10) => {
   }
 };
 
+export const getKitchenSummary = async (schoolId) => {
+  try {
+    const response = await authFetch(`${API_URL}/schools/${schoolId}/kitchen-summary`);
+    return await response.json();
+  } catch (error) {
+    console.error('Get kitchen summary error:', error);
+    throw error;
+  }
+};
+
 // Update student details
 export const updateStudent = async (studentId, studentData) => {
   try {
@@ -427,9 +437,11 @@ export const updateStudent = async (studentId, studentData) => {
 };
 
 // Add new student
+// משמש רק בפאנל ההורה - הורה מוסיף ילד לחשבון שלו-עצמו. שרת קובע את ה-parent_id/school_id
+// לפי המשתמש המחובר, לא לפי מה שנשלח כאן.
 export const addStudent = async (studentData) => {
   try {
-    const response = await authFetch(`${API_URL}/students`, {
+    const response = await authFetch(`${API_URL}/parent/students`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(studentData)

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { getMenuItems, scanStudent, processMealPurchase, getSchools, searchStudents, getRecentTransactions } from '../api';
+import { getMenuItems, scanStudent, processMealPurchase, getSchools, searchStudents, getRecentTransactions, getKitchenSummary } from '../api';
 import { authFetch } from '../auth';
-import { QrCode, ShoppingCart, Clock, CheckCircle, XCircle, Settings, LogOut, ChefHat, Plus, Minus, AlertCircle, MoreVertical, Search } from 'lucide-react';
+import { QrCode, ShoppingCart, Clock, CheckCircle, XCircle, Settings, LogOut, ChefHat, Plus, Minus, AlertCircle, MoreVertical, Search, Users } from 'lucide-react';
 
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -243,6 +243,22 @@ const KitchenQRScanner = () => {
           setRecentTransactions(formattedTransactions);
         }
 
+        // סיכום מטבח אמיתי מהשרת - מכירות/עסקאות של היום בפועל, ודוח היערכות לפני הארוחה
+        const summaryResult = await getKitchenSummary(user.school_id);
+        if (summaryResult.success) {
+          setDailyStats(prev => ({
+            ...prev,
+            totalSales: summaryResult.todaySales,
+            transactionCount: summaryResult.todayTransactionCount,
+            averageTransaction: summaryResult.todayAverageTransaction
+          }));
+          setKitchenPrep({
+            monthlyCount: summaryResult.monthlyCount,
+            dailyWithBalanceCount: summaryResult.dailyWithBalanceCount,
+            totalStudents: summaryResult.totalStudents
+          });
+        }
+
       } catch (error) {
         console.error('Error loading data:', error);
       } finally {
@@ -259,6 +275,13 @@ const KitchenQRScanner = () => {
     transactionCount: 0,
     averageTransaction: 0,
     topItem: ''
+  });
+
+  // דוח היערכות לפני הארוחה - כמה תלמידים על מנוי חודשי, כמה על תשלום בודד עם יתרה, וסה"כ תלמידים
+  const [kitchenPrep, setKitchenPrep] = useState({
+    monthlyCount: 0,
+    dailyWithBalanceCount: 0,
+    totalStudents: 0
   });
 
   const saveSchoolSettings = async () => {
@@ -461,6 +484,12 @@ const KitchenQRScanner = () => {
         .bap-kitchen .panel{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);overflow:hidden}
         .bap-kitchen .panel-head{display:flex;align-items:center;justify-content:space-between;padding:20px 22px;border-bottom:1px solid var(--line);gap:12px;flex-wrap:wrap}
         .bap-kitchen .panel-title{display:flex;align-items:center;gap:10px}
+        .bap-kitchen .sidebar-stack{display:flex;flex-direction:column;gap:20px}
+        .bap-kitchen .prep-rows{padding:14px 22px 20px}
+        .bap-kitchen .prep-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px;color:var(--muted)}
+        .bap-kitchen .prep-row strong{color:var(--navy);font-size:17px}
+        .bap-kitchen .prep-row--total{border-bottom:none;font-weight:600;color:var(--navy)}
+        .bap-kitchen .prep-row--total strong{color:var(--green)}
         .bap-kitchen .panel-title i{width:38px;height:38px;border-radius:10px;background:#eaf3f7;color:var(--blue);display:grid;place-items:center;font-style:normal;flex-shrink:0}
         .bap-kitchen .panel-title h2{font-size:20px;margin:0}
         .bap-kitchen .panel-title small{display:block;color:var(--muted)}
@@ -853,7 +882,34 @@ const KitchenQRScanner = () => {
               </div>
             </section>
 
-            {/* עמודה שנייה - עסקאות אחרונות */}
+            {/* עמודה שנייה - היערכות להיום + עסקאות אחרונות, שתיהן בתוך אותו תא grid */}
+            <div className="sidebar-stack">
+            <aside className="panel">
+              <div className="panel-head">
+                <div className="panel-title">
+                  <i><Users size={18} /></i>
+                  <div>
+                    <h2>היערכות להיום</h2>
+                    <small>לפני תחילת הארוחות</small>
+                  </div>
+                </div>
+              </div>
+              <div className="prep-rows">
+                <div className="prep-row">
+                  <span>מנוי חודשי (יבואו בכל מקרה)</span>
+                  <strong>{kitchenPrep.monthlyCount}</strong>
+                </div>
+                <div className="prep-row">
+                  <span>תשלום בודד עם יתרה (עשויים לבוא)</span>
+                  <strong>{kitchenPrep.dailyWithBalanceCount}</strong>
+                </div>
+                <div className="prep-row prep-row--total">
+                  <span>סה״כ תלמידים רשומים</span>
+                  <strong>{kitchenPrep.totalStudents}</strong>
+                </div>
+              </div>
+            </aside>
+
             <aside className="panel">
               <div className="panel-head">
                 <div className="panel-title">
@@ -893,6 +949,7 @@ const KitchenQRScanner = () => {
                 )}
               </div>
             </aside>
+            </div>
           </div>
           )
         ) : (
