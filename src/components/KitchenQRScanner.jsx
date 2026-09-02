@@ -235,7 +235,9 @@ const KitchenQRScanner = () => {
               items: t.items || [],
               total: parseFloat(t.amount),
               timestamp: t.transaction_date ? new Date(t.transaction_date).toLocaleString('he-IL') : new Date(t.created_at).toLocaleString('he-IL'),
-              status: 'completed'
+              status: 'completed',
+              // 'payment' - הפקדת יתרה ע"י הורה/מזכירה. כל השאר (בפועל 'meal') - חיוב ארוחה בקופה.
+              kind: t.type === 'payment' ? 'deposit' : 'purchase'
             }));
 
           setRecentTransactions(formattedTransactions);
@@ -497,6 +499,9 @@ const KitchenQRScanner = () => {
         .bap-kitchen .transaction{padding:15px 20px;border-bottom:1px solid var(--line);display:grid;grid-template-columns:1fr auto;gap:7px}
         .bap-kitchen .transaction:hover{background:#fbfcfc}
         .bap-kitchen .tr-name{font-weight:600}
+        .bap-kitchen .tr-kind{display:inline-block;font-size:11px;font-weight:700;padding:1px 8px;border-radius:20px;margin-inline-start:6px}
+        .bap-kitchen .tr-kind--deposit{background:var(--blue-2, #eaf3f7);color:var(--blue, #356b8c)}
+        .bap-kitchen .tr-kind--purchase{background:#fdf1e6;color:#b9812e}
         .bap-kitchen .tr-time{color:var(--muted);font-size:12px}
         .bap-kitchen .tr-items{color:var(--muted);font-size:13px}
         .bap-kitchen .tr-amount{font-size:18px;font-weight:700;color:var(--green);text-align:left}
@@ -866,10 +871,17 @@ const KitchenQRScanner = () => {
                   recentTransactions.map(transaction => (
                     <div key={transaction.id} className="transaction">
                       <div>
-                        <div className="tr-name">{transaction.student.first_name} {transaction.student.last_name}</div>
+                        <div className="tr-name">
+                          {transaction.student.first_name} {transaction.student.last_name}
+                          <span className={`tr-kind tr-kind--${transaction.kind}`}>
+                            {transaction.kind === 'deposit' ? '💰 הפקדה' : '🍽️ רכישת ארוחה'}
+                          </span>
+                        </div>
                         <div className="tr-time">{transaction.timestamp}</div>
                         <div className="tr-items">
-                          {transaction.items.map(item => `${getItemDisplayName(item)} (${item.quantity})`).join(', ')}
+                          {transaction.kind === 'deposit'
+                            ? 'הפקדת יתרה לחשבון'
+                            : transaction.items.map(item => `${getItemDisplayName(item)} (${item.quantity})`).join(', ')}
                         </div>
                       </div>
                       <div>

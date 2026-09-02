@@ -443,6 +443,38 @@ const handleEditStudent = (student) => {
   setShowEditStudent(true);
 };
 
+// אותה קריאת שרת בדיוק כמו handlePhotoUpload בכרטיס הראשי, רק שכאן היעד הוא editingStudent
+// (אובייקט נפרד, לא אינדקס לתוך children) - כדי שתמונה תהיה זמינה גם מתוך חלון העריכה.
+const handleEditStudentPhotoUpload = async (file) => {
+  if (!file || !editingStudent) return;
+
+  setUploadingPhoto(true);
+
+  try {
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const photoData = e.target.result;
+      const result = await uploadStudentPhoto(editingStudent.id, photoData);
+
+      if (result.success) {
+        setEditingStudent(prev => ({ ...prev, photo_url: result.photoUrl }));
+        setChildren(prev => prev.map(s =>
+          s.id === editingStudent.id ? { ...s, photo_url: result.photoUrl } : s
+        ));
+      } else {
+        alert('שגיאה בהעלאת תמונה');
+      }
+
+      setUploadingPhoto(false);
+    };
+
+    reader.readAsDataURL(file);
+  } catch (error) {
+    alert('שגיאה בהעלאת תמונה');
+    setUploadingPhoto(false);
+  }
+};
+
 const handleSaveStudent = async () => {
   console.log('=== SAVING STUDENT ===');
   console.log('Editing student:', editingStudent);
@@ -2482,6 +2514,47 @@ setTimeout(() => setIsPolling(false), 600000);
             }}>
               ✏️ עריכת פרטי {editingStudent.first_name}
             </h2>
+
+            {/* תמונת תלמיד */}
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '2rem' }}>
+              <div style={{ position: 'relative' }}>
+                <img
+                  src={editingStudent.photo_url || `https://via.placeholder.com/120/4CAF50/FFFFFF?text=${editingStudent.first_name?.[0] || 'X'}`}
+                  alt={`${editingStudent.first_name} ${editingStudent.last_name || ''}`}
+                  style={{ width: '110px', height: '110px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #eee' }}
+                />
+                <label
+                  htmlFor="edit-student-photo-upload"
+                  style={{
+                    position: 'absolute',
+                    bottom: 0,
+                    left: 0,
+                    background: '#4CAF50',
+                    color: 'white',
+                    width: '34px',
+                    height: '34px',
+                    borderRadius: '50%',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    cursor: uploadingPhoto ? 'not-allowed' : 'pointer',
+                    border: '3px solid white',
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.2)'
+                  }}
+                  title="העלאת תמונה"
+                >
+                  📁
+                </label>
+                <input
+                  id="edit-student-photo-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => handleEditStudentPhotoUpload(e.target.files[0])}
+                  style={{ display: 'none' }}
+                  disabled={uploadingPhoto}
+                />
+              </div>
+            </div>
 
             {/* פרטים בסיסיים */}
             <h3 style={{
