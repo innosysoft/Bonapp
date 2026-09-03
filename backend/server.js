@@ -2221,6 +2221,101 @@ app.get('/api/schools/:schoolId/reports/transactions', authenticateToken, requir
   }
 });
 
+// דוח ארוחות שסופקו בפועל (ילדים שעברו בקופה/בקיוסק ומימשו ארוחה) - להבדיל מדוח
+// התשלומים למעלה שמראה כסף שהתקבל, לא צריכה בפועל. קריאה בלבד מעסקאות type='meal'.
+app.get('/api/schools/:schoolId/reports/meals', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const groupBy = req.query.groupBy === 'month' ? 'month' : 'day';
+    const now = new Date();
+
+    let fromDate;
+    if (req.query.from) {
+      fromDate = new Date(`${req.query.from}T00:00:00`);
+    } else {
+      fromDate = new Date(now);
+      if (groupBy === 'month') {
+        fromDate.setMonth(fromDate.getMonth() - 11);
+        fromDate.setDate(1);
+      } else {
+        fromDate.setDate(fromDate.getDate() - 29);
+      }
+      fromDate.setHours(0, 0, 0, 0);
+    }
+
+    let toDate;
+    if (req.query.to) {
+      toDate = new Date(`${req.query.to}T23:59:59`);
+    } else {
+      toDate = new Date(now);
+      toDate.setHours(23, 59, 59, 999);
+    }
+
+    const { data: meals, error } = await supabase
+      .from('transactions')
+      .select('amount, student_id, transaction_date')
+      .eq('school_id', schoolId)
+      .eq('type', 'meal')
+      .not('transaction_date', 'is', null)
+      .gte('transaction_date', fromDate.toISOString())
+      .lte('transaction_date', toDate.toISOString());
+    if (error) throw error;
+
+    const keyOf = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return groupBy === 'month' ? `${y}-${m}` : `${y}-${m}-${day}`;
+    };
+
+    // ממלאים מראש את כל התקופות בטווח (כולל ריקות) כדי שהגרף יציג ציר רציף בלי חורים
+    const rowsMap = {};
+    const rowStudents = {};
+    const cursor = new Date(fromDate);
+    if (groupBy === 'month') cursor.setDate(1);
+    while (cursor <= toDate) {
+      const key = keyOf(cursor);
+      rowsMap[key] = { period: key, count: 0, amount: 0, uniqueStudents: 0 };
+      rowStudents[key] = new Set();
+      if (groupBy === 'month') cursor.setMonth(cursor.getMonth() + 1);
+      else cursor.setDate(cursor.getDate() + 1);
+    }
+
+    const allStudents = new Set();
+    (meals || []).forEach(t => {
+      const key = keyOf(new Date(t.transaction_date));
+      if (!rowsMap[key]) { rowsMap[key] = { period: key, count: 0, amount: 0, uniqueStudents: 0 }; rowStudents[key] = new Set(); }
+      rowsMap[key].count += 1;
+      rowsMap[key].amount += parseFloat(t.amount) || 0;
+      if (t.student_id) {
+        rowStudents[key].add(t.student_id);
+        allStudents.add(t.student_id);
+      }
+    });
+
+    const rows = Object.values(rowsMap)
+      .sort((a, b) => a.period.localeCompare(b.period))
+      .map(r => ({
+        ...r,
+        amount: Math.round(r.amount * 100) / 100,
+        uniqueStudents: rowStudents[r.period] ? rowStudents[r.period].size : 0,
+      }));
+
+    const totals = rows.reduce((acc, r) => ({
+      count: acc.count + r.count,
+      amount: acc.amount + r.amount,
+    }), { count: 0, amount: 0 });
+    totals.amount = Math.round(totals.amount * 100) / 100;
+    totals.uniqueStudents = allStudents.size;
+
+    res.json({ success: true, groupBy, from: fromDate.toISOString(), to: toDate.toISOString(), rows, totals });
+
+  } catch (error) {
+    console.error('Meals report error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת דוח ארוחות' });
+  }
+});
+
 app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { studentId, items, total, forceOverride } = req.body;

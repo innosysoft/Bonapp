@@ -514,6 +514,19 @@ export const getTransactionsReport = async (schoolId, groupBy = 'day', from, to)
   }
 };
 
+export const getMealsReport = async (schoolId, groupBy = 'day', from, to) => {
+  try {
+    const params = new URLSearchParams({ groupBy });
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const response = await authFetch(`${API_URL}/schools/${schoolId}/reports/meals?${params.toString()}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Get meals report error:', error);
+    throw error;
+  }
+};
+
 // Update student details
 export const updateStudent = async (studentId, studentData) => {
   try {

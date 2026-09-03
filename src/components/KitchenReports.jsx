@@ -1,16 +1,21 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTransactionsReport, getSchools } from '../api';
-import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet } from 'lucide-react';
+import { getTransactionsReport, getMealsReport, getSchools } from '../api';
+import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet, Users, UtensilsCrossed, CreditCard } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
 } from 'recharts';
 
-// דוח עסקאות למנהל מטבח - קיבוץ יומי/חודשי, מספר עסקאות וסכום, פילוח בודד מול חודשי.
+// דוחות למנהל מטבח - שני דוחות נפרדים ובבירור מסומנים, כדי שלא יתבלבלו ביניהם:
+// 1) "תשלומים שהתקבלו" - כסף שהופקד לחשבונות (type='payment' בטבלת transactions).
+//    לא אומר כמה ילדים אכלו בפועל - הורה ששילם חודשי מופיע פעם אחת בחודש, לא פעם ליום.
+// 2) "ארוחות שסופקו בקופה" - כל פעם שילד עבר בקופה/בקיוסק ומימש ארוחה (type='meal').
+//    זה המספר שמראה תנועה/צריכה בפועל, כולל כמות תלמידים ייחודיים שאכלו.
 // עמוד נפרד (כמו מסך הייצור) כדי שאפשר יהיה להוסיף אליו דוחות נוספים בעתיד בלי לגעת
-// בקופה/בקיוסק/בשום דבר קיים - הדוח קורא בלבד מהשרת ולא נוגע בשום נתון.
+// בקופה/בקיוסק/בשום דבר קיים - שני הדוחות קוראים בלבד מהשרת ולא נוגעים בשום נתון.
 const COLOR_DAILY = '#356b8c';
 const COLOR_MONTHLY = '#75a843';
+const COLOR_MEALS = '#c9702f';
 
 const formatPeriodLabel = (period, groupBy) => {
   if (groupBy === 'month') {
@@ -26,18 +31,21 @@ const KitchenReports = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
+  const [reportType, setReportType] = useState('payments'); // 'payments' | 'meals'
   const [groupBy, setGroupBy] = useState('day');
-  const [metric, setMetric] = useState('amount'); // 'amount' | 'count'
+  const [metric, setMetric] = useState('amount'); // 'amount' | 'count' | 'students'
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const loadReport = useCallback(async (schoolId, mode) => {
+  const loadReport = useCallback(async (schoolId, type, mode) => {
     setLoading(true);
     try {
-      const result = await getTransactionsReport(schoolId, mode);
+      const result = type === 'meals'
+        ? await getMealsReport(schoolId, mode)
+        : await getTransactionsReport(schoolId, mode);
       if (result.success) setReport(result);
     } catch (error) {
-      console.error('Error loading transactions report:', error);
+      console.error('Error loading report:', error);
     } finally {
       setLoading(false);
     }
@@ -61,15 +69,20 @@ const KitchenReports = () => {
       } catch (error) {
         console.error('Error loading school:', error);
       }
-      await loadReport(user.school_id, groupBy);
+      await loadReport(user.school_id, reportType, groupBy);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
   useEffect(() => {
-    if (currentUser) loadReport(currentUser.school_id, groupBy);
+    if (currentUser) loadReport(currentUser.school_id, reportType, groupBy);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupBy]);
+  }, [groupBy, reportType]);
+
+  const handleSelectReportType = (type) => {
+    setReportType(type);
+    setMetric('amount');
+  };
 
   const handleLogout = () => {
     localStorage.removeItem('currentUser');
@@ -78,7 +91,8 @@ const KitchenReports = () => {
   };
 
   const rows = report?.rows || [];
-  const totals = report?.totals || { count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0 };
+  const paymentsTotals = { count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0, ...(reportType === 'payments' ? report?.totals : {}) };
+  const mealsTotals = { count: 0, amount: 0, uniqueStudents: 0, ...(reportType === 'meals' ? report?.totals : {}) };
   const chartData = rows.map(r => ({
     ...r,
     label: formatPeriodLabel(r.period, groupBy)
@@ -88,7 +102,7 @@ const KitchenReports = () => {
     <div className="bap-reports">
       <style>{`
         .bap-reports{
-          --navy:#17324a;--blue:#356b8c;--green:#75a843;--green2:#eef6e9;--paper:#f4f7f7;
+          --navy:#17324a;--blue:#356b8c;--green:#75a843;--green2:#eef6e9;--orange:#c9702f;--paper:#f4f7f7;
           --white:#fff;--muted:#607482;--line:#dce6e9;--shadow:0 6px 20px rgba(23,50,74,.07);
           font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--paper);
           min-height:100vh;
@@ -108,6 +122,13 @@ const KitchenReports = () => {
 
         .bap-reports .body{padding:24px 32px;display:flex;flex-direction:column;gap:20px}
 
+        .bap-reports .report-tabs{display:flex;gap:12px;flex-wrap:wrap}
+        .bap-reports .report-tab{flex:1;min-width:220px;background:#fff;border:2px solid var(--line);border-radius:14px;padding:14px 18px;text-align:right;display:flex;flex-direction:column;gap:4px}
+        .bap-reports .report-tab .rt-title{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+        .bap-reports .report-tab .rt-sub{font-size:12.5px;color:var(--muted)}
+        .bap-reports .report-tab.active{border-color:var(--blue);box-shadow:0 0 0 3px rgba(53,107,140,.12)}
+        .bap-reports .report-tab.meals.active{border-color:var(--orange);box-shadow:0 0 0 3px rgba(201,112,47,.12)}
+
         .bap-reports .controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
         .bap-reports .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
         .bap-reports .seg button{border:none;background:transparent;border-radius:9px;padding:9px 16px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
@@ -119,6 +140,7 @@ const KitchenReports = () => {
         .bap-reports .card .card-value{font-size:26px;font-weight:800;color:var(--navy)}
         .bap-reports .card.daily .card-value{color:var(--blue)}
         .bap-reports .card.monthly .card-value{color:var(--green)}
+        .bap-reports .card.meals .card-value{color:var(--orange)}
         .bap-reports .card .card-sub{font-size:13px;color:var(--muted)}
 
         .bap-reports .panel{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}
@@ -159,6 +181,17 @@ const KitchenReports = () => {
       </header>
 
       <div className="body">
+        <div className="report-tabs">
+          <button className={`report-tab ${reportType === 'payments' ? 'active' : ''}`} onClick={() => handleSelectReportType('payments')}>
+            <span className="rt-title"><CreditCard size={17} color="var(--blue)" /> תשלומים שהתקבלו</span>
+            <span className="rt-sub">כסף שהופקד לחשבונות - כמה אנשים שילמו ובאיזה אופן</span>
+          </button>
+          <button className={`report-tab meals ${reportType === 'meals' ? 'active' : ''}`} onClick={() => handleSelectReportType('meals')}>
+            <span className="rt-title"><UtensilsCrossed size={17} color="var(--orange)" /> ארוחות שסופקו בקופה</span>
+            <span className="rt-sub">כמה ילדים בפועל עברו בקופה/בקיוסק וקיבלו ארוחה</span>
+          </button>
+        </div>
+
         <div className="controls">
           <div className="seg">
             <button className={groupBy === 'day' ? 'active' : ''} onClick={() => setGroupBy('day')}>
@@ -173,38 +206,62 @@ const KitchenReports = () => {
               <Wallet size={16} /> סכום
             </button>
             <button className={metric === 'count' ? 'active' : ''} onClick={() => setMetric('count')}>
-              <Receipt size={16} /> מספר עסקאות
+              <Receipt size={16} /> {reportType === 'meals' ? 'מספר ארוחות' : 'מספר עסקאות'}
             </button>
+            {reportType === 'meals' && (
+              <button className={metric === 'students' ? 'active' : ''} onClick={() => setMetric('students')}>
+                <Users size={16} /> תלמידים ייחודיים
+              </button>
+            )}
           </div>
         </div>
 
-        <div className="cards">
-          <div className="card">
-            <div className="card-head"><TrendingUp size={15} /> סה"כ עסקאות</div>
-            <div className="card-value">{totals.count}</div>
-            <div className="card-sub">₪{totals.amount.toFixed(0)} סה"כ</div>
+        {reportType === 'payments' ? (
+          <div className="cards">
+            <div className="card">
+              <div className="card-head"><TrendingUp size={15} /> סה"כ עסקאות</div>
+              <div className="card-value">{paymentsTotals.count}</div>
+              <div className="card-sub">₪{paymentsTotals.amount.toFixed(0)} סה"כ</div>
+            </div>
+            <div className="card daily">
+              <div className="card-head"><span className="legend-dot" style={{ background: COLOR_DAILY }} /> תשלום לארוחה בודדת</div>
+              <div className="card-value">{paymentsTotals.dailyCount}</div>
+              <div className="card-sub">₪{paymentsTotals.dailyAmount.toFixed(0)}</div>
+            </div>
+            <div className="card monthly">
+              <div className="card-head"><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> תשלום לארוחה חודשית</div>
+              <div className="card-value">{paymentsTotals.monthlyCount}</div>
+              <div className="card-sub">₪{paymentsTotals.monthlyAmount.toFixed(0)}</div>
+            </div>
           </div>
-          <div className="card daily">
-            <div className="card-head"><span className="legend-dot" style={{ background: COLOR_DAILY }} /> תשלום לארוחה בודדת</div>
-            <div className="card-value">{totals.dailyCount}</div>
-            <div className="card-sub">₪{totals.dailyAmount.toFixed(0)}</div>
+        ) : (
+          <div className="cards">
+            <div className="card meals">
+              <div className="card-head"><UtensilsCrossed size={15} /> סה"כ ארוחות שסופקו</div>
+              <div className="card-value">{mealsTotals.count}</div>
+              <div className="card-sub">₪{mealsTotals.amount.toFixed(0)} הכנסה מארוחות</div>
+            </div>
+            <div className="card meals">
+              <div className="card-head"><Users size={15} /> תלמידים ייחודיים שאכלו</div>
+              <div className="card-value">{mealsTotals.uniqueStudents}</div>
+              <div className="card-sub">בטווח שנבחר</div>
+            </div>
           </div>
-          <div className="card monthly">
-            <div className="card-head"><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> תשלום לארוחה חודשית</div>
-            <div className="card-value">{totals.monthlyCount}</div>
-            <div className="card-sub">₪{totals.monthlyAmount.toFixed(0)}</div>
-          </div>
-        </div>
+        )}
 
         <div className="panel">
           <div className="panel-title">
-            <h2><BarChart3 size={18} /> עסקאות {groupBy === 'day' ? 'לפי יום' : 'לפי חודש'} - {metric === 'amount' ? 'סכום (₪)' : 'מספר עסקאות'}</h2>
+            <h2>
+              <BarChart3 size={18} />
+              {reportType === 'meals' ? 'ארוחות שסופקו' : 'עסקאות'} {groupBy === 'day' ? 'לפי יום' : 'לפי חודש'} -{' '}
+              {metric === 'amount' ? 'סכום (₪)' : metric === 'students' ? 'תלמידים ייחודיים' : (reportType === 'meals' ? 'מספר ארוחות' : 'מספר עסקאות')}
+            </h2>
           </div>
           {loading ? (
             <div className="empty">טוען נתונים...</div>
           ) : chartData.length === 0 ? (
-            <div className="empty">אין עסקאות בטווח הזה</div>
-          ) : (
+            <div className="empty">אין נתונים בטווח הזה</div>
+          ) : reportType === 'payments' ? (
             <ResponsiveContainer width="100%" height={340}>
               <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
                 <CartesianGrid strokeDasharray="3 3" stroke="#dce6e9" />
@@ -233,6 +290,20 @@ const KitchenReports = () => {
                 />
               </BarChart>
             </ResponsiveContainer>
+          ) : (
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#dce6e9" />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#607482' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#607482' }} />
+                <Tooltip formatter={(value) => [metric === 'amount' ? `₪${value}` : value, 'ארוחות שסופקו']} />
+                <Bar
+                  dataKey={metric === 'amount' ? 'amount' : metric === 'students' ? 'uniqueStudents' : 'count'}
+                  fill={COLOR_MEALS}
+                  radius={[6, 6, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
           )}
         </div>
 
@@ -243,7 +314,7 @@ const KitchenReports = () => {
           <div className="table-wrap">
             {rows.length === 0 ? (
               <div className="empty">אין נתונים להצגה</div>
-            ) : (
+            ) : reportType === 'payments' ? (
               <table>
                 <thead>
                   <tr>
@@ -266,6 +337,27 @@ const KitchenReports = () => {
                       <td>₪{r.dailyAmount.toFixed(0)}</td>
                       <td>{r.monthlyCount}</td>
                       <td>₪{r.monthlyAmount.toFixed(0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>תקופה</th>
+                    <th>מספר ארוחות</th>
+                    <th>הכנסה</th>
+                    <th>תלמידים ייחודיים</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...rows].reverse().map(r => (
+                    <tr key={r.period}>
+                      <td>{formatPeriodLabel(r.period, groupBy)}</td>
+                      <td>{r.count}</td>
+                      <td>₪{r.amount.toFixed(0)}</td>
+                      <td>{r.uniqueStudents}</td>
                     </tr>
                   ))}
                 </tbody>
