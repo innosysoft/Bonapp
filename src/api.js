@@ -341,6 +341,20 @@ export const deleteMenuItemAddon = async (addonId) => {
   }
 };
 
+export const uploadMenuItemAddonImage = async (addonId, imageData) => {
+  try {
+    const response = await authFetch(`${API_URL}/menu-item-addons/${addonId}/image`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ imageData })
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Upload menu item addon image error:', error);
+    throw error;
+  }
+};
+
 // ===== מסך ייצור/מטבח =====
 
 export const getKitchenOrders = async (schoolId, status = 'pending') => {

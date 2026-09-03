@@ -324,7 +324,7 @@ const SelfServiceKiosk = () => {
           --navy:#17324a;--blue:#356b8c;--green:#75a843;--green2:#eef6e9;--paper:#f4f7f7;
           --white:#fff;--muted:#607482;--line:#dce6e9;--danger:#b64e4e;--warn:#b9812e;
           --shadow:0 10px 30px rgba(23,50,74,.1);
-          font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--paper);
+          font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--white);
           font-size:16px;min-height:100vh;padding-bottom:118px;
         }
         .bap-kiosk *{box-sizing:border-box}

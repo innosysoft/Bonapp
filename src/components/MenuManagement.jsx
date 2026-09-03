@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMenuItems, addMenuItem, updateMenuItem, deleteMenuItem, getSchools, addMenuItemAddon, deleteMenuItemAddon } from '../api';
+import { getMenuItems, addMenuItem, updateMenuItem, deleteMenuItem, getSchools, addMenuItemAddon, deleteMenuItemAddon, uploadMenuItemAddonImage } from '../api';
 import { authFetch } from '../auth';
 import { Plus, Edit2, Trash2, Check, X, ChefHat, ArrowRight, LogOut, QrCode } from 'lucide-react';
 
@@ -20,6 +20,8 @@ const [savingPrices, setSavingPrices] = useState(false);
   const [editingItem, setEditingItem] = useState(null);
   const [newAddonName, setNewAddonName] = useState('');
   const [newAddonPrice, setNewAddonPrice] = useState('');
+  const [newAddonImageFile, setNewAddonImageFile] = useState(null);
+  const [newAddonImagePreview, setNewAddonImagePreview] = useState('');
   const [savingAddon, setSavingAddon] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
@@ -271,6 +273,44 @@ const handleMenuTypeChange = async (newType) => {
     setMenuItems(prev => prev.map(mi => mi.id === itemId ? { ...mi, addons: updateFn(mi.addons || []) } : mi));
   };
 
+  // מקטין ודוחס תמונה בצד הדפדפן לפני השליחה - אותה שיטה כמו בטופס ההרשמה, כדי שתמונת
+  // מצלמה גולמית (כמה MB) לא תישלח כמו שהיא (הקטנה ל-800px, JPEG 70%, בד"כ כמה עשרות KB).
+  const compressAddonImage = (file, maxDimension = 800, quality = 0.7) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+          if (width > maxDimension || height > maxDimension) {
+            if (width > height) { height = Math.round(height * (maxDimension / width)); width = maxDimension; }
+            else { width = Math.round(width * (maxDimension / height)); height = maxDimension; }
+          }
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL('image/jpeg', quality));
+        };
+        img.onerror = () => reject(new Error('שגיאה בטעינת התמונה'));
+        img.src = e.target.result;
+      };
+      reader.onerror = () => reject(new Error('שגיאה בקריאת הקובץ'));
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleAddonImageSelect = async (file) => {
+    if (!file) return;
+    try {
+      const compressed = await compressAddonImage(file);
+      setNewAddonImageFile(file);
+      setNewAddonImagePreview(compressed);
+    } catch (error) {
+      alert('שגיאה בעיבוד התמונה');
+    }
+  };
+
   const handleAddAddon = async () => {
     if (!newAddonName.trim() || !editingItem) return;
     setSavingAddon(true);
@@ -280,9 +320,20 @@ const handleMenuTypeChange = async (newType) => {
         price_delta: parseFloat(newAddonPrice) || 0
       });
       if (result.success) {
-        applyAddonsUpdate(editingItem.id, (addons) => [...addons, result.addon]);
+        let addon = result.addon;
+        if (newAddonImagePreview) {
+          try {
+            const imgResult = await uploadMenuItemAddonImage(addon.id, newAddonImagePreview);
+            if (imgResult.success) addon = { ...addon, image_url: imgResult.imageUrl };
+          } catch (imgError) {
+            alert('התוספת נשמרה, אך העלאת התמונה נכשלה');
+          }
+        }
+        applyAddonsUpdate(editingItem.id, (addons) => [...addons, addon]);
         setNewAddonName('');
         setNewAddonPrice('');
+        setNewAddonImageFile(null);
+        setNewAddonImagePreview('');
       } else {
         alert(result.message || 'שגיאה בהוספת תוספת');
       }
@@ -1032,6 +1083,11 @@ const handleMenuTypeChange = async (newType) => {
 
         {(editingItem.addons || []).map(addon => (
           <div key={addon.id} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', background: 'white', padding: '0.5rem 0.75rem', borderRadius: '8px' }}>
+            {addon.image_url ? (
+              <img src={addon.image_url} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '6px' }} />
+            ) : (
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#f0f0f0' }} />
+            )}
             <span style={{ flex: 1 }}>{addon.name}</span>
             {parseFloat(addon.price_delta) > 0 && (
               <span style={{ color: '#2e7d32', fontWeight: '600' }}>+₪{parseFloat(addon.price_delta).toFixed(2)}</span>
@@ -1047,7 +1103,10 @@ const handleMenuTypeChange = async (newType) => {
           </div>
         ))}
 
-        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem' }}>
+        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.5rem', alignItems: 'center' }}>
+          {newAddonImagePreview && (
+            <img src={newAddonImagePreview} alt="" style={{ width: '38px', height: '38px', objectFit: 'cover', borderRadius: '6px' }} />
+          )}
           <input
             type="text"
             value={newAddonName}
@@ -1063,6 +1122,18 @@ const handleMenuTypeChange = async (newType) => {
             placeholder="תוספת מחיר"
             style={{ ...styles.input, flex: 1 }}
           />
+          <label style={{
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '0.6rem', border: '1px dashed #ccc', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
+          }}>
+            📷
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => handleAddonImageSelect(e.target.files[0])}
+              style={{ display: 'none' }}
+            />
+          </label>
           <button
             type="button"
             onClick={handleAddAddon}

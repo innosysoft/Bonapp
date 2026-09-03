@@ -3219,6 +3219,39 @@ app.post('/api/menu-items/:itemId/image', authenticateToken, requireRole('secret
   }
 });
 
+app.post('/api/menu-item-addons/:addonId/image', authenticateToken, requireRole('secretary', 'admin', 'kitchen'), requireSchoolAccess(getAddonSchoolId), async (req, res) => {
+  try {
+    const { addonId } = req.params;
+    const { imageData } = req.body;
+
+    const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
+    const buffer = Buffer.from(base64Data, 'base64');
+
+    const fileName = `addon_${addonId}_${Date.now()}.jpg`;
+    const { error: uploadError } = await supabase.storage
+      .from('menu-item-images')
+      .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
+
+    if (uploadError) throw uploadError;
+
+    const { data: urlData } = supabase.storage
+      .from('menu-item-images')
+      .getPublicUrl(fileName);
+
+    const { error: updateError } = await supabase
+      .from('menu_item_addons')
+      .update({ image_url: urlData.publicUrl })
+      .eq('id', addonId);
+
+    if (updateError) throw updateError;
+
+    res.json({ success: true, imageUrl: urlData.publicUrl });
+  } catch (error) {
+    console.error('Upload menu item addon image error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בהעלאת תמונה' });
+  }
+});
+
 app.get('/api/daily-menu/:schoolId', authenticateToken, requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
