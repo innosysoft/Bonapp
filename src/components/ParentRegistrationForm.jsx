@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Eye, EyeOff, User, Mail, Phone, School, UserPlus, ArrowRight, Upload, Camera, Settings, Shield, AlertCircle, Bell, Check, X, FileText } from 'lucide-react';
 import { getSchools, checkParentEmail } from '../api';
+import { SUPPORT_WHATSAPP_NUMBER } from './WhatsAppSupportButton';
 
 const ParentRegistrationForm = () => {
   const [formData, setFormData] = useState({
@@ -1565,9 +1566,8 @@ const loadSchoolGroups = async (schoolId) => {
               }}>
                 <strong>צריכים עזרה?</strong>
                 <div style={{ marginTop: '10px' }}>
-                  📧 מייל: <a href="mailto:support@schoollunch.co.il" style={{ color: '#1976d2' }}>support@schoollunch.co.il</a><br />
-                  📞 טלפון: 1-800-LUNCH (בשעות העבודה)<br />
-                  💬 WhatsApp: <a href="https://wa.me/972501234567" style={{ color: '#1976d2' }}>050-123-4567</a>
+                  📧 מייל: <a href="mailto:Bonapp.support@gmail.com" style={{ color: '#1976d2' }}>Bonapp.support@gmail.com</a><br />
+                  💬 WhatsApp: <a href={`https://wa.me/${SUPPORT_WHATSAPP_NUMBER}`} style={{ color: '#1976d2' }}>צרו קשר בוואטסאפ</a>
                 </div>
               </div>
             </div>

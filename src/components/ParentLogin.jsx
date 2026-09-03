@@ -404,7 +404,7 @@ const ParentLogin = () => {
         <div style={loginStyles.supportSection}>
           <p style={loginStyles.supportText}>
             נתקלתם בבעיה? 
-            <a href="mailto:support@schoollunch.co.il" style={loginStyles.supportLink}>
+            <a href="mailto:Bonapp.support@gmail.com" style={loginStyles.supportLink}>
               צרו קשר עם התמיכה
             </a>
           </p>
