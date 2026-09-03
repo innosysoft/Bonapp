@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getMenuItems, scanStudent, processMealPurchase, getSchools, searchStudents, getRecentTransactions, getKitchenSummary } from '../api';
 import { authFetch } from '../auth';
-import { QrCode, ShoppingCart, Clock, CheckCircle, XCircle, Settings, LogOut, ChefHat, Plus, Minus, AlertCircle, MoreVertical, Search, Users } from 'lucide-react';
+import { QrCode, ShoppingCart, Clock, CheckCircle, XCircle, Settings, LogOut, ChefHat, Plus, Minus, AlertCircle, MoreVertical, Search, Users, BarChart3 } from 'lucide-react';
 
 import { Html5QrcodeScanner } from 'html5-qrcode';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -644,6 +644,10 @@ const KitchenQRScanner = () => {
                 <ChefHat size={18} />
                 <span className="label">ניהול תפריט</span>
               </button>
+              <button className="action" onClick={() => navigate('/kitchen-reports')}>
+                <BarChart3 size={18} />
+                <span className="label">דוחות</span>
+              </button>
               <button className="action" onClick={() => setActiveTab('settings')}>
                 <Settings size={18} />
                 <span className="label">הגדרות</span>
@@ -659,6 +663,7 @@ const KitchenQRScanner = () => {
               {showMoreActions && (
                 <div className="more-menu-panel">
                   <button onClick={() => { navigate('/menu-management'); setShowMoreActions(false); }}>ניהול תפריט</button>
+                  <button onClick={() => { navigate('/kitchen-reports'); setShowMoreActions(false); }}>דוחות</button>
                   <button onClick={() => { setActiveTab('settings'); setShowMoreActions(false); }}>הגדרות</button>
                 </div>
               )}

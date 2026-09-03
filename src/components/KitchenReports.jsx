@@ -1,0 +1,281 @@
+import React, { useState, useEffect, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { getTransactionsReport, getSchools } from '../api';
+import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet } from 'lucide-react';
+import {
+  ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend
+} from 'recharts';
+
+// דוח עסקאות למנהל מטבח - קיבוץ יומי/חודשי, מספר עסקאות וסכום, פילוח בודד מול חודשי.
+// עמוד נפרד (כמו מסך הייצור) כדי שאפשר יהיה להוסיף אליו דוחות נוספים בעתיד בלי לגעת
+// בקופה/בקיוסק/בשום דבר קיים - הדוח קורא בלבד מהשרת ולא נוגע בשום נתון.
+const COLOR_DAILY = '#356b8c';
+const COLOR_MONTHLY = '#75a843';
+
+const formatPeriodLabel = (period, groupBy) => {
+  if (groupBy === 'month') {
+    const [y, m] = period.split('-');
+    const names = ['ינו', 'פבר', 'מרץ', 'אפר', 'מאי', 'יוני', 'יולי', 'אוג', 'ספט', 'אוק', 'נוב', 'דצמ'];
+    return `${names[parseInt(m, 10) - 1] || m} ${y}`;
+  }
+  const [, m, d] = period.split('-');
+  return `${d}/${m}`;
+};
+
+const KitchenReports = () => {
+  const navigate = useNavigate();
+  const [currentUser, setCurrentUser] = useState(null);
+  const [schoolName, setSchoolName] = useState('');
+  const [groupBy, setGroupBy] = useState('day');
+  const [metric, setMetric] = useState('amount'); // 'amount' | 'count'
+  const [report, setReport] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadReport = useCallback(async (schoolId, mode) => {
+    setLoading(true);
+    try {
+      const result = await getTransactionsReport(schoolId, mode);
+      if (result.success) setReport(result);
+    } catch (error) {
+      console.error('Error loading transactions report:', error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
+    if (!user || !['kitchen', 'production', 'secretary', 'admin', 'super_admin'].includes(user.type)) {
+      navigate('/login');
+      return;
+    }
+    setCurrentUser(user);
+
+    (async () => {
+      try {
+        const schoolsData = await getSchools();
+        if (schoolsData.success) {
+          const school = schoolsData.schools.find(s => s.id === user.school_id);
+          if (school) setSchoolName(school.name);
+        }
+      } catch (error) {
+        console.error('Error loading school:', error);
+      }
+      await loadReport(user.school_id, groupBy);
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [navigate]);
+
+  useEffect(() => {
+    if (currentUser) loadReport(currentUser.school_id, groupBy);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groupBy]);
+
+  const handleLogout = () => {
+    localStorage.removeItem('currentUser');
+    localStorage.removeItem('authToken');
+    navigate('/login');
+  };
+
+  const rows = report?.rows || [];
+  const totals = report?.totals || { count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0 };
+  const chartData = rows.map(r => ({
+    ...r,
+    label: formatPeriodLabel(r.period, groupBy)
+  }));
+
+  return (
+    <div className="bap-reports">
+      <style>{`
+        .bap-reports{
+          --navy:#17324a;--blue:#356b8c;--green:#75a843;--green2:#eef6e9;--paper:#f4f7f7;
+          --white:#fff;--muted:#607482;--line:#dce6e9;--shadow:0 6px 20px rgba(23,50,74,.07);
+          font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--paper);
+          min-height:100vh;
+        }
+        .bap-reports *{box-sizing:border-box}
+        .bap-reports button{font:inherit;cursor:pointer}
+        .bap-reports .top{
+          min-height:84px;background:#fff;border-bottom:1px solid var(--line);
+          display:flex;align-items:center;justify-content:space-between;padding:16px 32px;flex-wrap:wrap;gap:12px;
+        }
+        .bap-reports .brand{display:flex;align-items:center;gap:14px}
+        .bap-reports .brand-icon{width:52px;height:52px;border-radius:14px;background:var(--blue);color:#fff;display:grid;place-items:center;flex-shrink:0}
+        .bap-reports .brand h1{font-size:22px;margin:0;color:var(--navy)}
+        .bap-reports .brand .sub{color:var(--muted);font-size:14px}
+        .bap-reports .logout-btn{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:10px;padding:10px 16px;display:inline-flex;align-items:center;gap:8px;font-weight:600}
+        .bap-reports .logout-btn:hover{background:var(--paper)}
+
+        .bap-reports .body{padding:24px 32px;display:flex;flex-direction:column;gap:20px}
+
+        .bap-reports .controls{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px}
+        .bap-reports .seg{display:inline-flex;background:#fff;border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+        .bap-reports .seg button{border:none;background:transparent;border-radius:9px;padding:9px 16px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px}
+        .bap-reports .seg button.active{background:var(--blue);color:#fff}
+
+        .bap-reports .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px}
+        .bap-reports .card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:18px 20px;box-shadow:var(--shadow);display:flex;flex-direction:column;gap:6px}
+        .bap-reports .card .card-head{display:flex;align-items:center;gap:8px;color:var(--muted);font-size:13px;font-weight:600}
+        .bap-reports .card .card-value{font-size:26px;font-weight:800;color:var(--navy)}
+        .bap-reports .card.daily .card-value{color:var(--blue)}
+        .bap-reports .card.monthly .card-value{color:var(--green)}
+        .bap-reports .card .card-sub{font-size:13px;color:var(--muted)}
+
+        .bap-reports .panel{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px 22px}
+        .bap-reports .panel-title{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:12px}
+        .bap-reports .panel-title h2{font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
+        .bap-reports .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%}
+
+        .bap-reports table{width:100%;border-collapse:collapse;font-size:14px}
+        .bap-reports th{text-align:right;color:var(--muted);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--line)}
+        .bap-reports td{padding:10px 8px;border-bottom:1px solid var(--line)}
+        .bap-reports tbody tr:hover{background:var(--paper)}
+        .bap-reports .table-wrap{overflow-x:auto}
+        .bap-reports .empty{padding:60px 20px;text-align:center;color:var(--muted);font-size:16px}
+
+        @media (max-width:640px){
+          .bap-reports .top{padding:14px 16px}
+          .bap-reports .body{padding:16px}
+        }
+      `}</style>
+
+      <header className="top">
+        <div className="brand">
+          <div className="brand-icon"><BarChart3 size={26} /></div>
+          <div>
+            <h1>דוחות</h1>
+            <div className="sub">{schoolName || 'בית ספר'} · {currentUser?.name}</div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
+          <button className="logout-btn" onClick={() => navigate('/kitchen-scanner')}>
+            חזרה לקופה
+          </button>
+          <button className="logout-btn" onClick={handleLogout}>
+            <LogOut size={18} />
+            יציאה
+          </button>
+        </div>
+      </header>
+
+      <div className="body">
+        <div className="controls">
+          <div className="seg">
+            <button className={groupBy === 'day' ? 'active' : ''} onClick={() => setGroupBy('day')}>
+              <CalendarDays size={16} /> לפי ימים
+            </button>
+            <button className={groupBy === 'month' ? 'active' : ''} onClick={() => setGroupBy('month')}>
+              <CalendarDays size={16} /> לפי חודשים
+            </button>
+          </div>
+          <div className="seg">
+            <button className={metric === 'amount' ? 'active' : ''} onClick={() => setMetric('amount')}>
+              <Wallet size={16} /> סכום
+            </button>
+            <button className={metric === 'count' ? 'active' : ''} onClick={() => setMetric('count')}>
+              <Receipt size={16} /> מספר עסקאות
+            </button>
+          </div>
+        </div>
+
+        <div className="cards">
+          <div className="card">
+            <div className="card-head"><TrendingUp size={15} /> סה"כ עסקאות</div>
+            <div className="card-value">{totals.count}</div>
+            <div className="card-sub">₪{totals.amount.toFixed(0)} סה"כ</div>
+          </div>
+          <div className="card daily">
+            <div className="card-head"><span className="legend-dot" style={{ background: COLOR_DAILY }} /> תשלום לארוחה בודדת</div>
+            <div className="card-value">{totals.dailyCount}</div>
+            <div className="card-sub">₪{totals.dailyAmount.toFixed(0)}</div>
+          </div>
+          <div className="card monthly">
+            <div className="card-head"><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> תשלום לארוחה חודשית</div>
+            <div className="card-value">{totals.monthlyCount}</div>
+            <div className="card-sub">₪{totals.monthlyAmount.toFixed(0)}</div>
+          </div>
+        </div>
+
+        <div className="panel">
+          <div className="panel-title">
+            <h2><BarChart3 size={18} /> עסקאות {groupBy === 'day' ? 'לפי יום' : 'לפי חודש'} - {metric === 'amount' ? 'סכום (₪)' : 'מספר עסקאות'}</h2>
+          </div>
+          {loading ? (
+            <div className="empty">טוען נתונים...</div>
+          ) : chartData.length === 0 ? (
+            <div className="empty">אין עסקאות בטווח הזה</div>
+          ) : (
+            <ResponsiveContainer width="100%" height={340}>
+              <BarChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#dce6e9" />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: '#607482' }} />
+                <YAxis tick={{ fontSize: 12, fill: '#607482' }} />
+                <Tooltip
+                  formatter={(value, name) => [
+                    metric === 'amount' ? `₪${value}` : value,
+                    name === 'dailyAmount' || name === 'dailyCount' ? 'תשלום בודד' : 'תשלום חודשי'
+                  ]}
+                />
+                <Legend
+                  formatter={(value) => (value === 'dailyAmount' || value === 'dailyCount' ? 'תשלום לארוחה בודדת' : 'תשלום לארוחה חודשית')}
+                />
+                <Bar
+                  dataKey={metric === 'amount' ? 'dailyAmount' : 'dailyCount'}
+                  stackId="a"
+                  fill={COLOR_DAILY}
+                  radius={[0, 0, 0, 0]}
+                />
+                <Bar
+                  dataKey={metric === 'amount' ? 'monthlyAmount' : 'monthlyCount'}
+                  stackId="a"
+                  fill={COLOR_MONTHLY}
+                  radius={[6, 6, 0, 0]}
+                />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel-title">
+            <h2>טבלת פירוט</h2>
+          </div>
+          <div className="table-wrap">
+            {rows.length === 0 ? (
+              <div className="empty">אין נתונים להצגה</div>
+            ) : (
+              <table>
+                <thead>
+                  <tr>
+                    <th>תקופה</th>
+                    <th>סה"כ עסקאות</th>
+                    <th>סה"כ סכום</th>
+                    <th>בודד (מס')</th>
+                    <th>בודד (₪)</th>
+                    <th>חודשי (מס')</th>
+                    <th>חודשי (₪)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...rows].reverse().map(r => (
+                    <tr key={r.period}>
+                      <td>{formatPeriodLabel(r.period, groupBy)}</td>
+                      <td>{r.count}</td>
+                      <td>₪{r.amount.toFixed(0)}</td>
+                      <td>{r.dailyCount}</td>
+                      <td>₪{r.dailyAmount.toFixed(0)}</td>
+                      <td>{r.monthlyCount}</td>
+                      <td>₪{r.monthlyAmount.toFixed(0)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default KitchenReports;

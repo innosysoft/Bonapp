@@ -2118,6 +2118,109 @@ app.get('/api/schools/:schoolId/kitchen-summary', authenticateToken, requireRole
   }
 });
 
+// דוח עסקאות (תשלומים) למנהל מטבח - קיבוץ לפי יום/חודש, מספר עסקאות וסכום, עם פילוח
+// לפי סוג תשלום (בודד/יומי מול חודשי). קריאה בלבד, לא נוגע בשום טבלה קיימת.
+app.get('/api/schools/:schoolId/reports/transactions', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const groupBy = req.query.groupBy === 'month' ? 'month' : 'day';
+    const now = new Date();
+
+    let fromDate;
+    if (req.query.from) {
+      fromDate = new Date(`${req.query.from}T00:00:00`);
+    } else {
+      fromDate = new Date(now);
+      if (groupBy === 'month') {
+        fromDate.setMonth(fromDate.getMonth() - 11);
+        fromDate.setDate(1);
+      } else {
+        fromDate.setDate(fromDate.getDate() - 29);
+      }
+      fromDate.setHours(0, 0, 0, 0);
+    }
+
+    let toDate;
+    if (req.query.to) {
+      toDate = new Date(`${req.query.to}T23:59:59`);
+    } else {
+      toDate = new Date(now);
+      toDate.setHours(23, 59, 59, 999);
+    }
+
+    const { data: transactions, error } = await supabase
+      .from('transactions')
+      .select('amount, payment_type, transaction_date')
+      .eq('school_id', schoolId)
+      .eq('type', 'payment')
+      .not('transaction_date', 'is', null)
+      .gte('transaction_date', fromDate.toISOString())
+      .lte('transaction_date', toDate.toISOString());
+    if (error) throw error;
+
+    const keyOf = (d) => {
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return groupBy === 'month' ? `${y}-${m}` : `${y}-${m}-${day}`;
+    };
+    const emptyRow = (period) => ({ period, count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0 });
+
+    // ממלאים מראש את כל התקופות בטווח (כולל ריקות) כדי שהגרף יציג ציר רציף בלי חורים
+    const rowsMap = {};
+    const cursor = new Date(fromDate);
+    if (groupBy === 'month') cursor.setDate(1);
+    while (cursor <= toDate) {
+      const key = keyOf(cursor);
+      rowsMap[key] = emptyRow(key);
+      if (groupBy === 'month') cursor.setMonth(cursor.getMonth() + 1);
+      else cursor.setDate(cursor.getDate() + 1);
+    }
+
+    (transactions || []).forEach(t => {
+      const key = keyOf(new Date(t.transaction_date));
+      if (!rowsMap[key]) rowsMap[key] = emptyRow(key);
+      const amount = parseFloat(t.amount) || 0;
+      rowsMap[key].count += 1;
+      rowsMap[key].amount += amount;
+      if (t.payment_type === 'monthly') {
+        rowsMap[key].monthlyCount += 1;
+        rowsMap[key].monthlyAmount += amount;
+      } else {
+        rowsMap[key].dailyCount += 1;
+        rowsMap[key].dailyAmount += amount;
+      }
+    });
+
+    const rows = Object.values(rowsMap)
+      .sort((a, b) => a.period.localeCompare(b.period))
+      .map(r => ({
+        ...r,
+        amount: Math.round(r.amount * 100) / 100,
+        dailyAmount: Math.round(r.dailyAmount * 100) / 100,
+        monthlyAmount: Math.round(r.monthlyAmount * 100) / 100,
+      }));
+
+    const totals = rows.reduce((acc, r) => ({
+      count: acc.count + r.count,
+      amount: acc.amount + r.amount,
+      dailyCount: acc.dailyCount + r.dailyCount,
+      dailyAmount: acc.dailyAmount + r.dailyAmount,
+      monthlyCount: acc.monthlyCount + r.monthlyCount,
+      monthlyAmount: acc.monthlyAmount + r.monthlyAmount,
+    }), { count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0 });
+    totals.amount = Math.round(totals.amount * 100) / 100;
+    totals.dailyAmount = Math.round(totals.dailyAmount * 100) / 100;
+    totals.monthlyAmount = Math.round(totals.monthlyAmount * 100) / 100;
+
+    res.json({ success: true, groupBy, from: fromDate.toISOString(), to: toDate.toISOString(), rows, totals });
+
+  } catch (error) {
+    console.error('Transactions report error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת דוח עסקאות' });
+  }
+});
+
 app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { studentId, items, total, forceOverride } = req.body;
