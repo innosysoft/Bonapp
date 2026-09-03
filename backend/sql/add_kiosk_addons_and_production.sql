@@ -35,3 +35,8 @@ CREATE TABLE IF NOT EXISTS public.kitchen_orders (
 
 CREATE INDEX IF NOT EXISTS idx_kitchen_orders_school_status
   ON public.kitchen_orders(school_id, status);
+
+-- אותה תבנית בדיוק כמו backend/sql/enable_rls.sql: מפתח ה-service_role שהשרת משתמש בו
+-- תמיד עוקף RLS (האתר ממשיך לעבוד רגיל), וזה רק חוסם גישה ישירה דרך מפתח anon שידלוף.
+ALTER TABLE public.menu_item_addons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.kitchen_orders ENABLE ROW LEVEL SECURITY;
