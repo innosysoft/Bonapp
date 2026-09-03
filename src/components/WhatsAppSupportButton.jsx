@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 
 // עדכן כאן את מספר הוואטסאפ של התמיכה בפורמט בינלאומי (לדוגמה '972501234567').
 // כל עוד השדה ריק, הכפתור לא יוצג בכלל - כדי שאף אחד לא יכתוב למספר לא קיים.
-export const SUPPORT_WHATSAPP_NUMBER = '972522494183';
+export const SUPPORT_WHATSAPP_NUMBER = '972512727167';
 
 // נשלח כחלק מהודעת הפתיחה, כדי שבצד התמיכה (שהמספר משותף גם לאתרים אחרים) יידעו שהפנייה הגיעה מ-BonApp.
 export const SUPPORT_SOURCE_TAG = 'פנייה מאתר BonApp 🎓';

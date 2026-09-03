@@ -2697,7 +2697,7 @@ app.post('/api/pending-registrations', async (req, res) => {
 
         await transporter.sendMail({
           from: EMAIL_FROM,
-          to: process.env.ADMIN_EMAIL || 'netproil@gmail.com',
+          to: process.env.SUPPORT_EMAIL || 'Bonapp.support@gmail.com',
           subject: `👨‍👩‍👧 הרשמת הורה חדשה - ${schoolName || 'BonApp'}`,
           html: `
             <div dir="rtl" style="font-family: Arial; text-align: right;">
@@ -4248,10 +4248,13 @@ const subject = type === 'suggestion'
       return res.status(400).json({ success: false, message: 'נא למלא את כל השדות' });
     }
 
-    // שלח מייל למנהל המערכת
+    // שלח מייל למנהל המערכת - תמיכה טכנית הולכת לתיבת התמיכה, כל שאר הפניות (יצירת
+    // קשר כללית / הצעה לשיפור) הולכות לתיבה הכללית.
     await transporter.sendMail({
       from: EMAIL_FROM,
-      to: process.env.ADMIN_EMAIL || 'netproil@gmail.com',
+      to: type === 'support'
+        ? (process.env.SUPPORT_EMAIL || 'Bonapp.support@gmail.com')
+        : (process.env.ADMIN_EMAIL || 'netproil@gmail.com'),
       subject: type === 'suggestion' ? `💡 הצעה לשיפור - BonApp` : type === 'support' ? `🔧 קריאת שירות - ${fullName}` : `📞 פנייה חדשה - ${fullName}`,
       html: `
         <div dir="rtl" style="font-family: Arial; text-align: right;">
