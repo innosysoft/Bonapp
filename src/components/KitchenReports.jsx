@@ -237,7 +237,7 @@ const KitchenReports = () => {
         {reportType !== 'prep' && (
           <div className="controls">
             <div className="seg">
-              <button className={groupBy === 'day' ? 'active' : ''} onClick={() => setGroupBy('day')}>
+              <button className={groupBy === 'day' ? 'active' : ''} onClick={() => { setGroupBy('day'); if (metric === 'students') setMetric('amount'); }}>
                 <CalendarDays size={16} /> לפי ימים
               </button>
               <button className={groupBy === 'month' ? 'active' : ''} onClick={() => setGroupBy('month')}>
@@ -251,9 +251,9 @@ const KitchenReports = () => {
               <button className={metric === 'count' ? 'active' : ''} onClick={() => setMetric('count')}>
                 <Receipt size={16} /> {reportType === 'meals' ? 'מספר ארוחות' : 'מספר עסקאות'}
               </button>
-              {reportType === 'meals' && (
+              {reportType === 'meals' && groupBy === 'month' && (
                 <button className={metric === 'students' ? 'active' : ''} onClick={() => setMetric('students')}>
-                  <Users size={16} /> תלמידים ייחודיים
+                  <Users size={16} /> ילדים שונים שאכלו
                 </button>
               )}
             </div>
@@ -302,9 +302,9 @@ const KitchenReports = () => {
               <div className="card-sub">₪{mealsTotals.amount.toFixed(0)} הכנסה מארוחות</div>
             </div>
             <div className="card meals">
-              <div className="card-head"><Users size={15} /> תלמידים שאכלו לפחות פעם אחת</div>
+              <div className="card-head"><Users size={15} /> כמה ילדים שונים אכלו</div>
               <div className="card-value">{mealsTotals.uniqueStudents}</div>
-              <div className="card-sub">ללא כפילויות, בטווח שנבחר</div>
+              <div className="card-sub">כל ילד נספר פעם אחת בלבד, לא משנה כמה פעמים אכל. לא קשור לאופן התשלום</div>
             </div>
           </div>
         )}
@@ -356,7 +356,7 @@ const KitchenReports = () => {
               <h2>
                 <BarChart3 size={18} />
                 {reportType === 'meals' ? 'ארוחות שסופקו' : 'עסקאות'} {groupBy === 'day' ? 'לפי יום' : 'לפי חודש'} -{' '}
-                {metric === 'amount' ? 'סכום (₪)' : metric === 'students' ? 'תלמידים ייחודיים' : (reportType === 'meals' ? 'מספר ארוחות' : 'מספר עסקאות')}
+                {metric === 'amount' ? 'סכום (₪)' : metric === 'students' ? 'ילדים שונים שאכלו' : (reportType === 'meals' ? 'מספר ארוחות' : 'מספר עסקאות')}
               </h2>
             </div>
             {loading ? (
@@ -452,7 +452,7 @@ const KitchenReports = () => {
                       <th>תקופה</th>
                       <th>מספר ארוחות</th>
                       <th>הכנסה</th>
-                      <th>תלמידים ייחודיים</th>
+                      <th>ילדים שונים שאכלו</th>
                     </tr>
                   </thead>
                   <tbody>
