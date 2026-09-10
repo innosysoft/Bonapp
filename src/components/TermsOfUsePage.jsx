@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 const Section = ({ title, children }) => (
   <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
-    <h2 style={{ color: '#333', marginBottom: '1rem', fontSize: '1.3rem' }}>{title}</h2>
-    <div style={{ color: '#555', lineHeight: 1.8, fontSize: '1rem' }}>{children}</div>
+    <h2 style={{ color: '#17324a', marginBottom: '1rem', fontSize: '1.3rem' }}>{title}</h2>
+    <div style={{ color: '#607482', lineHeight: 1.8, fontSize: '1rem' }}>{children}</div>
   </div>
 );
 
@@ -12,8 +12,8 @@ const TermsOfUsePage = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Segoe UI', sans-serif", direction: 'rtl' }}>
-      <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', padding: '2rem', textAlign: 'center', color: 'white' }}>
+    <div style={{ minHeight: '100vh', background: '#f4f7f7', fontFamily: "'Segoe UI', sans-serif", direction: 'rtl' }}>
+      <div style={{ background: 'linear-gradient(135deg, #356b8c, #17324a)', padding: '2rem', textAlign: 'center', color: 'white' }}>
         <button onClick={() => navigate('/')} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', marginBottom: '1rem' }}>
           ← חזרה לדף הבית
         </button>
@@ -46,7 +46,7 @@ const TermsOfUsePage = () => {
             ידי בית הספר), ופרטי אמצעי התשלום (כרטיס אשראי וכדומה) אינם נשמרים בשרתי BonApp - הם מטופלים
             ישירות מול ספק הסליקה. אופן חישוב הסכומים לתשלום (מנוי חודשי / תשלום יומי לארוחה), מחירי הארוחות,
             ומדיניות הביטולים וההחזרים נקבעים על ידי בית הספר בו לומד הילד - ראו{' '}
-            <a href="/school-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2' }}>
+            <a href="/school-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#2c5a75' }}>
               מדיניות בית הספר
             </a>{' '}
             לפרטים.
@@ -94,7 +94,7 @@ const TermsOfUsePage = () => {
         <Section title="9. יצירת קשר">
           <p>
             לשאלות בנוגע לתנאי השימוש ניתן לפנות דרך{' '}
-            <a href="/contact" style={{ color: '#1976d2' }}>עמוד צור קשר</a>.
+            <a href="/contact" style={{ color: '#2c5a75' }}>עמוד צור קשר</a>.
           </p>
         </Section>
 

@@ -26,9 +26,9 @@ const ToggleRow = ({ label, active, onClick }) => (
     style={{
       display: 'flex', justifyContent: 'space-between', alignItems: 'center',
       width: '100%', padding: '0.6rem 0.75rem', borderRadius: '8px',
-      border: active ? '2px solid #1a237e' : '2px solid #e0e0e0',
-      background: active ? '#e8eaf6' : 'white', cursor: 'pointer',
-      fontSize: '0.9rem', color: '#333', textAlign: 'right'
+      border: active ? '2px solid #17324a' : '2px solid #dce6e9',
+      background: active ? '#eaf3f7' : 'white', cursor: 'pointer',
+      fontSize: '0.9rem', color: '#17324a', textAlign: 'right'
     }}
   >
     <span>{label}</span>
@@ -37,7 +37,7 @@ const ToggleRow = ({ label, active, onClick }) => (
 );
 
 const iconButtonStyle = {
-  width: '36px', height: '36px', borderRadius: '8px', border: '2px solid #e0e0e0',
+  width: '36px', height: '36px', borderRadius: '8px', border: '2px solid #dce6e9',
   background: 'white', cursor: 'pointer', fontWeight: '700', fontSize: '0.95rem'
 };
 
@@ -69,7 +69,7 @@ const AccessibilityWidget = () => {
         title="נגישות"
         style={{
           position: 'fixed', bottom: '20px', right: '20px', width: '56px', height: '56px',
-          borderRadius: '50%', background: '#1a237e', color: 'white', border: 'none',
+          borderRadius: '50%', background: '#17324a', color: 'white', border: 'none',
           cursor: 'pointer', fontSize: '1.6rem', boxShadow: '0 4px 14px rgba(0,0,0,0.3)',
           zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}
@@ -88,14 +88,14 @@ const AccessibilityWidget = () => {
             fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif", overflow: 'hidden'
           }}
         >
-          <div style={{ background: '#1a237e', color: 'white', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ background: '#17324a', color: 'white', padding: '1rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <strong>♿ נגישות</strong>
             <button onClick={() => setOpen(false)} aria-label="סגור" style={{ background: 'none', border: 'none', color: 'white', fontSize: '1.4rem', cursor: 'pointer', lineHeight: 1, padding: 0 }}>×</button>
           </div>
 
           <div style={{ padding: '1rem', display: 'grid', gap: '0.6rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: '0.5rem' }}>
-              <span style={{ fontSize: '0.9rem', color: '#333' }}>גודל טקסט</span>
+              <span style={{ fontSize: '0.9rem', color: '#17324a' }}>גודל טקסט</span>
               <div style={{ display: 'flex', gap: '0.4rem' }}>
                 <button onClick={() => changeFont(-1)} aria-label="הקטן טקסט" style={iconButtonStyle}>A-</button>
                 <button onClick={() => changeFont(1)} aria-label="הגדל טקסט" style={iconButtonStyle}>A+</button>
@@ -109,12 +109,12 @@ const AccessibilityWidget = () => {
 
             <button
               onClick={reset}
-              style={{ marginTop: '0.5rem', padding: '0.6rem', borderRadius: '8px', border: '1px solid #ddd', background: '#f8f9fa', cursor: 'pointer', fontSize: '0.9rem' }}
+              style={{ marginTop: '0.5rem', padding: '0.6rem', borderRadius: '8px', border: '1px solid #dce6e9', background: '#f4f7f7', cursor: 'pointer', fontSize: '0.9rem' }}
             >
               איפוס הגדרות
             </button>
 
-            <a href="/accessibility" style={{ textAlign: 'center', fontSize: '0.85rem', color: '#1a237e', marginTop: '0.3rem' }}>
+            <a href="/accessibility" style={{ textAlign: 'center', fontSize: '0.85rem', color: '#17324a', marginTop: '0.3rem' }}>
               הצהרת נגישות
             </a>
           </div>

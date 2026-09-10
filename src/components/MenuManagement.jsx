@@ -426,7 +426,7 @@ const handleMenuTypeChange = async (newType) => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     },
     header: {
@@ -450,7 +450,7 @@ const handleMenuTypeChange = async (newType) => {
     logoIcon: {
       width: '50px',
       height: '50px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+      background: 'linear-gradient(135deg, #356b8c, #17324a)',
       borderRadius: '12px',
       display: 'flex',
       alignItems: 'center',
@@ -459,12 +459,12 @@ const handleMenuTypeChange = async (newType) => {
     title: {
       fontSize: '1.6rem',
       fontWeight: 'bold',
-      color: '#667eea',
+      color: '#356b8c',
       margin: 0
     },
     subtitle: {
       fontSize: '0.9rem',
-      color: '#666',
+      color: '#607482',
       marginTop: '0.25rem'
     },
     mainContent: {
@@ -488,14 +488,14 @@ const handleMenuTypeChange = async (newType) => {
     cardTitle: {
       fontSize: '1.5rem',
       fontWeight: 'bold',
-      color: '#333',
+      color: '#17324a',
       margin: 0,
       display: 'flex',
       alignItems: 'center',
       gap: '0.75rem'
     },
     addButton: {
-      background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+      background: 'linear-gradient(135deg, #75a843, #5f8a36)',
       color: 'white',
       border: 'none',
       padding: '0.75rem 1.5rem',
@@ -514,13 +514,13 @@ const handleMenuTypeChange = async (newType) => {
     th: {
       textAlign: 'right',
       padding: '1rem',
-      borderBottom: '2px solid #e0e0e0',
+      borderBottom: '2px solid #dce6e9',
       fontWeight: '600',
-      color: '#333'
+      color: '#17324a'
     },
     td: {
       padding: '1rem',
-      borderBottom: '1px solid #f0f0f0'
+      borderBottom: '1px solid #dce6e9'
     },
     modal: {
       position: 'fixed',
@@ -547,7 +547,7 @@ const handleMenuTypeChange = async (newType) => {
       fontSize: '1.4rem',
       fontWeight: 'bold',
       marginBottom: '2rem',
-      color: '#333'
+      color: '#17324a'
     },
     formGroup: {
       marginBottom: '1.5rem'
@@ -557,12 +557,12 @@ const handleMenuTypeChange = async (newType) => {
       fontSize: '0.9rem',
       fontWeight: '600',
       marginBottom: '0.5rem',
-      color: '#333'
+      color: '#17324a'
     },
     input: {
       width: '100%',
       padding: '0.75rem',
-      border: '2px solid #e0e0e0',
+      border: '2px solid #dce6e9',
       borderRadius: '8px',
       fontSize: '1rem',
       boxSizing: 'border-box'
@@ -570,7 +570,7 @@ const handleMenuTypeChange = async (newType) => {
     select: {
       width: '100%',
       padding: '0.75rem',
-      border: '2px solid #e0e0e0',
+      border: '2px solid #dce6e9',
       borderRadius: '8px',
       fontSize: '1rem',
       boxSizing: 'border-box'
@@ -587,8 +587,8 @@ const handleMenuTypeChange = async (newType) => {
       border: 'none',
       cursor: 'pointer',
       fontWeight: '600',
-      background: '#f8f9fa',
-      color: '#666'
+      background: '#f4f7f7',
+      color: '#607482'
     },
     saveButton: {
       padding: '0.75rem 1.5rem',
@@ -596,7 +596,7 @@ const handleMenuTypeChange = async (newType) => {
       border: 'none',
       cursor: 'pointer',
       fontWeight: '600',
-      background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+      background: 'linear-gradient(135deg, #75a843, #5f8a36)',
       color: 'white'
     },
     iconButton: {
@@ -644,7 +644,7 @@ const handleMenuTypeChange = async (newType) => {
 
           <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: '600', fontSize: '1.1rem', color: '#333' }}>
+              <div style={{ fontWeight: '600', fontSize: '1.1rem', color: '#17324a' }}>
                 {currentUser?.name || 'מנהל מטבח'}
               </div>
             </div>
@@ -652,7 +652,7 @@ const handleMenuTypeChange = async (newType) => {
             <div style={{ display: 'flex', gap: '1rem' }}>
   <button 
     style={{
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+      background: 'linear-gradient(135deg, #356b8c, #17324a)',
       color: 'white',
       border: 'none',
       borderRadius: '12px',
@@ -672,7 +672,7 @@ const handleMenuTypeChange = async (newType) => {
   {menuType === 'items' && (
     <button
       style={{
-        background: 'linear-gradient(135deg, #ff9800, #f57c00)',
+        background: 'linear-gradient(135deg, #b87920, #b87920)',
         color: 'white',
         border: 'none',
         borderRadius: '12px',
@@ -716,10 +716,10 @@ const handleMenuTypeChange = async (newType) => {
   justifyContent: 'space-between'
 }}>
   <div>
-    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', color: '#333' }}>
+    <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.2rem', color: '#17324a' }}>
       סוג התפריט
     </h3>
-    <p style={{ margin: 0, fontSize: '0.9rem', color: '#666' }}>
+    <p style={{ margin: 0, fontSize: '0.9rem', color: '#607482' }}>
       בחר איך תנהל את התפריט של בית הספר
     </p>
   </div>
@@ -727,7 +727,7 @@ const handleMenuTypeChange = async (newType) => {
   <div style={{
     display: 'flex',
     gap: '1rem',
-    background: '#f8f9fa',
+    background: '#f4f7f7',
     padding: '0.5rem',
     borderRadius: '12px'
   }}>
@@ -741,8 +741,8 @@ const handleMenuTypeChange = async (newType) => {
         fontWeight: '600',
         fontSize: '1rem',
         background: menuType === 'items' ? 
-          'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-        color: menuType === 'items' ? 'white' : '#666',
+          'linear-gradient(135deg, #356b8c, #17324a)' : 'transparent',
+        color: menuType === 'items' ? 'white' : '#607482',
         transition: 'all 0.3s'
       }}
     >
@@ -759,8 +759,8 @@ const handleMenuTypeChange = async (newType) => {
         fontWeight: '600',
         fontSize: '1rem',
         background: menuType === 'daily' ? 
-          'linear-gradient(135deg, #667eea, #764ba2)' : 'transparent',
-        color: menuType === 'daily' ? 'white' : '#666',
+          'linear-gradient(135deg, #356b8c, #17324a)' : 'transparent',
+        color: menuType === 'daily' ? 'white' : '#607482',
         transition: 'all 0.3s'
       }}
     >
@@ -775,14 +775,14 @@ const handleMenuTypeChange = async (newType) => {
   boxShadow: '0 8px 32px rgba(0,0,0,0.1)', marginBottom: '2rem',
   direction: 'rtl'
 }}>
-  <h3 style={{ margin: '0 0 1.5rem 0', color: '#333', fontSize: '1.3rem' }}>
+  <h3 style={{ margin: '0 0 1.5rem 0', color: '#17324a', fontSize: '1.3rem' }}>
     💰 הגדרות מחירים
   </h3>
   <div style={{ display: 'flex', gap: '2rem', flexWrap: 'wrap' }}>
     
 
 <div>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
         מחיר ארוחה יומית (₪)
       </label>
       <input
@@ -790,12 +790,12 @@ const handleMenuTypeChange = async (newType) => {
         value={mealPrices.daily_meal_price}
         onChange={(e) => setMealPrices({ ...mealPrices, daily_meal_price: e.target.value })}
         placeholder="25"
-        style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
+        style={{ padding: '0.75rem', border: '2px solid #dce6e9', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
       />
     </div>
 
     <div>
-      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
         מחיר ארוחה בחבילה חודשית (₪)
       </label>
       <input
@@ -803,12 +803,12 @@ const handleMenuTypeChange = async (newType) => {
         value={mealPrices.monthly_meal_price}
         onChange={(e) => setMealPrices({ ...mealPrices, monthly_meal_price: e.target.value })}
         placeholder="20"
-        style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
+        style={{ padding: '0.75rem', border: '2px solid #dce6e9', borderRadius: '8px', fontSize: '1rem', width: '150px' }}
       />
     </div>
     <div style={{ display: 'flex', alignItems: 'flex-end' }}>
       <button onClick={saveMealPrices} disabled={savingPrices}
-        style={{ padding: '0.75rem 1.5rem', background: '#4CAF50', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+        style={{ padding: '0.75rem 1.5rem', background: '#75a843', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
         {savingPrices ? 'שומר...' : '💾 שמור מחירים'}
       </button>
     </div>
@@ -853,7 +853,7 @@ const handleMenuTypeChange = async (newType) => {
         <tbody>
           {menuItems.length === 0 ? (
             <tr>
-              <td colSpan="7" style={{ ...styles.td, textAlign: 'center', color: '#999', padding: '3rem' }}>
+              <td colSpan="7" style={{ ...styles.td, textAlign: 'center', color: '#607482', padding: '3rem' }}>
                 אין פריטים בתפריט. לחץ על "הוסף פריט חדש" להתחלה.
               </td>
             </tr>
@@ -862,7 +862,7 @@ const handleMenuTypeChange = async (newType) => {
               <tr key={item.id}>
                 <td style={styles.td}>
                   {item.image_url ? (
-                    <img src={item.image_url} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', background: '#f5f5f5', borderRadius: '6px' }} />
+                    <img src={item.image_url} alt="" style={{ width: '40px', height: '40px', objectFit: 'contain', background: '#f4f7f7', borderRadius: '6px' }} />
                   ) : '-'}
                 </td>
                 <td style={styles.td}><strong>{item.name}</strong></td>
@@ -874,7 +874,7 @@ const handleMenuTypeChange = async (newType) => {
                     onClick={() => toggleAvailability(item)}
                     style={{
                       ...styles.toggleButton,
-                      background: item.available ? '#4CAF50' : '#f44336',
+                      background: item.available ? '#75a843' : '#b94b4b',
                       color: 'white'
                     }}
                   >
@@ -885,14 +885,14 @@ const handleMenuTypeChange = async (newType) => {
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <button
                       onClick={() => handleEdit(item)}
-                      style={{ ...styles.iconButton, color: '#2196F3' }}
+                      style={{ ...styles.iconButton, color: '#356b8c' }}
                       title="ערוך"
                     >
                       <Edit2 size={18} />
                     </button>
                     <button
                       onClick={() => handleDeleteItem(item.id)}
-                      style={{ ...styles.iconButton, color: '#f44336' }}
+                      style={{ ...styles.iconButton, color: '#b94b4b' }}
                       title="מחק"
                     >
                       <Trash2 size={18} />
@@ -923,10 +923,10 @@ const handleMenuTypeChange = async (newType) => {
           
           return (
             <div key={index} style={{
-              background: '#f8f9fa',
+              background: '#f4f7f7',
               borderRadius: '12px',
               padding: '1.5rem',
-              border: '2px solid #e0e0e0'
+              border: '2px solid #dce6e9'
             }}>
               <div style={{
                 display: 'flex',
@@ -938,7 +938,7 @@ const handleMenuTypeChange = async (newType) => {
                   <h3 style={{
                     margin: '0 0 0.5rem 0',
                     fontSize: '1.2rem',
-                    color: '#333'
+                    color: '#17324a'
                   }}>
                     {day}
                   </h3>
@@ -946,7 +946,7 @@ const handleMenuTypeChange = async (newType) => {
                     <>
                       <p style={{
                         margin: '0 0 0.5rem 0',
-                        color: '#666',
+                        color: '#607482',
                         lineHeight: 1.5
                       }}>
                         {dayMenu.menu_description}
@@ -955,7 +955,7 @@ const handleMenuTypeChange = async (newType) => {
                       
                     </>
                   ) : (
-                    <p style={{ margin: 0, color: '#999', fontStyle: 'italic' }}>
+                    <p style={{ margin: 0, color: '#607482', fontStyle: 'italic' }}>
                       לא הוגדר תפריט ליום זה
                     </p>
                   )}
@@ -972,9 +972,9 @@ const handleMenuTypeChange = async (newType) => {
                   }}
                   style={{
                     ...styles.iconButton,
-                    color: '#2196F3',
+                    color: '#356b8c',
                     background: 'white',
-                    border: '1px solid #e0e0e0'
+                    border: '1px solid #dce6e9'
                   }}
                   title="ערוך"
                 >
@@ -1034,10 +1034,10 @@ const handleMenuTypeChange = async (newType) => {
     <div style={styles.formGroup}>
       <label style={styles.label}>תמונת הפריט</label>
       {imagePreview && (
-        <img src={imagePreview} alt="" style={{ width: '100px', height: '100px', objectFit: 'contain', background: '#f5f5f5', borderRadius: '8px', marginBottom: '0.5rem', display: 'block' }} />
+        <img src={imagePreview} alt="" style={{ width: '100px', height: '100px', objectFit: 'contain', background: '#f4f7f7', borderRadius: '8px', marginBottom: '0.5rem', display: 'block' }} />
       )}
       <input type="file" accept="image/*" onChange={handleImageSelect} />
-      {uploadingImage && <span style={{ fontSize: '0.85rem', color: '#888' }}>מעלה תמונה...</span>}
+      {uploadingImage && <span style={{ fontSize: '0.85rem', color: '#607482' }}>מעלה תמונה...</span>}
     </div>
 
     <div style={styles.formGroup}>
@@ -1075,9 +1075,9 @@ const handleMenuTypeChange = async (newType) => {
     </div>
 
     {editingItem && (
-      <div style={{ ...styles.formGroup, background: '#f8f9fa', padding: '1rem', borderRadius: '10px' }}>
+      <div style={{ ...styles.formGroup, background: '#f4f7f7', padding: '1rem', borderRadius: '10px' }}>
         <label style={styles.label}>תוספות (אופציונלי)</label>
-        <p style={{ fontSize: '0.85rem', color: '#888', margin: '0 0 0.75rem 0' }}>
+        <p style={{ fontSize: '0.85rem', color: '#607482', margin: '0 0 0.75rem 0' }}>
           כשיש למוצר תוספות, לחיצה עליו בקיוסק תפתח מסך בחירה במקום להוסיף ישר לעגלה
         </p>
 
@@ -1086,16 +1086,16 @@ const handleMenuTypeChange = async (newType) => {
             {addon.image_url ? (
               <img src={addon.image_url} alt="" style={{ width: '32px', height: '32px', objectFit: 'cover', borderRadius: '6px' }} />
             ) : (
-              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#f0f0f0' }} />
+              <div style={{ width: '32px', height: '32px', borderRadius: '6px', background: '#dce6e9' }} />
             )}
             <span style={{ flex: 1 }}>{addon.name}</span>
             {parseFloat(addon.price_delta) > 0 && (
-              <span style={{ color: '#2e7d32', fontWeight: '600' }}>+₪{parseFloat(addon.price_delta).toFixed(2)}</span>
+              <span style={{ color: '#5f8a36', fontWeight: '600' }}>+₪{parseFloat(addon.price_delta).toFixed(2)}</span>
             )}
             <button
               type="button"
               onClick={() => handleDeleteAddon(addon.id)}
-              style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}
+              style={{ background: '#b94b4b', color: 'white', border: 'none', borderRadius: '6px', width: '28px', height: '28px', cursor: 'pointer' }}
               aria-label={`מחק תוספת ${addon.name}`}
             >
               ×
@@ -1124,7 +1124,7 @@ const handleMenuTypeChange = async (newType) => {
           />
           <label style={{
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            padding: '0.6rem', border: '1px dashed #ccc', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
+            padding: '0.6rem', border: '1px dashed #dce6e9', borderRadius: '8px', cursor: 'pointer', fontSize: '0.85rem'
           }}>
             📷
             <input

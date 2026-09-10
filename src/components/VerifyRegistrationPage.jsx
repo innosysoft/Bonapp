@@ -105,7 +105,7 @@ const VerifyRegistrationPage = () => {
         .bap-verify .mobile-box{display:flex;align-items:center;gap:10px;background:var(--paper);border:1px dashed var(--blue);border-radius:10px;padding:12px 14px;font-size:13px;word-break:break-all;color:var(--muted);margin-bottom:12px}
         .bap-verify .copy-btn{display:inline-flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-size:14px;font-weight:600;color:var(--navy);cursor:pointer}
         .bap-verify .copy-btn.copied{background:var(--soft);border-color:var(--green);color:#3f6b1f}
-        .bap-verify .tip{margin-top:14px;background:#e3f2fd;color:#1565c0;border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5}
+        .bap-verify .tip{margin-top:14px;background:var(--soft);color:var(--blue);border-radius:10px;padding:12px 14px;font-size:13px;line-height:1.5}
       `}</style>
 
       <button className="brand" onClick={() => navigate('/')}>Bon<i>App</i></button>

@@ -88,7 +88,7 @@ const MobileStudentApp = () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       padding: '1rem'
     },
@@ -102,18 +102,18 @@ const MobileStudentApp = () => {
     },
     schoolName: {
       fontSize: '1.1rem',
-      color: '#7f8c8d',
+      color: '#607482',
       margin: '0 0 0.5rem 0'
     },
     studentName: {
       fontSize: '2rem',
       fontWeight: 'bold',
-      color: '#2c3e50',
+      color: '#17324a',
       margin: '0 0 0.25rem 0'
     },
     grade: {
       fontSize: '1rem',
-      color: '#95a5a6',
+      color: '#607482',
       margin: 0
     },
     card: {
@@ -129,7 +129,7 @@ const MobileStudentApp = () => {
     qrTitle: {
       fontSize: '1.5rem',
       fontWeight: 'bold',
-      color: '#2c3e50',
+      color: '#17324a',
       marginBottom: '1.5rem',
       display: 'flex',
       alignItems: 'center',
@@ -141,7 +141,7 @@ const MobileStudentApp = () => {
       maxWidth: '300px',
       height: 'auto',
       margin: '0 auto',
-      border: '4px solid #667eea',
+      border: '4px solid #356b8c',
       borderRadius: '16px',
       padding: '1rem',
       background: 'white'
@@ -149,22 +149,22 @@ const MobileStudentApp = () => {
     qrCode: {
       fontSize: '1.8rem',
       fontWeight: 'bold',
-      color: '#667eea',
+      color: '#356b8c',
       margin: '1.5rem 0',
       fontFamily: 'monospace',
-      background: 'linear-gradient(135deg, #f8f9fa, #e9ecef)',
+      background: 'linear-gradient(135deg, #f4f7f7, #dce6e9)',
       padding: '1rem',
       borderRadius: '12px',
       letterSpacing: '3px'
     },
     qrInstruction: {
       fontSize: '0.95rem',
-      color: '#7f8c8d',
+      color: '#607482',
       lineHeight: 1.6,
       marginTop: '1rem'
     },
     balanceCard: {
-      background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+      background: 'linear-gradient(135deg, #75a843, #5f8a36)',
       color: 'white',
       padding: '2rem 1.5rem',
       borderRadius: '20px',
@@ -188,7 +188,7 @@ const MobileStudentApp = () => {
       margin: '0.5rem 0 0 0'
     },
     menuCard: {
-      background: 'linear-gradient(135deg, #FF9800, #F57C00)',
+      background: 'linear-gradient(135deg, #b87920, #b87920)',
       color: 'white',
       padding: '2rem 1.5rem',
       borderRadius: '20px',
@@ -241,7 +241,7 @@ const MobileStudentApp = () => {
       transition: 'all 0.3s'
     },
     downloadButton: {
-      background: '#5cb85c',
+      background: '#75a843',
       color: 'white',
       boxShadow: '0 4px 12px rgba(92, 184, 92, 0.3)'
     },
@@ -367,7 +367,7 @@ const MobileStudentApp = () => {
       }}>
         <h3 style={{
           fontSize: '1.2rem',
-          color: '#2c3e50',
+          color: '#17324a',
           marginBottom: '1rem'
         }}>
           💡 איך להשתמש?
@@ -375,7 +375,7 @@ const MobileStudentApp = () => {
         <ol style={{
           textAlign: 'right',
           lineHeight: 2,
-          color: '#555',
+          color: '#607482',
           paddingRight: '1.5rem'
         }}>
           <li>הגע למזנון בית הספר</li>

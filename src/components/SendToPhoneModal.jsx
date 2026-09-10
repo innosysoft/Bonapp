@@ -178,16 +178,16 @@ ${mobileUrl}
       alignItems: 'center',
       marginBottom: '1.5rem',
       paddingBottom: '1rem',
-      borderBottom: '2px solid #f0f0f0'
+      borderBottom: '2px solid #dce6e9'
     },
     title: {
       fontSize: '1.5rem',
       fontWeight: 'bold',
-      color: '#2c3e50',
+      color: '#17324a',
       margin: 0
     },
     closeButton: {
-      background: '#f8f9fa',
+      background: '#f4f7f7',
       border: 'none',
       borderRadius: '50%',
       width: '40px',
@@ -198,19 +198,19 @@ ${mobileUrl}
       justifyContent: 'center'
     },
     linkBox: {
-      background: '#f8f9fa',
+      background: '#f4f7f7',
       padding: '1rem',
       borderRadius: '12px',
       marginBottom: '1.5rem',
       wordBreak: 'break-all',
       fontSize: '0.9rem',
-      color: '#555',
-      border: '2px dashed #667eea'
+      color: '#607482',
+      border: '2px dashed #356b8c'
     },
     copyButton: {
       width: '100%',
       padding: '0.75rem',
-      background: copied ? '#5cb85c' : '#667eea',
+      background: copied ? '#75a843' : '#356b8c',
       color: 'white',
       border: 'none',
       borderRadius: '12px',
@@ -244,7 +244,7 @@ ${mobileUrl}
     input: {
       width: '100%',
       padding: '0.75rem',
-      border: '2px solid #e0e0e0',
+      border: '2px solid #dce6e9',
       borderRadius: '12px',
       fontSize: '1rem',
       marginBottom: '1rem',
@@ -277,7 +277,7 @@ ${mobileUrl}
         </div>
 
         {loading ? (
-          <div style={{ textAlign: 'center', padding: '2rem', color: '#999' }}>
+          <div style={{ textAlign: 'center', padding: '2rem', color: '#607482' }}>
             יוצר קישור...
           </div>
         ) : (
@@ -303,7 +303,7 @@ ${mobileUrl}
             <h3 style={{
               fontSize: '1.1rem',
               fontWeight: 'bold',
-              color: '#2c3e50',
+              color: '#17324a',
               marginBottom: '1rem'
             }}>
               בחר אמצעי שליחה:
@@ -314,8 +314,8 @@ ${mobileUrl}
                 onClick={() => setSelectedMethod('whatsapp')}
                 style={{
                   ...styles.methodButton,
-                  borderColor: selectedMethod === 'whatsapp' ? '#25D366' : '#e0e0e0',
-                  color: selectedMethod === 'whatsapp' ? '#25D366' : '#999'
+                  borderColor: selectedMethod === 'whatsapp' ? '#25D366' : '#dce6e9',
+                  color: selectedMethod === 'whatsapp' ? '#25D366' : '#607482'
                 }}
               >
                 💬<br/>WhatsApp
@@ -325,8 +325,8 @@ ${mobileUrl}
                 onClick={() => setSelectedMethod('sms')}
                 style={{
                   ...styles.methodButton,
-                  borderColor: selectedMethod === 'sms' ? '#2196F3' : '#e0e0e0',
-                  color: selectedMethod === 'sms' ? '#2196F3' : '#999'
+                  borderColor: selectedMethod === 'sms' ? '#356b8c' : '#dce6e9',
+                  color: selectedMethod === 'sms' ? '#356b8c' : '#607482'
                 }}
               >
                 📱<br/>SMS
@@ -336,8 +336,8 @@ ${mobileUrl}
                 onClick={() => setSelectedMethod('email')}
                 style={{
                   ...styles.methodButton,
-                  borderColor: selectedMethod === 'email' ? '#f44336' : '#e0e0e0',
-                  color: selectedMethod === 'email' ? '#f44336' : '#999'
+                  borderColor: selectedMethod === 'email' ? '#b94b4b' : '#dce6e9',
+                  color: selectedMethod === 'email' ? '#b94b4b' : '#607482'
                 }}
               >
                 📧<br/>Email
@@ -370,8 +370,8 @@ ${mobileUrl}
                 disabled={!phone}
                 style={{
                   ...styles.sendButton,
-                  background: !phone ? '#e0e0e0' : '#25D366',
-                  color: !phone ? '#999' : 'white',
+                  background: !phone ? '#dce6e9' : '#25D366',
+                  color: !phone ? '#607482' : 'white',
                   cursor: !phone ? 'not-allowed' : 'pointer'
                 }}
               >
@@ -386,8 +386,8 @@ ${mobileUrl}
                 disabled={!phone}
                 style={{
                   ...styles.sendButton,
-                  background: !phone ? '#e0e0e0' : '#2196F3',
-                  color: !phone ? '#999' : 'white',
+                  background: !phone ? '#dce6e9' : '#356b8c',
+                  color: !phone ? '#607482' : 'white',
                   cursor: !phone ? 'not-allowed' : 'pointer'
                 }}
               >
@@ -402,8 +402,8 @@ ${mobileUrl}
                 disabled={!email}
                 style={{
                   ...styles.sendButton,
-                  background: !email ? '#e0e0e0' : '#f44336',
-                  color: !email ? '#999' : 'white',
+                  background: !email ? '#dce6e9' : '#b94b4b',
+                  color: !email ? '#607482' : 'white',
                   cursor: !email ? 'not-allowed' : 'pointer'
                 }}
               >
@@ -415,10 +415,10 @@ ${mobileUrl}
             <div style={{
               marginTop: '1.5rem',
               padding: '1rem',
-              background: '#e3f2fd',
+              background: '#eaf3f7',
               borderRadius: '12px',
               fontSize: '0.85rem',
-              color: '#1976d2',
+              color: '#2c5a75',
               lineHeight: 1.5
             }}>
               💡 <strong>טיפ:</strong> לאחר פתיחת הקישור בטלפון, ניתן ללחוץ על "הוסף למסך הבית" כדי להפוך את האפליקציה לזמינה בקלות!

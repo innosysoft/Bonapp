@@ -15,7 +15,7 @@ const PaymentSuccess = () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -31,25 +31,25 @@ const PaymentSuccess = () => {
         boxShadow: '0 20px 60px rgba(0,0,0,0.2)'
       }}>
         <div style={{ fontSize: '5rem', marginBottom: '1rem' }}>✅</div>
-        <h1 style={{ color: '#2e7d32', fontSize: '2rem', marginBottom: '1rem' }}>
+        <h1 style={{ color: '#5f8a36', fontSize: '2rem', marginBottom: '1rem' }}>
           התשלום התקבל בהצלחה!
         </h1>
-        <p style={{ color: '#555', fontSize: '1.1rem', marginBottom: '1rem' }}>
+        <p style={{ color: '#607482', fontSize: '1.1rem', marginBottom: '1rem' }}>
           היתרה תתעדכן בקרוב בחשבונך
         </p>
-        <p style={{ color: '#666', fontSize: '0.95rem', marginBottom: '2rem', 
-          background: '#f8f9fa', padding: '1rem', borderRadius: '8px' }}>
+        <p style={{ color: '#607482', fontSize: '0.95rem', marginBottom: '2rem', 
+          background: '#f4f7f7', padding: '1rem', borderRadius: '8px' }}>
           📧 חשבונית תשלום תישלח למייל שלך.<br/>
           אם לא מופיעה - בדוק בתיקיית הספאם.
         </p>
         
-        <p style={{ color: '#999', fontSize: '0.9rem', marginBottom: '2rem' }}>
+        <p style={{ color: '#607482', fontSize: '0.9rem', marginBottom: '2rem' }}>
           מועבר לפאנל ההורה בעוד 5 שניות...
         </p>
         <button
           onClick={() => navigate('/parent-dashboard')}
           style={{
-            background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+            background: 'linear-gradient(135deg, #75a843, #5f8a36)',
             color: 'white',
             border: 'none',
             padding: '1rem 2rem',

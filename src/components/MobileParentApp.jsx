@@ -101,7 +101,7 @@ const MobileParentApp = () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       paddingBottom: '80px'
     },
@@ -121,12 +121,12 @@ const MobileParentApp = () => {
     title: {
       fontSize: '1.3rem',
       fontWeight: 'bold',
-      color: '#2c3e50',
+      color: '#17324a',
       margin: 0
     },
     subtitle: {
       fontSize: '0.9rem',
-      color: '#7f8c8d',
+      color: '#607482',
       margin: '0.25rem 0 0 0'
     },
     childSelector: {
@@ -166,7 +166,7 @@ const MobileParentApp = () => {
       maxWidth: '280px',
       height: 'auto',
       margin: '1rem auto',
-      border: '3px solid #e9ecef',
+      border: '3px solid #dce6e9',
       borderRadius: '12px',
       padding: '0.75rem',
       background: 'white'
@@ -174,15 +174,15 @@ const MobileParentApp = () => {
     qrCode: {
       fontSize: '1.4rem',
       fontWeight: 'bold',
-      color: '#2c3e50',
+      color: '#17324a',
       margin: '1rem 0',
       fontFamily: 'monospace',
-      background: '#f8f9fa',
+      background: '#f4f7f7',
       padding: '0.75rem',
       borderRadius: '8px'
     },
     balanceCard: {
-      background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+      background: 'linear-gradient(135deg, #75a843, #5f8a36)',
       color: 'white',
       padding: '1.5rem',
       borderRadius: '16px',
@@ -196,10 +196,10 @@ const MobileParentApp = () => {
     },
     menuDay: {
       padding: '1rem',
-      background: '#f8f9fa',
+      background: '#f4f7f7',
       borderRadius: '12px',
       marginBottom: '0.75rem',
-      border: '1px solid #e9ecef'
+      border: '1px solid #dce6e9'
     },
     dayName: {
       display: 'flex',
@@ -207,10 +207,10 @@ const MobileParentApp = () => {
       alignItems: 'center',
       marginBottom: '0.5rem',
       fontWeight: 'bold',
-      color: '#2c3e50'
+      color: '#17324a'
     },
     price: {
-      background: '#4CAF50',
+      background: '#75a843',
       color: 'white',
       padding: '0.25rem 0.75rem',
       borderRadius: '12px',
@@ -238,7 +238,7 @@ const MobileParentApp = () => {
       flexDirection: 'column',
       alignItems: 'center',
       gap: '0.25rem',
-      color: '#7f8c8d',
+      color: '#607482',
       fontSize: '0.75rem',
       transition: 'all 0.3s'
     },
@@ -287,7 +287,7 @@ const MobileParentApp = () => {
             <h1 style={styles.title}>{schoolName}</h1>
             <p style={styles.subtitle}>שלום, {parentData?.name}</p>
           </div>
-          <QrCode size={32} color="#667eea" />
+          <QrCode size={32} color="#356b8c" />
         </div>
       </div>
 
@@ -300,9 +300,9 @@ const MobileParentApp = () => {
             style={{
               ...styles.childButton,
               background: selectedChild === index ? 
-                'linear-gradient(135deg, #667eea, #764ba2)' : 
+                'linear-gradient(135deg, #356b8c, #17324a)' : 
                 'rgba(255,255,255,0.9)',
-              color: selectedChild === index ? 'white' : '#666'
+              color: selectedChild === index ? 'white' : '#607482'
             }}
           >
             {c.first_name}
@@ -328,7 +328,7 @@ const MobileParentApp = () => {
               <h2 style={{ 
                 fontSize: '1.3rem', 
                 fontWeight: 'bold', 
-                color: '#2c3e50',
+                color: '#17324a',
                 marginBottom: '1rem'
               }}>
                 QR Code - {child?.first_name}
@@ -346,7 +346,7 @@ const MobileParentApp = () => {
               
               <p style={{
                 fontSize: '0.85rem',
-                color: '#7f8c8d',
+                color: '#607482',
                 marginTop: '1rem'
               }}>
                 סרוק במזנון לביצוע רכישות
@@ -362,7 +362,7 @@ const MobileParentApp = () => {
                 style={{
                   marginTop: '1rem',
                   padding: '0.75rem 2rem',
-                  background: '#5cb85c',
+                  background: '#75a843',
                   color: 'white',
                   border: 'none',
                   borderRadius: '12px',
@@ -388,7 +388,7 @@ const MobileParentApp = () => {
             <h2 style={{ 
               fontSize: '1.3rem', 
               fontWeight: 'bold', 
-              color: '#2c3e50',
+              color: '#17324a',
               marginBottom: '1rem',
               display: 'flex',
               alignItems: 'center',
@@ -407,7 +407,7 @@ const MobileParentApp = () => {
                   </div>
                   <div style={{
                     fontSize: '0.9rem',
-                    color: '#555',
+                    color: '#607482',
                     lineHeight: 1.4
                   }}>
                     {day.menu}
@@ -415,7 +415,7 @@ const MobileParentApp = () => {
                 </div>
               ))
             ) : (
-              <p style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>
+              <p style={{ textAlign: 'center', color: '#607482', padding: '2rem' }}>
                 לא הוגדר תפריט
               </p>
             )}
@@ -427,7 +427,7 @@ const MobileParentApp = () => {
             <h2 style={{ 
               fontSize: '1.3rem', 
               fontWeight: 'bold', 
-              color: '#2c3e50',
+              color: '#17324a',
               marginBottom: '1rem'
             }}>
               פרטי תלמיד
@@ -442,10 +442,10 @@ const MobileParentApp = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '0.75rem',
-                background: '#f8f9fa',
+                background: '#f4f7f7',
                 borderRadius: '8px'
               }}>
-                <span style={{ color: '#7f8c8d' }}>שם:</span>
+                <span style={{ color: '#607482' }}>שם:</span>
                 <span style={{ fontWeight: '600' }}>
                   {child?.first_name} {child?.last_name}
                 </span>
@@ -455,10 +455,10 @@ const MobileParentApp = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '0.75rem',
-                background: '#f8f9fa',
+                background: '#f4f7f7',
                 borderRadius: '8px'
               }}>
-                <span style={{ color: '#7f8c8d' }}>כיתה:</span>
+                <span style={{ color: '#607482' }}>כיתה:</span>
                 <span style={{ fontWeight: '600' }}>{child?.grade}</span>
               </div>
               
@@ -466,10 +466,10 @@ const MobileParentApp = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '0.75rem',
-                background: '#f8f9fa',
+                background: '#f4f7f7',
                 borderRadius: '8px'
               }}>
-                <span style={{ color: '#7f8c8d' }}>טלפון:</span>
+                <span style={{ color: '#607482' }}>טלפון:</span>
                 <span style={{ fontWeight: '600' }}>{child?.student_phone || 'לא הוגדר'}</span>
               </div>
               
@@ -477,11 +477,11 @@ const MobileParentApp = () => {
                 display: 'flex',
                 justifyContent: 'space-between',
                 padding: '0.75rem',
-                background: '#f8f9fa',
+                background: '#f4f7f7',
                 borderRadius: '8px'
               }}>
-                <span style={{ color: '#7f8c8d' }}>מגבלת הוצאה:</span>
-                <span style={{ fontWeight: '600', color: '#4CAF50' }}>
+                <span style={{ color: '#607482' }}>מגבלת הוצאה:</span>
+                <span style={{ fontWeight: '600', color: '#75a843' }}>
                   ₪{child?.spending_limit || 50}
                 </span>
               </div>
@@ -501,7 +501,7 @@ const MobileParentApp = () => {
           onClick={() => setActiveTab('qr')}
           style={{
             ...styles.navButton,
-            color: activeTab === 'qr' ? '#667eea' : '#7f8c8d'
+            color: activeTab === 'qr' ? '#356b8c' : '#607482'
           }}
         >
           <QrCode size={24} />
@@ -512,7 +512,7 @@ const MobileParentApp = () => {
           onClick={() => setActiveTab('menu')}
           style={{
             ...styles.navButton,
-            color: activeTab === 'menu' ? '#667eea' : '#7f8c8d'
+            color: activeTab === 'menu' ? '#356b8c' : '#607482'
           }}
         >
           <MenuIcon size={24} />
@@ -523,7 +523,7 @@ const MobileParentApp = () => {
           onClick={() => setActiveTab('info')}
           style={{
             ...styles.navButton,
-            color: activeTab === 'info' ? '#667eea' : '#7f8c8d'
+            color: activeTab === 'info' ? '#356b8c' : '#607482'
           }}
         >
           <User size={24} />

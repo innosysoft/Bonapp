@@ -626,12 +626,12 @@ const handlePrintQR = () => {
           padding: 2rem;
         }
         h1 {
-          color: #2c3e50;
+          color: #17324a;
           margin-bottom: 1rem;
         }
         img {
           max-width: 400px;
-          border: 2px solid #000;
+          border: 2px solid #17324a;
           padding: 1rem;
           margin: 2rem 0;
         }
@@ -651,7 +651,7 @@ const handlePrintQR = () => {
       <p>בית ספר: ${schoolName}</p>
       <img src="${currentQR.qrImage}" alt="QR Code" />
       <div class="code">קוד: ${currentQR.qrCode}</div>
-      <p style="margin-top: 2rem; color: #666;">
+      <p style="margin-top: 2rem; color: #607482;">
         סרוק את הקוד במזנון בית הספר לביצוע רכישות
       </p>
     </body>
@@ -756,7 +756,7 @@ const handleSendEmail = async () => {
           <div key={index} style={{ textAlign: 'center', flex: 1 }}>
             <div style={{
               height: `${amount === 0 ? 2 : (amount / maxAmount) * 50 + 2}px`,
-              backgroundColor: amount === 0 ? '#e0e0e0' : '#4CAF50',
+              backgroundColor: amount === 0 ? '#dce6e9' : '#75a843',
               borderRadius: '2px',
               margin: '0 auto 0.25rem',
               width: '16px',
@@ -764,7 +764,7 @@ const handleSendEmail = async () => {
             }} />
             <div style={{
               fontSize: '0.7rem',
-              color: '#666',
+              color: '#607482',
               fontWeight: amount > 0 ? 'bold' : 'normal'
             }}>
               {days[index]}
@@ -780,7 +780,7 @@ const handleSendEmail = async () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       padding: '1rem',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     },
@@ -805,7 +805,7 @@ const handleSendEmail = async () => {
     logoIcon: {
       width: '60px',
       height: '60px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+      background: 'linear-gradient(135deg, #356b8c, #17324a)',
       borderRadius: '16px',
       display: 'flex',
       alignItems: 'center', 
@@ -814,11 +814,11 @@ const handleSendEmail = async () => {
     welcomeText: {
       fontSize: '1.8rem',
       fontWeight: 'bold',
-      color: '#1a1a1a', 
+      color: '#17324a', 
       margin: 0
     },
     schoolText: {
-      color: '#666', 
+      color: '#607482', 
       fontSize: '1rem', 
       margin: '0.25rem 0 0 0'
     },
@@ -837,12 +837,12 @@ const handleSendEmail = async () => {
     summaryValue: {
       fontSize: '1.3rem',
       fontWeight: 'bold',
-      color: '#667eea',
+      color: '#356b8c',
       margin: 0
     },
     summaryLabel: {
       fontSize: '0.8rem',
-      color: '#666',
+      color: '#607482',
       margin: '0.25rem 0 0 0'
     },
     actionButtons: {
@@ -850,7 +850,7 @@ const handleSendEmail = async () => {
       gap: '0.5rem'
     },
     actionButton: {
-      background: '#f8f9fa',
+      background: '#f4f7f7',
       border: 'none',
       borderRadius: '12px',
       padding: '1rem',
@@ -882,7 +882,7 @@ const handleSendEmail = async () => {
     cardTitle: {
       fontSize: '1.4rem',
       fontWeight: 'bold',
-      color: '#1a1a1a',
+      color: '#17324a',
       margin: '0 0 1.5rem 0',
       display: 'flex',
       alignItems: 'center',
@@ -907,10 +907,10 @@ const handleSendEmail = async () => {
       gap: '0.5rem'
     },
     childCard: {
-      border: '2px solid #f0f0f0',
+      border: '2px solid #dce6e9',
       borderRadius: '16px',
       padding: '2rem', 
-      background: 'linear-gradient(135deg, #f8f9fa 0%, #ffffff 100%)',
+      background: 'linear-gradient(135deg, #f4f7f7 0%, #ffffff 100%)',
       position: 'relative',
       overflow: 'hidden'
     },
@@ -931,7 +931,7 @@ const handleSendEmail = async () => {
       width: '80px',
       height: '80px',
       borderRadius: '50%',
-      border: '3px solid #4CAF50',
+      border: '3px solid #75a843',
       objectFit: 'cover'
     },
     childDetails: {
@@ -940,11 +940,11 @@ const handleSendEmail = async () => {
     childName: {
       fontSize: '1.4rem',
       fontWeight: 'bold',
-      color: '#1a1a1a',
+      color: '#17324a',
       margin: '0 0 0.5rem 0'
     },
     childMeta: {
-      color: '#666', 
+      color: '#607482', 
       fontSize: '0.9rem', 
       margin: '0.25rem 0'
     },
@@ -958,11 +958,11 @@ const handleSendEmail = async () => {
     balanceAmount: {
       fontSize: '2.5rem',
       fontWeight: 'bold', 
-      color: '#4CAF50',
+      color: '#75a843',
       margin: 0
     },
     balanceLabel: {
-      color: '#666', 
+      color: '#607482', 
       fontSize: '0.9rem', 
       margin: '0.25rem 0 0 0'
     },
@@ -977,7 +977,7 @@ const handleSendEmail = async () => {
       padding: '1rem',
       background: 'white',
       borderRadius: '12px',
-      border: '1px solid #e0e0e0',
+      border: '1px solid #dce6e9',
       boxShadow: '0 2px 8px rgba(0, 0, 0, 0.05)'
     },
     statValue: {
@@ -987,20 +987,20 @@ const handleSendEmail = async () => {
     },
     statLabel: {
       fontSize: '0.8rem', 
-      color: '#666', 
+      color: '#607482', 
       margin: 0
     },
     chartSection: {
       background: 'white',
       padding: '1rem',
       borderRadius: '12px',
-      border: '1px solid #e0e0e0',
+      border: '1px solid #dce6e9',
       marginBottom: '2rem'
     },
     chartTitle: {
       fontSize: '1rem',
       fontWeight: 'bold',
-      color: '#1a1a1a',
+      color: '#17324a',
       margin: '0 0 1rem 0',
       textAlign: 'center'
     },
@@ -1025,14 +1025,14 @@ const handleSendEmail = async () => {
       justifyContent: 'center'
     },
     primaryButton: {
-      background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+      background: 'linear-gradient(135deg, #75a843, #5f8a36)',
       color: 'white',
       boxShadow: '0 4px 15px rgba(76, 175, 80, 0.3)'
     },
     secondaryButton: {
-      background: '#f8f9fa',
-      color: '#666',
-      border: '1px solid #e0e0e0'
+      background: '#f4f7f7',
+      color: '#607482',
+      border: '1px solid #dce6e9'
     },
     sidebar: {
       display: 'flex',
@@ -1110,7 +1110,7 @@ const handleSendEmail = async () => {
                 position: 'absolute',
                 top: '0.5rem',
                 right: '0.5rem',
-                background: '#f44336',
+                background: '#b94b4b',
                 color: 'white',
                 borderRadius: '50%',
                 width: '18px',
@@ -1145,7 +1145,7 @@ const handleSendEmail = async () => {
   onClick={() => setShowAddMoney(true)}
   style={{
     padding: '0.75rem 1.5rem',
-    background: 'linear-gradient(135deg, #4caf50, #66bb6a)',
+    background: 'linear-gradient(135deg, #75a843, #75a843)',
     color: 'white',
     border: 'none',
     borderRadius: '12px',
@@ -1212,8 +1212,8 @@ const handleSendEmail = async () => {
       style={{
         ...styles.childTab,
         background: selectedChild === index ? 
-          'linear-gradient(135deg, #667eea, #764ba2)' : '#f8f9fa',
-        color: selectedChild === index ? 'white' : '#666'
+          'linear-gradient(135deg, #356b8c, #17324a)' : '#f4f7f7',
+        color: selectedChild === index ? 'white' : '#607482'
       }}
     >
       {child?.first_name}
@@ -1246,7 +1246,7 @@ const handleSendEmail = async () => {
     onClick={() => startCamera(selectedChild)}
     disabled={uploadingPhoto}
     style={{
-      background: '#2196F3',
+      background: '#356b8c',
       color: 'white',
       width: '32px',
       height: '32px',
@@ -1268,7 +1268,7 @@ const handleSendEmail = async () => {
   <label 
     htmlFor={`photo-upload-${selectedChild}`}
     style={{
-      background: '#4CAF50',
+      background: '#75a843',
       color: 'white',
       width: '32px',
       height: '32px',
@@ -1313,7 +1313,7 @@ const handleSendEmail = async () => {
                 <div style={styles.balanceSection}>
                   {children[selectedChild]?.payment_type === 'monthly' ? (
                     <>
-                      <p style={{ ...styles.balanceAmount, color: children[selectedChild]?.monthlyPaid ? '#2e7d32' : '#f44336' }}>
+                      <p style={{ ...styles.balanceAmount, color: children[selectedChild]?.monthlyPaid ? '#5f8a36' : '#b94b4b' }}>
                         {children[selectedChild]?.monthlyPaid ? '✅ שולם' : '❌ לא שולם'}
                       </p>
                       <p style={styles.balanceLabel}>מנוי חודשי - {monthNamesHeb[new Date().getMonth()]}</p>
@@ -1334,7 +1334,7 @@ const handleSendEmail = async () => {
                 <div style={styles.statCard}>
                   <p style={{
                     ...styles.statValue,
-                    color: children[selectedChild]?.canBuyToday !== false ? '#4caf50' : '#f44336'
+                    color: children[selectedChild]?.canBuyToday !== false ? '#75a843' : '#b94b4b'
                   }}>
                     {'זמין'}
                   </p>
@@ -1373,7 +1373,7 @@ const handleSendEmail = async () => {
     disabled={loadingQR}
     style={{
       ...styles.quickButton, 
-      background: '#5b9bd5',
+      background: '#356b8c',
       color: 'white'
     }}
   >
@@ -1419,10 +1419,10 @@ const handleSendEmail = async () => {
                   justifyContent: 'space-between',
                   alignItems: 'center',
                   padding: '1rem',
-                  borderBottom: '1px solid #f0f0f0',
+                  borderBottom: '1px solid #dce6e9',
                   borderLeft: `4px solid ${
-                    transaction.type === 'payment' ? '#4CAF50' :
-                    transaction.type === 'emergency' ? '#FF9800' : '#2196F3'
+                    transaction.type === 'payment' ? '#75a843' :
+                    transaction.type === 'emergency' ? '#b87920' : '#356b8c'
                   }`
                 }}>
                   <div style={{ flex: 1 }}>
@@ -1434,14 +1434,14 @@ const handleSendEmail = async () => {
                     }}>
                       <span style={{
                         fontWeight: '600', 
-                        color: '#1a1a1a', 
+                        color: '#17324a', 
                         fontSize: '0.95rem'
                       }}>
                         {transaction.students?.first_name}
                       </span>
                       {transaction.type === 'emergency' && (
                         <span style={{
-                          background: '#FF9800',
+                          background: '#b87920',
                           color: 'white',
                           padding: '0.1rem 0.4rem',
                           borderRadius: '8px',
@@ -1453,14 +1453,14 @@ const handleSendEmail = async () => {
                       )}
                     </div>
                     <p style={{ 
-                      color: '#666', 
+                      color: '#607482', 
                       fontSize: '0.8rem', 
                       margin: '0.25rem 0' 
                     }}>
                       {transaction.description}
                     </p>
                     <p style={{ 
-                      color: '#999', 
+                      color: '#607482', 
                       fontSize: '0.75rem', 
                       margin: 0 
                     }}>
@@ -1472,7 +1472,7 @@ const handleSendEmail = async () => {
                   <div style={{
                     fontWeight: 'bold',
                     fontSize: '1.1rem',
-                    color: transaction.amount > 0 ? '#4caf50' : '#666',
+                    color: transaction.amount > 0 ? '#75a843' : '#607482',
                     textAlign: 'left',
                     minWidth: '80px'
                   }}>
@@ -1499,12 +1499,12 @@ const handleSendEmail = async () => {
                   padding: '1rem',
                   marginBottom: '0.5rem',
                   borderRadius: '8px',
-                  background: notification.urgent ? '#fff3cd' : '#f8f9fa',
-                  border: `1px solid ${notification.urgent ? '#ffeaa7' : '#e9ecef'}`
+                  background: notification.urgent ? '#fdf1e2' : '#f4f7f7',
+                  border: `1px solid ${notification.urgent ? '#f0d9c2' : '#dce6e9'}`
                 }}>
                   <div style={{
                     fontSize: '0.85rem',
-                    color: '#333',
+                    color: '#17324a',
                     marginBottom: '0.25rem',
                     lineHeight: 1.4
                   }}>
@@ -1512,7 +1512,7 @@ const handleSendEmail = async () => {
                   </div>
                   <div style={{
                     fontSize: '0.7rem',
-                    color: '#666'
+                    color: '#607482'
                   }}>
                     {notification.time}
                   </div>
@@ -1534,8 +1534,8 @@ const handleSendEmail = async () => {
         padding: '0.75rem',
         marginBottom: '0.5rem',
         borderRadius: '8px',
-        background: '#f8f9fa',
-        border: '1px solid #e9ecef'
+        background: '#f4f7f7',
+        border: '1px solid #dce6e9'
       }}>
         <div style={{
           display: 'flex',
@@ -1545,13 +1545,13 @@ const handleSendEmail = async () => {
         }}>
           <span style={{
             fontWeight: 'bold',
-            color: '#333',
+            color: '#17324a',
             fontSize: '0.9rem'
           }}>
             {day.day}
           </span>
           <span style={{
-            background: '#4CAF50',
+            background: '#75a843',
             color: 'white',
             padding: '0.2rem 0.5rem',
             borderRadius: '12px',
@@ -1563,7 +1563,7 @@ const handleSendEmail = async () => {
         </div>
         <div style={{
           fontSize: '0.8rem',
-          color: '#666',
+          color: '#607482',
           lineHeight: 1.3
         }}>
           {day.menu}
@@ -1571,7 +1571,7 @@ const handleSendEmail = async () => {
       </div>
     ))
   ) : (
-    <div style={{ textAlign: 'center', color: '#999', padding: '2rem' }}>
+    <div style={{ textAlign: 'center', color: '#607482', padding: '2rem' }}>
       <p>לא הוגדר תפריט שבועי</p>
     </div>
   )}
@@ -1594,12 +1594,12 @@ const handleSendEmail = async () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '0.75rem',
-                background: '#e8f5e8',
+                background: '#eef6e9',
                 borderRadius: '8px'
               }}>
                 <span style={{
                   fontSize: '0.9rem',
-                  color: '#2e7d32'
+                  color: '#5f8a36'
                 }}>
                   {children[selectedChild]?.payment_type === 'monthly' ? 'סטטוס תשלום חודשי' : 'סה״כ יתרות'}
                 </span>
@@ -1607,8 +1607,8 @@ const handleSendEmail = async () => {
                   fontSize: '1.1rem',
                   fontWeight: 'bold',
                   color: children[selectedChild]?.payment_type === 'monthly'
-                    ? (children[selectedChild]?.monthlyPaid ? '#2e7d32' : '#f44336')
-                    : '#2e7d32'
+                    ? (children[selectedChild]?.monthlyPaid ? '#5f8a36' : '#b94b4b')
+                    : '#5f8a36'
                 }}>
                   {children[selectedChild]?.payment_type === 'monthly'
                     ? (children[selectedChild]?.monthlyPaid ? '✅ שולם' : '❌ טרם שולם')
@@ -1623,19 +1623,19 @@ const handleSendEmail = async () => {
                 justifyContent: 'space-between',
                 alignItems: 'center',
                 padding: '0.75rem',
-                background: '#fff3e0',
+                background: '#fdf1e2',
                 borderRadius: '8px'
               }}>
                 <span style={{
                   fontSize: '0.9rem',
-                  color: '#f57c00'
+                  color: '#b87920'
                 }}>
                   הוצאות החודש
                 </span>
                 <span style={{
                   fontSize: '1.1rem',
                   fontWeight: 'bold',
-                  color: '#f57c00'
+                  color: '#b87920'
                 }}>
 
                   ₪{transactions
@@ -1649,7 +1649,7 @@ const handleSendEmail = async () => {
               <button style={{
                 width: '100%',
                 padding: '1rem',
-                background: 'linear-gradient(135deg, #667eea, #764ba2)',
+                background: 'linear-gradient(135deg, #356b8c, #17324a)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -1712,7 +1712,7 @@ const handleSendEmail = async () => {
       position: 'absolute',
       bottom: 0,
       right: 0,
-      background: '#4CAF50',
+      background: '#75a843',
       color: 'white',
       width: '32px',
       height: '32px',
@@ -1750,7 +1750,7 @@ const handleSendEmail = async () => {
   </h3>
   <p style={{
     fontSize: '0.9rem',
-    color: '#666',
+    color: '#607482',
     margin: 0
   }}>
                   יתרה נוכחית: ₪{(children[selectedChild]?.balance || 0).toFixed(2)}
@@ -1761,7 +1761,7 @@ const handleSendEmail = async () => {
   {/* כפתורי תשלום - חודש נוכחי וכל חודש עתידי שהמזכירה כבר מילאה לו לוח ימי לימוד */}
 {schoolSettings?.enable_monthly_package && payableMonths.length > 0 && (
   <div style={{
-    background: '#e8f5e9', padding: '1rem', borderRadius: '12px',
+    background: '#eef6e9', padding: '1rem', borderRadius: '12px',
     marginBottom: '1rem', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: '0.75rem'
   }}>
     {payableMonths.map(pm => (
@@ -1801,7 +1801,7 @@ setTimeout(() => setIsPolling(false), 600000);
         }}
         style={{
           padding: '1rem 2rem',
-          background: 'linear-gradient(135deg, #43a047, #2e7d32)',
+          background: 'linear-gradient(135deg, #75a843, #5f8a36)',
           color: 'white',
           border: 'none',
           borderRadius: '12px',
@@ -1819,10 +1819,10 @@ setTimeout(() => setIsPolling(false), 600000);
             
 {schoolSettings?.enable_daily_payment && (
   <div style={{
-    background: '#f3e5f5', padding: '1rem', borderRadius: '12px',
+    background: '#eaf3f7', padding: '1rem', borderRadius: '12px',
     marginBottom: '1rem', textAlign: 'center'
   }}>
-    <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#7b1fa2' }}>
+    <p style={{ margin: '0 0 0.5rem 0', fontWeight: '600', color: '#356b8c' }}>
       📆 תשלום יומי - ₪{schoolSettings.daily_meal_price} לארוחה
     </p>
     <button
@@ -1858,7 +1858,7 @@ setTimeout(() => setIsPolling(false), 600000);
         }
       }}
       style={{
-        padding: '0.75rem 2rem', background: '#7b1fa2', color: 'white',
+        padding: '0.75rem 2rem', background: '#356b8c', color: 'white',
         border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600'
       }}
     >
@@ -1880,7 +1880,7 @@ setTimeout(() => setIsPolling(false), 600000);
       onChange={(e) => setAmount(e.target.value)}
       placeholder="הכנס סכום בש״ח"
       style={{
-        width: '100%', padding: '1rem', border: '2px solid #e0e0e0',
+        width: '100%', padding: '1rem', border: '2px solid #dce6e9',
         borderRadius: '12px', fontSize: '1.2rem', textAlign: 'center',
         boxSizing: 'border-box'
       }}
@@ -1888,8 +1888,8 @@ setTimeout(() => setIsPolling(false), 600000);
   </div>
 ) : (
   <div style={{
-    marginBottom: '1.5rem', padding: '1rem', background: '#f8f9fa',
-    borderRadius: '12px', textAlign: 'center', color: '#666'
+    marginBottom: '1.5rem', padding: '1rem', background: '#f4f7f7',
+    borderRadius: '12px', textAlign: 'center', color: '#607482'
   }}>
     {amount ? `סכום לתשלום: ₪${amount}` : 'בחר אפשרות תשלום למעלה'}
   </div>
@@ -1920,9 +1920,9 @@ setTimeout(() => setIsPolling(false), 600000);
                     padding: '1rem',
                     border: '2px solid',
                     borderRadius: '12px',
-                    background: paymentMethod === 'gateway' ? '#e3f2fd' : 'white',
-                    borderColor: paymentMethod === 'gateway' ? '#2196f3' : '#e0e0e0',
-                    color: paymentMethod === 'gateway' ? '#2196f3' : '#666',
+                    background: paymentMethod === 'gateway' ? '#eaf3f7' : 'white',
+                    borderColor: paymentMethod === 'gateway' ? '#356b8c' : '#dce6e9',
+                    color: paymentMethod === 'gateway' ? '#356b8c' : '#607482',
                     cursor: 'pointer',
                     transition: 'all 0.3s',
                     textAlign: 'center',
@@ -1940,9 +1940,9 @@ setTimeout(() => setIsPolling(false), 600000);
                     padding: '1rem',
                     border: '2px solid',
                     borderRadius: '12px',
-                    background: paymentMethod === 'cash' ? '#e3f2fd' : 'white',
-                    borderColor: paymentMethod === 'cash' ? '#2196f3' : '#e0e0e0',
-                    color: paymentMethod === 'cash' ? '#2196f3' : '#666',
+                    background: paymentMethod === 'cash' ? '#eaf3f7' : 'white',
+                    borderColor: paymentMethod === 'cash' ? '#356b8c' : '#dce6e9',
+                    color: paymentMethod === 'cash' ? '#356b8c' : '#607482',
                     cursor: 'pointer',
                     transition: 'all 0.3s',
                     textAlign: 'center',
@@ -1958,9 +1958,9 @@ setTimeout(() => setIsPolling(false), 600000);
             
             <div style={{
               fontSize: '0.8rem',
-              color: '#666',
+              color: '#607482',
               padding: '1rem',
-              background: '#f8f9fa',
+              background: '#f4f7f7',
               borderRadius: '8px',
               marginBottom: '2rem',
               lineHeight: 1.4
@@ -1986,8 +1986,8 @@ setTimeout(() => setIsPolling(false), 600000);
                   transition: 'all 0.3s',
                   fontWeight: '600',
                   fontSize: '1rem',
-                  background: '#f8f9fa',
-                  color: '#666'
+                  background: '#f4f7f7',
+                  color: '#607482'
                 }}
               >
                 ביטול
@@ -2007,9 +2007,9 @@ setTimeout(() => setIsPolling(false), 600000);
                   gap: '0.75rem',
                   fontWeight: '600',
                   fontSize: '1rem',
-                  background: (!amount || parseFloat(amount) <= 0 || isLoading) ? '#e0e0e0' : 
-                             'linear-gradient(135deg, #4CAF50, #45a049)',
-                  color: (!amount || parseFloat(amount) <= 0 || isLoading) ? '#999' : 'white',
+                  background: (!amount || parseFloat(amount) <= 0 || isLoading) ? '#dce6e9' : 
+                             'linear-gradient(135deg, #75a843, #5f8a36)',
+                  color: (!amount || parseFloat(amount) <= 0 || isLoading) ? '#607482' : 'white',
                   boxShadow: (!amount || parseFloat(amount) <= 0 || isLoading) ? 'none' : 
                             '0 4px 15px rgba(76, 175, 80, 0.3)'
                 }}
@@ -2076,7 +2076,7 @@ setTimeout(() => setIsPolling(false), 600000);
             <h2 style={{
               fontSize: '1.8rem',
               fontWeight: 'bold',
-              color: '#2c3e50',
+              color: '#17324a',
               marginBottom: '1.5rem'
             }}>
               QR Code - {children[selectedChild]?.first_name}
@@ -2087,7 +2087,7 @@ setTimeout(() => setIsPolling(false), 600000);
               background: 'white',
               padding: '1rem',
               borderRadius: '12px',
-              border: '2px solid #e9ecef',
+              border: '2px solid #dce6e9',
               marginBottom: '1.5rem'
             }}>
               <img 
@@ -2103,14 +2103,14 @@ setTimeout(() => setIsPolling(false), 600000);
 
             {/* קוד טקסט */}
             <div style={{
-              background: '#f8f9fa',
+              background: '#f4f7f7',
               padding: '1rem',
               borderRadius: '8px',
               marginBottom: '1.5rem'
             }}>
               <p style={{
                 fontSize: '0.85rem',
-                color: '#7f8c8d',
+                color: '#607482',
                 margin: '0 0 0.5rem 0'
               }}>
                 קוד תלמיד:
@@ -2118,7 +2118,7 @@ setTimeout(() => setIsPolling(false), 600000);
               <p style={{
                 fontSize: '1.1rem',
                 fontWeight: 'bold',
-                color: '#2c3e50',
+                color: '#17324a',
                 margin: 0,
                 fontFamily: 'monospace'
               }}>
@@ -2128,16 +2128,16 @@ setTimeout(() => setIsPolling(false), 600000);
 
             {children[selectedChild]?.pin && (
               <div style={{
-                background: '#e8f5e9',
+                background: '#eef6e9',
                 padding: '1rem',
                 borderRadius: '8px',
                 marginBottom: '1.5rem',
                 textAlign: 'center'
               }}>
-                <p style={{ fontSize: '0.85rem', color: '#2e7d32', margin: '0 0 0.5rem 0' }}>
+                <p style={{ fontSize: '0.85rem', color: '#5f8a36', margin: '0 0 0.5rem 0' }}>
                   קוד PIN אישי לקיוסק (במקום סריקת QR):
                 </p>
-                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2e7d32', margin: 0, letterSpacing: '0.3rem' }}>
+                <p style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#5f8a36', margin: 0, letterSpacing: '0.3rem' }}>
                   {children[selectedChild].pin}
                 </p>
               </div>
@@ -2160,7 +2160,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   padding: '0.75rem',
                   borderRadius: '12px',
                   border: 'none',
-                  background: '#5cb85c',
+                  background: '#75a843',
                   color: 'white',
                   fontSize: '0.9rem',
                   fontWeight: '600',
@@ -2176,7 +2176,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   padding: '0.75rem',
                   borderRadius: '12px',
                   border: 'none',
-                  background: '#5b9bd5',
+                  background: '#356b8c',
                   color: 'white',
                   fontSize: '0.9rem',
                   fontWeight: '600',
@@ -2192,7 +2192,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   padding: '0.75rem',
                   borderRadius: '12px',
                   border: 'none',
-                  background: '#e74c3c',
+                  background: '#b94b4b',
                   color: 'white',
                   fontSize: '0.9rem',
                   fontWeight: '600',
@@ -2226,9 +2226,9 @@ setTimeout(() => setIsPolling(false), 600000);
                 style={{
                   padding: '0.75rem',
                   borderRadius: '12px',
-                  border: '2px solid #e0e0e0',
+                  border: '2px solid #dce6e9',
                   background: 'white',
-                  color: '#666',
+                  color: '#607482',
                   fontSize: '0.9rem',
                   fontWeight: '600',
                   cursor: 'pointer',
@@ -2275,12 +2275,12 @@ setTimeout(() => setIsPolling(false), 600000);
               alignItems: 'center',
               marginBottom: '2rem',
               paddingBottom: '1rem',
-              borderBottom: '2px solid #f0f0f0'
+              borderBottom: '2px solid #dce6e9'
             }}>
               <h2 style={{
                 fontSize: '1.8rem',
                 fontWeight: 'bold',
-                color: '#2c3e50',
+                color: '#17324a',
                 margin: 0
               }}>
                 ⚙️ ניהול ילדים
@@ -2289,7 +2289,7 @@ setTimeout(() => setIsPolling(false), 600000);
               <button
                 onClick={() => setShowSettingsModal(false)}
                 style={{
-                  background: '#f8f9fa',
+                  background: '#f4f7f7',
                   border: 'none',
                   borderRadius: '50%',
                   width: '40px',
@@ -2298,7 +2298,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  color: '#666'
+                  color: '#607482'
                 }}
               >
                 <X size={24} />
@@ -2314,7 +2314,7 @@ setTimeout(() => setIsPolling(false), 600000);
               style={{
                 width: '100%',
                 padding: '1rem',
-                background: '#5b9bd5',
+                background: '#356b8c',
                 color: 'white',
                 border: 'none',
                 borderRadius: '12px',
@@ -2336,11 +2336,11 @@ setTimeout(() => setIsPolling(false), 600000);
             {/* רשימת ילדים */}
             {children.map((child, index) => (
               <div key={child.id} style={{
-                background: '#f8f9fa',
+                background: '#f4f7f7',
                 borderRadius: '16px',
                 padding: '1.5rem',
                 marginBottom: '1.5rem',
-                border: '1px solid #e9ecef'
+                border: '1px solid #dce6e9'
               }}>
                 {/* כותרת הילד */}
                 <div style={{
@@ -2366,14 +2366,14 @@ setTimeout(() => setIsPolling(false), 600000);
                       <h3 style={{
                         fontSize: '1.3rem',
                         fontWeight: 'bold',
-                        color: '#2c3e50',
+                        color: '#17324a',
                         margin: '0 0 0.25rem 0'
                       }}>
                         {child.first_name} {child.last_name}
                       </h3>
                       <p style={{
                         fontSize: '0.9rem',
-                        color: '#7f8c8d',
+                        color: '#607482',
                         margin: 0
                       }}>
 
@@ -2387,7 +2387,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     <button
                       onClick={() => handleEditStudent(child)}
                       style={{
-                        background: '#5b9bd5',
+                        background: '#356b8c',
                         color: 'white',
                         border: 'none',
                         borderRadius: '8px',
@@ -2406,8 +2406,8 @@ setTimeout(() => setIsPolling(false), 600000);
                         onClick={() => handleDeleteStudent(child.id, child.first_name)}
                         style={{
                           background: 'white',
-                          color: '#e74c3c',
-                          border: '1px solid #e74c3c',
+                          color: '#b94b4b',
+                          border: '1px solid #b94b4b',
                           borderRadius: '8px',
                           padding: '0.5rem 1rem',
                           cursor: 'pointer',
@@ -2428,49 +2428,49 @@ setTimeout(() => setIsPolling(false), 600000);
                   gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
                   gap: '0.75rem',
                   fontSize: '0.9rem',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   <div style={{
                     padding: '0.5rem',
                     background: 'white',
                     borderRadius: '8px'
                   }}>
-                    <strong>גישה למערכת:</strong> <span style={{ color: child.system_access ? '#5cb85c' : '#95a5a6' }}>{child.system_access ? '✓ פעיל' : '○ כבוי'}</span>
+                    <strong>גישה למערכת:</strong> <span style={{ color: child.system_access ? '#75a843' : '#607482' }}>{child.system_access ? '✓ פעיל' : '○ כבוי'}</span>
                   </div>
                   <div style={{
                     padding: '0.5rem',
                     background: 'white',
                     borderRadius: '8px'
                   }}>
-                    <strong>עריכת פרטים:</strong> <span style={{ color: child.can_edit_profile ? '#5cb85c' : '#95a5a6' }}>{child.can_edit_profile ? '✓ פעיל' : '○ כבוי'}</span>
+                    <strong>עריכת פרטים:</strong> <span style={{ color: child.can_edit_profile ? '#75a843' : '#607482' }}>{child.can_edit_profile ? '✓ פעיל' : '○ כבוי'}</span>
                   </div>
                   <div style={{
                     padding: '0.5rem',
                     background: 'white',
                     borderRadius: '8px'
                   }}>
-                    <strong>הזמנה לחברים:</strong> <span style={{ color: child.can_order_for_friends ? '#5cb85c' : '#95a5a6' }}>{child.can_order_for_friends ? '✓ פעיל' : '○ כבוי'}</span>
+                    <strong>הזמנה לחברים:</strong> <span style={{ color: child.can_order_for_friends ? '#75a843' : '#607482' }}>{child.can_order_for_friends ? '✓ פעיל' : '○ כבוי'}</span>
                   </div>
                   <div style={{
                     padding: '0.5rem',
                     background: 'white',
                     borderRadius: '8px'
                   }}>
-                    <strong>מגבלה יומית:</strong> <span style={{ color: '#5b9bd5', fontWeight: '600' }}>₪{child.spending_limit || 50}</span>
+                    <strong>מגבלה יומית:</strong> <span style={{ color: '#356b8c', fontWeight: '600' }}>₪{child.spending_limit || 50}</span>
                   </div>
                   <div style={{
                     padding: '0.5rem',
                     background: 'white',
                     borderRadius: '8px'
                   }}>
-                    <strong>ארוחות מקס:</strong> <span style={{ color: '#5b9bd5', fontWeight: '600' }}>{child.max_daily_meals || 2} ביום</span>
+                    <strong>ארוחות מקס:</strong> <span style={{ color: '#356b8c', fontWeight: '600' }}>{child.max_daily_meals || 2} ביום</span>
                   </div>
                   <div style={{
                     padding: '0.5rem',
                     background: 'white',
                     borderRadius: '8px'
                   }}>
-                    <strong>התראות להורה:</strong> <span style={{ color: child.parent_notifications !== false ? '#5cb85c' : '#95a5a6' }}>{child.parent_notifications !== false ? '✓ פעיל' : '○ כבוי'}</span>
+                    <strong>התראות להורה:</strong> <span style={{ color: child.parent_notifications !== false ? '#75a843' : '#607482' }}>{child.parent_notifications !== false ? '✓ פעיל' : '○ כבוי'}</span>
                   </div>
                 </div>
               </div>
@@ -2508,7 +2508,7 @@ setTimeout(() => setIsPolling(false), 600000);
             <h2 style={{
               fontSize: '1.8rem',
               fontWeight: 'bold',
-              color: '#333',
+              color: '#17324a',
               marginBottom: '2rem',
               textAlign: 'center'
             }}>
@@ -2521,7 +2521,7 @@ setTimeout(() => setIsPolling(false), 600000);
                 <img
                   src={editingStudent.photo_url || `https://via.placeholder.com/120/4CAF50/FFFFFF?text=${editingStudent.first_name?.[0] || 'X'}`}
                   alt={`${editingStudent.first_name} ${editingStudent.last_name || ''}`}
-                  style={{ width: '110px', height: '110px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #eee' }}
+                  style={{ width: '110px', height: '110px', borderRadius: '50%', objectFit: 'cover', border: '3px solid #dce6e9' }}
                 />
                 <label
                   htmlFor="edit-student-photo-upload"
@@ -2529,7 +2529,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     position: 'absolute',
                     bottom: 0,
                     left: 0,
-                    background: '#4CAF50',
+                    background: '#75a843',
                     color: 'white',
                     width: '34px',
                     height: '34px',
@@ -2559,9 +2559,9 @@ setTimeout(() => setIsPolling(false), 600000);
             {/* פרטים בסיסיים */}
             <h3 style={{
               fontSize: '1.2rem',
-              color: '#667eea',
+              color: '#356b8c',
               marginBottom: '1rem',
-              borderBottom: '2px solid #667eea',
+              borderBottom: '2px solid #356b8c',
               paddingBottom: '0.5rem'
             }}>
               פרטים אישיים
@@ -2573,7 +2573,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   שם פרטי *
                 </label>
@@ -2587,7 +2587,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box'
@@ -2600,7 +2600,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   שם משפחה
                 </label>
@@ -2614,7 +2614,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box'
@@ -2629,7 +2629,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   כיתה *
                 </label>
@@ -2642,7 +2642,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box',
@@ -2663,7 +2663,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   טלפון תלמיד
                 </label>
@@ -2678,7 +2678,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box'
@@ -2692,7 +2692,7 @@ setTimeout(() => setIsPolling(false), 600000);
                 display: 'block',
                 marginBottom: '0.5rem',
                 fontWeight: '600',
-                color: '#555'
+                color: '#607482'
               }}>
                 מספר תעודת זהות
               </label>
@@ -2707,7 +2707,7 @@ setTimeout(() => setIsPolling(false), 600000);
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  border: '2px solid #e0e0e0',
+                  border: '2px solid #dce6e9',
                   borderRadius: '8px',
                   fontSize: '1rem',
                   boxSizing: 'border-box'
@@ -2718,16 +2718,16 @@ setTimeout(() => setIsPolling(false), 600000);
             {/* הגדרות עצמאות */}
             <h3 style={{
               fontSize: '1.2rem',
-              color: '#667eea',
+              color: '#356b8c',
               marginBottom: '1rem',
-              borderBottom: '2px solid #667eea',
+              borderBottom: '2px solid #356b8c',
               paddingBottom: '0.5rem'
             }}>
               הגדרות עצמאות
             </h3>
 
             <div style={{
-              background: '#f8f9fa',
+              background: '#f4f7f7',
               padding: '1.5rem',
               borderRadius: '12px',
               marginBottom: '2rem'
@@ -2800,7 +2800,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     display: 'block',
                     marginBottom: '0.5rem',
                     fontWeight: '600',
-                    color: '#555',
+                    color: '#607482',
                     fontSize: '0.9rem'
                   }}>
                     מגבלת הוצאה יומית (₪)
@@ -2817,7 +2817,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      border: '2px solid #e0e0e0',
+                      border: '2px solid #dce6e9',
                       borderRadius: '8px',
                       fontSize: '1rem',
                       textAlign: 'center',
@@ -2831,7 +2831,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     display: 'block',
                     marginBottom: '0.5rem',
                     fontWeight: '600',
-                    color: '#555',
+                    color: '#607482',
                     fontSize: '0.9rem'
                   }}>
                     מקסימום ארוחות ביום
@@ -2848,7 +2848,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      border: '2px solid #e0e0e0',
+                      border: '2px solid #dce6e9',
                       borderRadius: '8px',
                       fontSize: '1rem',
                       textAlign: 'center',
@@ -2873,9 +2873,9 @@ setTimeout(() => setIsPolling(false), 600000);
                   flex: 1,
                   padding: '1rem',
                   borderRadius: '12px',
-                  border: '2px solid #e0e0e0',
+                  border: '2px solid #dce6e9',
                   background: 'white',
-                  color: '#666',
+                  color: '#607482',
                   fontSize: '1rem',
                   fontWeight: '600',
                   cursor: 'pointer'
@@ -2891,7 +2891,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   padding: '1rem',
                   borderRadius: '12px',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #2196F3, #1976D2)',
+                  background: 'linear-gradient(135deg, #356b8c, #2c5a75)',
                   color: 'white',
                   fontSize: '1rem',
                   fontWeight: '600',
@@ -2935,7 +2935,7 @@ setTimeout(() => setIsPolling(false), 600000);
             <h2 style={{
               fontSize: '1.8rem',
               fontWeight: 'bold',
-              color: '#333',
+              color: '#17324a',
               marginBottom: '2rem',
               textAlign: 'center'
             }}>
@@ -2945,9 +2945,9 @@ setTimeout(() => setIsPolling(false), 600000);
             {/* פרטים בסיסיים */}
             <h3 style={{
               fontSize: '1.2rem',
-              color: '#667eea',
+              color: '#356b8c',
               marginBottom: '1rem',
-              borderBottom: '2px solid #667eea',
+              borderBottom: '2px solid #356b8c',
               paddingBottom: '0.5rem'
             }}>
               פרטים אישיים
@@ -2959,7 +2959,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   שם פרטי *
                 </label>
@@ -2973,7 +2973,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box'
@@ -2986,7 +2986,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   שם משפחה
                 </label>
@@ -3000,7 +3000,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box'
@@ -3015,7 +3015,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   כיתה *
                 </label>
@@ -3028,7 +3028,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box',
@@ -3049,7 +3049,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   display: 'block',
                   marginBottom: '0.5rem',
                   fontWeight: '600',
-                  color: '#555'
+                  color: '#607482'
                 }}>
                   טלפון תלמיד
                 </label>
@@ -3064,7 +3064,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '2px solid #e0e0e0',
+                    border: '2px solid #dce6e9',
                     borderRadius: '8px',
                     fontSize: '1rem',
                     boxSizing: 'border-box'
@@ -3078,7 +3078,7 @@ setTimeout(() => setIsPolling(false), 600000);
                 display: 'block',
                 marginBottom: '0.5rem',
                 fontWeight: '600',
-                color: '#555'
+                color: '#607482'
               }}>
                 מספר תעודת זהות
               </label>
@@ -3093,7 +3093,7 @@ setTimeout(() => setIsPolling(false), 600000);
                 style={{
                   width: '100%',
                   padding: '0.75rem',
-                  border: '2px solid #e0e0e0',
+                  border: '2px solid #dce6e9',
                   borderRadius: '8px',
                   fontSize: '1rem',
                   boxSizing: 'border-box'
@@ -3104,16 +3104,16 @@ setTimeout(() => setIsPolling(false), 600000);
             {/* הגדרות עצמאות */}
             <h3 style={{
               fontSize: '1.2rem',
-              color: '#667eea',
+              color: '#356b8c',
               marginBottom: '1rem',
-              borderBottom: '2px solid #667eea',
+              borderBottom: '2px solid #356b8c',
               paddingBottom: '0.5rem'
             }}>
               הגדרות עצמאות
             </h3>
 
             <div style={{
-              background: '#f8f9fa',
+              background: '#f4f7f7',
               padding: '1.5rem',
               borderRadius: '12px',
               marginBottom: '2rem'
@@ -3186,7 +3186,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     display: 'block',
                     marginBottom: '0.5rem',
                     fontWeight: '600',
-                    color: '#555',
+                    color: '#607482',
                     fontSize: '0.9rem'
                   }}>
                     מגבלת הוצאה יומית (₪)
@@ -3203,7 +3203,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      border: '2px solid #e0e0e0',
+                      border: '2px solid #dce6e9',
                       borderRadius: '8px',
                       fontSize: '1rem',
                       textAlign: 'center',
@@ -3217,7 +3217,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     display: 'block',
                     marginBottom: '0.5rem',
                     fontWeight: '600',
-                    color: '#555',
+                    color: '#607482',
                     fontSize: '0.9rem'
                   }}>
                     מקסימום ארוחות ביום
@@ -3234,7 +3234,7 @@ setTimeout(() => setIsPolling(false), 600000);
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      border: '2px solid #e0e0e0',
+                      border: '2px solid #dce6e9',
                       borderRadius: '8px',
                       fontSize: '1rem',
                       textAlign: 'center',
@@ -3272,9 +3272,9 @@ setTimeout(() => setIsPolling(false), 600000);
                   flex: 1,
                   padding: '1rem',
                   borderRadius: '12px',
-                  border: '2px solid #e0e0e0',
+                  border: '2px solid #dce6e9',
                   background: 'white',
-                  color: '#666',
+                  color: '#607482',
                   fontSize: '1rem',
                   fontWeight: '600',
                   cursor: 'pointer'
@@ -3290,7 +3290,7 @@ setTimeout(() => setIsPolling(false), 600000);
                   padding: '1rem',
                   borderRadius: '12px',
                   border: 'none',
-                  background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+                  background: 'linear-gradient(135deg, #75a843, #5f8a36)',
                   color: 'white',
                   fontSize: '1rem',
                   fontWeight: '600',
@@ -3388,7 +3388,7 @@ setTimeout(() => setIsPolling(false), 600000);
         borderRadius: '12px',
         overflow: 'hidden',
         marginBottom: '1.5rem',
-        background: '#f0f0f0',
+        background: '#dce6e9',
         position: 'relative',
         paddingBottom: '75%'
       }}>
@@ -3435,7 +3435,7 @@ setTimeout(() => setIsPolling(false), 600000);
               onClick={capturePhoto}
               style={{
                 padding: '1rem 2rem',
-                background: 'linear-gradient(135deg, #4CAF50, #45a049)',
+                background: 'linear-gradient(135deg, #75a843, #5f8a36)',
                 color: 'white',
                 border: 'none',
                 borderRadius: '12px',
@@ -3452,8 +3452,8 @@ setTimeout(() => setIsPolling(false), 600000);
               onClick={closeCameraModal}
               style={{
                 padding: '1rem 2rem',
-                background: '#f8f9fa',
-                color: '#666',
+                background: '#f4f7f7',
+                color: '#607482',
                 border: 'none',
                 borderRadius: '12px',
                 fontSize: '1.1rem',
@@ -3471,8 +3471,8 @@ setTimeout(() => setIsPolling(false), 600000);
               disabled={uploadingPhoto}
               style={{
                 padding: '1rem 2rem',
-                background: uploadingPhoto ? '#e0e0e0' : 'linear-gradient(135deg, #4CAF50, #45a049)',
-                color: uploadingPhoto ? '#999' : 'white',
+                background: uploadingPhoto ? '#dce6e9' : 'linear-gradient(135deg, #75a843, #5f8a36)',
+                color: uploadingPhoto ? '#607482' : 'white',
                 border: 'none',
                 borderRadius: '12px',
                 fontSize: '1.1rem',
@@ -3489,8 +3489,8 @@ setTimeout(() => setIsPolling(false), 600000);
               disabled={uploadingPhoto}
               style={{
                 padding: '1rem 2rem',
-                background: '#f8f9fa',
-                color: '#666',
+                background: '#f4f7f7',
+                color: '#607482',
                 border: 'none',
                 borderRadius: '12px',
                 fontSize: '1.1rem',

@@ -62,7 +62,7 @@ const ParentLogin = () => {
   const loginStyles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #e3f2fd 0%, #e8eaf6 100%)',
+      background: 'linear-gradient(135deg, #eaf3f7 0%, #eaf3f7 100%)',
       padding: '2rem 1rem',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif",
       display: 'flex',
@@ -84,7 +84,7 @@ const ParentLogin = () => {
     iconContainer: {
       width: '64px',
       height: '64px',
-      background: '#e3f2fd',
+      background: '#eaf3f7',
       borderRadius: '50%',
       display: 'flex',
       alignItems: 'center',
@@ -94,11 +94,11 @@ const ParentLogin = () => {
     title: {
       fontSize: '2rem',
       fontWeight: '700',
-      color: '#1a1a1a',
+      color: '#17324a',
       margin: '0.5rem 0'
     },
     subtitle: {
-      color: '#666',
+      color: '#607482',
       fontSize: '1rem'
     },
     formGroup: {
@@ -107,7 +107,7 @@ const ParentLogin = () => {
     label: {
       display: 'block',
       fontWeight: '600',
-      color: '#333',
+      color: '#17324a',
       marginBottom: '0.5rem',
       textAlign: 'right',
       fontSize: '0.9rem'
@@ -120,7 +120,7 @@ const ParentLogin = () => {
     input: {
       width: '100%',
       padding: '12px 48px 12px 16px',
-      border: '2px solid #e0e0e0',
+      border: '2px solid #dce6e9',
       borderRadius: '8px',
       fontSize: '1rem',
       transition: 'all 0.3s',
@@ -131,7 +131,7 @@ const ParentLogin = () => {
       right: '12px',
       top: '50%',
       transform: 'translateY(-50%)',
-      color: '#999'
+      color: '#607482'
     },
     passwordToggle: {
       position: 'absolute',
@@ -140,7 +140,7 @@ const ParentLogin = () => {
       transform: 'translateY(-50%)',
       background: 'none',
       border: 'none',
-      color: '#999',
+      color: '#607482',
       cursor: 'pointer',
       padding: '4px',
       borderRadius: '4px',
@@ -159,19 +159,19 @@ const ParentLogin = () => {
       justifyContent: 'center',
       gap: '0.5rem',
       border: 'none',
-      background: '#2196f3',
+      background: '#356b8c',
       color: 'white',
       marginBottom: '1rem'
     },
     buttonDisabled: {
-      background: '#e0e0e0',
-      color: '#999',
+      background: '#dce6e9',
+      color: '#607482',
       cursor: 'not-allowed'
     },
     forgotPassword: {
       background: 'none',
       border: 'none',
-      color: '#2196f3',
+      color: '#356b8c',
       cursor: 'pointer',
       textDecoration: 'underline',
       fontSize: '0.9rem',
@@ -179,15 +179,15 @@ const ParentLogin = () => {
       width: '100%'
     },
     errorBanner: {
-      background: '#ffebee',
-      border: '1px solid #f44336',
+      background: '#f7e8e8',
+      border: '1px solid #b94b4b',
       borderRadius: '8px',
       padding: '1rem',
       marginBottom: '1.5rem',
       textAlign: 'right'
     },
     errorText: {
-      color: '#f44336',
+      color: '#b94b4b',
       fontSize: '0.9rem',
       margin: 0
     },
@@ -195,16 +195,16 @@ const ParentLogin = () => {
       textAlign: 'center',
       marginTop: '2rem',
       paddingTop: '2rem',
-      borderTop: '1px solid #e0e0e0'
+      borderTop: '1px solid #dce6e9'
     },
     registerText: {
-      color: '#666',
+      color: '#607482',
       margin: 0
     },
     registerLink: {
       background: 'none',
       border: 'none',
-      color: '#2196f3',
+      color: '#356b8c',
       cursor: 'pointer',
       textDecoration: 'underline',
       marginRight: '0.5rem'
@@ -213,15 +213,15 @@ const ParentLogin = () => {
       marginTop: '2rem'
     },
     infoBox: {
-      background: '#f5f9ff',
-      border: '1px solid #e3f2fd',
+      background: '#eaf3f7',
+      border: '1px solid #eaf3f7',
       borderRadius: '8px',
       padding: '1rem'
     },
     infoTitle: {
       fontSize: '1rem',
       fontWeight: '600',
-      color: '#1976d2',
+      color: '#2c5a75',
       textAlign: 'right',
       margin: '0 0 0.5rem 0'
     },
@@ -231,7 +231,7 @@ const ParentLogin = () => {
       textAlign: 'right'
     },
     infoListItem: {
-      color: '#666',
+      color: '#607482',
       fontSize: '0.9rem',
       marginBottom: '0.25rem'
     },
@@ -240,10 +240,10 @@ const ParentLogin = () => {
       marginTop: '2rem'
     },
     supportText: {
-      color: '#666'
+      color: '#607482'
     },
     supportLink: {
-      color: '#2196f3',
+      color: '#356b8c',
       textDecoration: 'none',
       marginRight: '0.5rem'
     },
@@ -272,7 +272,7 @@ const ParentLogin = () => {
           {/* כותרת */}
           <div style={loginStyles.header}>
             <div style={loginStyles.iconContainer}>
-              <School size={32} color="#2196f3" />
+              <School size={32} color="#356b8c" />
             </div>
             <h1 style={loginStyles.title}>כניסה למערכת ארוחות</h1>
             <p style={loginStyles.subtitle}>הזן את פרטי הכניסה שלך</p>

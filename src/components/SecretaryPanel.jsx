@@ -340,24 +340,24 @@ const loadStudentSchedule = async (studentId) => {
   <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
               background: white; padding: 2rem; border-radius: 12px; box-shadow: 0 8px 32px rgba(0,0,0,0.3);
               z-index: 1000; direction: rtl; text-align: center;">
-    <h3 style="color: #4CAF50; margin-bottom: 1rem;">ההרשמה אושרה בהצלחה!</h3>
-    <div style="background: #f0f8ff; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
+    <h3 style="color: #75a843; margin-bottom: 1rem;">ההרשמה אושרה בהצלחה!</h3>
+    <div style="background: #eaf3f7; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
       <h4>פרטי גישה להורה:</h4>
       <p><strong>אימייל:</strong> ${currentRegistration.parent_email}</p>
-      <p><strong>סיסמה:</strong> <span style="font-family: monospace; font-size: 1.2rem; color: #2196F3;">${result.parentPassword}</span></p>
+      <p><strong>סיסמה:</strong> <span style="font-family: monospace; font-size: 1.2rem; color: #356b8c;">${result.parentPassword}</span></p>
     </div>
     <div style="margin-top: 1rem;">
       <button onclick="this.parentElement.parentElement.remove()"
-              style="background: #4CAF50; color: white; border: none; padding: 0.75rem 1.5rem;
+              style="background: #75a843; color: white; border: none; padding: 0.75rem 1.5rem;
                      border-radius: 25px; cursor: pointer; margin-left: 0.5rem;">
         סגור
       </button>
-      <button id="copyBtn" style="background: #2196F3; color: white; border: none; padding: 0.75rem 1.5rem;
+      <button id="copyBtn" style="background: #356b8c; color: white; border: none; padding: 0.75rem 1.5rem;
                          border-radius: 25px; cursor: pointer;">
         העתק פרטים
       </button>
     </div>
-    <p style="font-size: 0.9rem; color: #666; margin-top: 1rem;">
+    <p style="font-size: 0.9rem; color: #607482; margin-top: 1rem;">
       אימייל נשלח אוטומטית להורה עם פרטי הגישה
     </p>
   </div>
@@ -1119,13 +1119,13 @@ const downloadReport = () => {
                 <div className="bap-sec-field">
                   <label>מחיר ארוחה יומית (₪)</label>
                   <div className="bap-sec-readonly">{schoolData?.daily_meal_price || 0} ₪</div>
-                  <p style={{ color: '#999', fontSize: '0.85rem', marginTop: '0.5rem' }}>
+                  <p style={{ color: '#607482', fontSize: '0.85rem', marginTop: '0.5rem' }}>
                     מחיר הארוחה נקבע בפאנל ניהול המטבח, כדי למנוע התנגשות בין שני מקומות עריכה.
                   </p>
                 </div>
               )}
 
-              <p style={{ color: '#999', fontSize: '0.9rem' }}>
+              <p style={{ color: '#607482', fontSize: '0.9rem' }}>
                 הגדרות נוספות מנוהלות ע"י מנהל המערכת
               </p>
             </div>
@@ -1523,7 +1523,7 @@ const downloadReport = () => {
 
             {passwordResetInfo && (
               <div className="bap-sec-detail-box" style={{ marginBottom: '1.5rem', background: 'var(--green2)' }} role="status">
-                <h4 style={{ color: '#2e7d32' }}>סיסמה חדשה נוצרה</h4>
+                <h4 style={{ color: '#5f8a36' }}>סיסמה חדשה נוצרה</h4>
                 <div>
                   <strong>סיסמה זמנית:</strong>{' '}
                   <span style={{ fontFamily: 'monospace', fontSize: '1.1rem', color: 'var(--blue)' }}>

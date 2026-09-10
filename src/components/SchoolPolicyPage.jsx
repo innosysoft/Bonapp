@@ -3,8 +3,8 @@ import { useNavigate } from 'react-router-dom';
 
 const Section = ({ title, children }) => (
   <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', marginBottom: '1.5rem', boxShadow: '0 4px 15px rgba(0,0,0,0.08)' }}>
-    <h2 style={{ color: '#333', marginBottom: '1rem', fontSize: '1.3rem' }}>{title}</h2>
-    <div style={{ color: '#555', lineHeight: 1.8, fontSize: '1rem' }}>{children}</div>
+    <h2 style={{ color: '#17324a', marginBottom: '1rem', fontSize: '1.3rem' }}>{title}</h2>
+    <div style={{ color: '#607482', lineHeight: 1.8, fontSize: '1rem' }}>{children}</div>
   </div>
 );
 
@@ -12,8 +12,8 @@ const SchoolPolicyPage = () => {
   const navigate = useNavigate();
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f8f9fa', fontFamily: "'Segoe UI', sans-serif", direction: 'rtl' }}>
-      <div style={{ background: 'linear-gradient(135deg, #667eea, #764ba2)', padding: '2rem', textAlign: 'center', color: 'white' }}>
+    <div style={{ minHeight: '100vh', background: '#f4f7f7', fontFamily: "'Segoe UI', sans-serif", direction: 'rtl' }}>
+      <div style={{ background: 'linear-gradient(135deg, #356b8c, #17324a)', padding: '2rem', textAlign: 'center', color: 'white' }}>
         <button onClick={() => navigate('/')} style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: 'white', padding: '0.5rem 1rem', borderRadius: '8px', cursor: 'pointer', marginBottom: '1rem' }}>
           ← חזרה לדף הבית
         </button>
@@ -23,7 +23,7 @@ const SchoolPolicyPage = () => {
 
       <div style={{ maxWidth: '800px', margin: '0 auto', padding: '2rem 1rem' }}>
 
-        <div style={{ background: '#fff3e0', border: '1px solid #ffcc02', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem', color: '#7a5200', fontSize: '0.9rem', lineHeight: 1.6 }}>
+        <div style={{ background: '#fdf1e2', border: '1px solid #f0d9c2', borderRadius: '12px', padding: '1.25rem', marginBottom: '1.5rem', color: '#b87920', fontSize: '0.9rem', lineHeight: 1.6 }}>
           המדיניות המפורטת כאן היא כללית ועשויה להשתנות בפרטים מסוימים בין בית ספר לבית ספר. בכל מקרה של
           סתירה, ההנחיה המחייבת היא זו שנמסרה על ידי מזכירות בית הספר בו לומד התלמיד.
         </div>

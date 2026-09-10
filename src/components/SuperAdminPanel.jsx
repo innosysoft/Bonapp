@@ -36,26 +36,26 @@ const VideoManager = () => {
     <div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
         <input placeholder="כותרת הסרטון" value={newVideo.title} onChange={e => setNewVideo({...newVideo, title: e.target.value})}
-          style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px' }} />
+          style={{ padding: '0.75rem', border: '2px solid #dce6e9', borderRadius: '8px' }} />
         <input placeholder="קישור YouTube" value={newVideo.youtube_url} onChange={e => setNewVideo({...newVideo, youtube_url: e.target.value})}
-          style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px' }} />
+          style={{ padding: '0.75rem', border: '2px solid #dce6e9', borderRadius: '8px' }} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '1rem', marginBottom: '2rem', alignItems: 'end' }}>
         <textarea placeholder="הסבר קצר (אופציונלי)" value={newVideo.description} onChange={e => setNewVideo({...newVideo, description: e.target.value})}
           rows={2}
-          style={{ padding: '0.75rem', border: '2px solid #e0e0e0', borderRadius: '8px', fontFamily: 'inherit', resize: 'vertical' }} />
-        <button onClick={addVideo} style={{ padding: '0.75rem 1.5rem', background: '#667eea', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
+          style={{ padding: '0.75rem', border: '2px solid #dce6e9', borderRadius: '8px', fontFamily: 'inherit', resize: 'vertical' }} />
+        <button onClick={addVideo} style={{ padding: '0.75rem 1.5rem', background: '#356b8c', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600' }}>
           הוסף
         </button>
       </div>
       {videos.map(v => (
-        <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: '#f8f9fa', borderRadius: '8px', marginBottom: '0.5rem' }}>
+        <div key={v.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '1rem', background: '#f4f7f7', borderRadius: '8px', marginBottom: '0.5rem' }}>
           <div>
             <div style={{ fontWeight: '600' }}>{v.title}</div>
-            <div style={{ fontSize: '0.85rem', color: '#666' }}>{v.youtube_url}</div>
-            {v.description && <div style={{ fontSize: '0.85rem', color: '#888', marginTop: '0.25rem' }}>{v.description}</div>}
+            <div style={{ fontSize: '0.85rem', color: '#607482' }}>{v.youtube_url}</div>
+            {v.description && <div style={{ fontSize: '0.85rem', color: '#607482', marginTop: '0.25rem' }}>{v.description}</div>}
           </div>
-          <button onClick={() => deleteVideo(v.id)} style={{ background: '#f44336', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
+          <button onClick={() => deleteVideo(v.id)} style={{ background: '#b94b4b', color: 'white', border: 'none', borderRadius: '8px', padding: '0.5rem 1rem', cursor: 'pointer' }}>
             מחק
           </button>
         </div>
@@ -371,7 +371,7 @@ const saveSchoolSettings = async () => {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     }}>
 
@@ -385,16 +385,16 @@ const saveSchoolSettings = async () => {
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <div style={{
               width: '60px', height: '60px',
-              background: 'linear-gradient(135deg, #667eea, #764ba2)',
+              background: 'linear-gradient(135deg, #356b8c, #17324a)',
               borderRadius: '15px', display: 'flex', alignItems: 'center', justifyContent: 'center'
             }}>
               <School size={32} color="white" />
             </div>
             <div>
-              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#333', margin: 0 }}>
+              <h1 style={{ fontSize: '2rem', fontWeight: 'bold', color: '#17324a', margin: 0 }}>
   {isSuperAdmin ? 'Super Admin Panel' : 'ניהול בית הספר'}
 </h1>
-<p style={{ color: '#666', margin: 0 }}>
+<p style={{ color: '#607482', margin: 0 }}>
   {isSuperAdmin ? 'ניהול מערכת ארוחות בתי הספר' : `ניהול ${schools[0]?.name || ''}`}
 </p>
 
@@ -403,7 +403,7 @@ const saveSchoolSettings = async () => {
           
           <button style={{
   padding: '1rem 2rem', 
-  background: '#f44336', 
+  background: '#b94b4b', 
   color: 'white', 
   border: 'none',
   borderRadius: '12px', 
@@ -435,27 +435,27 @@ onClick={() => {
             background: 'white', padding: '2rem', borderRadius: '16px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.1)', textAlign: 'center'
           }}>
-            <School size={40} color="#667eea" style={{ marginBottom: '1rem' }} />
-            <h3 style={{ fontSize: '2rem', margin: 0, color: '#333' }}>{schools.length}</h3>
-            <p style={{ color: '#666', margin: 0 }}>בתי ספר במערכת</p>
+            <School size={40} color="#356b8c" style={{ marginBottom: '1rem' }} />
+            <h3 style={{ fontSize: '2rem', margin: 0, color: '#17324a' }}>{schools.length}</h3>
+            <p style={{ color: '#607482', margin: 0 }}>בתי ספר במערכת</p>
           </div>
           
           <div style={{
             background: 'white', padding: '2rem', borderRadius: '16px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.1)', textAlign: 'center'
           }}>
-            <Users size={40} color="#4CAF50" style={{ marginBottom: '1rem' }} />
-            <h3 style={{ fontSize: '2rem', margin: 0, color: '#333' }}>0</h3>
-            <p style={{ color: '#666', margin: 0 }}>סך תלמידים</p>
+            <Users size={40} color="#75a843" style={{ marginBottom: '1rem' }} />
+            <h3 style={{ fontSize: '2rem', margin: 0, color: '#17324a' }}>0</h3>
+            <p style={{ color: '#607482', margin: 0 }}>סך תלמידים</p>
           </div>
           
           <div style={{
             background: 'white', padding: '2rem', borderRadius: '16px',
             boxShadow: '0 4px 20px rgba(0,0,0,0.1)', textAlign: 'center'
           }}>
-            <TrendingUp size={40} color="#FF9800" style={{ marginBottom: '1rem' }} />
-            <h3 style={{ fontSize: '2rem', margin: 0, color: '#333' }}>₪0</h3>
-            <p style={{ color: '#666', margin: 0 }}>מחזור חודשי</p>
+            <TrendingUp size={40} color="#b87920" style={{ marginBottom: '1rem' }} />
+            <h3 style={{ fontSize: '2rem', margin: 0, color: '#17324a' }}>₪0</h3>
+            <p style={{ color: '#607482', margin: 0 }}>מחזור חודשי</p>
           </div>
         </div>
 
@@ -469,7 +469,7 @@ onClick={() => {
           </h2>
           {isSuperAdmin && (
   <button style={{
-    padding: '1rem 2rem', background: '#4CAF50', color: 'white',
+    padding: '1rem 2rem', background: '#75a843', color: 'white',
     border: 'none', borderRadius: '12px', cursor: 'pointer',
     display: 'flex', alignItems: 'center', gap: '0.5rem'
   }}
@@ -490,18 +490,18 @@ onClick={() => {
               background: 'white', padding: '2rem', borderRadius: '16px',
               boxShadow: '0 4px 20px rgba(0,0,0,0.1)'
             }}>
-              <h3 style={{ fontSize: '1.2rem', margin: '0 0 1rem 0', color: '#333' }}>
+              <h3 style={{ fontSize: '1.2rem', margin: '0 0 1rem 0', color: '#17324a' }}>
                 {school.name}
               </h3>
-              <p style={{ color: '#666', margin: '0.5rem 0' }}>📍 {school.address}</p>
-              <p style={{ color: '#666', margin: '0.5rem 0' }}>👨‍💼 {school.contact_person}</p>
-              <p style={{ color: '#666', margin: '0.5rem 0' }}>📞 {school.contact_phone}</p>
-              <p style={{ color: '#666', margin: '0.5rem 0' }}>✉️ {school.contact_email}</p>
+              <p style={{ color: '#607482', margin: '0.5rem 0' }}>📍 {school.address}</p>
+              <p style={{ color: '#607482', margin: '0.5rem 0' }}>👨‍💼 {school.contact_person}</p>
+              <p style={{ color: '#607482', margin: '0.5rem 0' }}>📞 {school.contact_phone}</p>
+              <p style={{ color: '#607482', margin: '0.5rem 0' }}>✉️ {school.contact_email}</p>
               
-              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #eee' }}>
+              <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #dce6e9' }}>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
                   <button style={{
-                    padding: '0.5rem 1rem', background: '#667eea', color: 'white',
+                    padding: '0.5rem 1rem', background: '#356b8c', color: 'white',
                     border: 'none', borderRadius: '8px', cursor: 'pointer', flex: 1
                   }}
                   onClick={() => {
@@ -512,7 +512,7 @@ onClick={() => {
                   </button>
                   
                   <button style={{
-                    padding: '0.5rem 1rem', background: '#5cb85c', color: 'white',
+                    padding: '0.5rem 1rem', background: '#75a843', color: 'white',
                     border: 'none', borderRadius: '8px', cursor: 'pointer', flex: 1
                   }}
                   onClick={async () => {
@@ -561,7 +561,7 @@ onClick={() => {
               <input type="text" value={newSchool.name}
                 onChange={(e) => setNewSchool({...newSchool, name: e.target.value})}
                 style={{
-                  width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                  width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                   borderRadius: '8px', marginTop: '0.5rem', boxSizing: 'border-box',
                   textAlign: 'right'
                 }} />
@@ -572,7 +572,7 @@ onClick={() => {
               <input type="text" value={newSchool.address}
                 onChange={(e) => setNewSchool({...newSchool, address: e.target.value})}
                 style={{
-                  width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                  width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                   borderRadius: '8px', marginTop: '0.5rem', boxSizing: 'border-box',
                   textAlign: 'right'
                 }} />
@@ -583,7 +583,7 @@ onClick={() => {
               <input type="text" value={newSchool.contact_person}
                 onChange={(e) => setNewSchool({...newSchool, contact_person: e.target.value})}
                 style={{
-                  width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                  width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                   borderRadius: '8px', marginTop: '0.5rem', boxSizing: 'border-box',
                   textAlign: 'right'
                 }} />
@@ -594,7 +594,7 @@ onClick={() => {
               <input type="tel" value={newSchool.contact_phone}
                 onChange={(e) => setNewSchool({...newSchool, contact_phone: e.target.value})}
                 style={{
-                  width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                  width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                   borderRadius: '8px', marginTop: '0.5rem', boxSizing: 'border-box',
                   textAlign: 'right'
                 }} />
@@ -605,7 +605,7 @@ onClick={() => {
               <input type="email" value={newSchool.contact_email}
                 onChange={(e) => setNewSchool({...newSchool, contact_email: e.target.value})}
                 style={{
-                  width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                  width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                   borderRadius: '8px', marginTop: '0.5rem', boxSizing: 'border-box',
                   textAlign: 'left'
                 }} />
@@ -614,14 +614,14 @@ onClick={() => {
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
               <button onClick={() => setShowCreateForm(false)}
                 style={{
-                  padding: '0.75rem 2rem', background: '#f5f5f5', color: '#666',
+                  padding: '0.75rem 2rem', background: '#f4f7f7', color: '#607482',
                   border: 'none', borderRadius: '8px', cursor: 'pointer'
                 }}>
                 ביטול
               </button>
               <button onClick={createSchool}
                 style={{
-                  padding: '0.75rem 2rem', background: '#4CAF50', color: 'white',
+                  padding: '0.75rem 2rem', background: '#75a843', color: 'white',
                   border: 'none', borderRadius: '8px', cursor: 'pointer'
                 }}>
                 צור בית ספר
@@ -648,7 +648,7 @@ onClick={() => {
               <h3>ניהול משתמשים - {selectedSchool.name}</h3>
               <button onClick={() => setSelectedSchool(null)}
                 style={{
-                  background: '#f5f5f5', border: 'none', padding: '0.5rem 1rem',
+                  background: '#f4f7f7', border: 'none', padding: '0.5rem 1rem',
                   borderRadius: '8px', cursor: 'pointer'
                 }}>
                 סגור
@@ -658,7 +658,7 @@ onClick={() => {
             {/* כפתור הוספת משתמש */}
             <button onClick={() => setShowCreateUserForm(true)}
               style={{
-                padding: '0.75rem 1.5rem', background: '#4CAF50', color: 'white',
+                padding: '0.75rem 1.5rem', background: '#75a843', color: 'white',
                 border: 'none', borderRadius: '8px', cursor: 'pointer', marginBottom: '1.5rem'
               }}>
               + הוסף משתמש חדש
@@ -667,26 +667,26 @@ onClick={() => {
             {/* רשימת משתמשים */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               {schoolUsers.length === 0 ? (
-                <p style={{ textAlign: 'center', color: '#666' }}>אין עדיין משתמשים לבית ספר זה</p>
+                <p style={{ textAlign: 'center', color: '#607482' }}>אין עדיין משתמשים לבית ספר זה</p>
               ) : (
                 schoolUsers.map(user => (
                   <div key={user.id} style={{
-                    padding: '1rem', background: '#f8f9fa', borderRadius: '8px',
+                    padding: '1rem', background: '#f4f7f7', borderRadius: '8px',
                     display: 'flex', justifyContent: 'space-between', alignItems: 'center'
                   }}>
                     <div>
                       <h4 style={{ margin: '0 0 0.5rem 0' }}>
                         {user.first_name} {user.last_name}
                       </h4>
-                      <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#666' }}>
+                      <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#607482' }}>
                         📧 {user.email}
                       </p>
-                      <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#666' }}>
+                      <p style={{ margin: '0.25rem 0', fontSize: '0.9rem', color: '#607482' }}>
                         📞 {user.phone}
                       </p>
                       <span style={{
                         display: 'inline-block', padding: '0.25rem 0.75rem',
-                        background: '#667eea', color: 'white', borderRadius: '12px',
+                        background: '#356b8c', color: 'white', borderRadius: '12px',
                         fontSize: '0.8rem', marginTop: '0.5rem'
                       }}>
                         {user.role === 'secretary' ? 'מזכירות' : 
@@ -705,7 +705,7 @@ onClick={() => {
                         setShowEditUserForm(true);
                       }}
                         style={{
-                          padding: '0.5rem 1rem', background: '#5b9bd5', color: 'white',
+                          padding: '0.5rem 1rem', background: '#356b8c', color: 'white',
                           border: 'none', borderRadius: '8px', cursor: 'pointer'
                         }}>
                         ✏️ ערוך
@@ -713,7 +713,7 @@ onClick={() => {
 
                       <button onClick={() => deleteUser(user.id)}
                         style={{
-                          padding: '0.5rem 1rem', background: '#f44336', color: 'white',
+                          padding: '0.5rem 1rem', background: '#b94b4b', color: 'white',
                           border: 'none', borderRadius: '8px', cursor: 'pointer'
                         }}>
                         מחק
@@ -739,7 +739,7 @@ onClick={() => {
                   <input type="text" value={newUser.firstName}
                     onChange={(e) => setNewUser({...newUser, firstName: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'right'
                     }} />
                 </div>
@@ -749,7 +749,7 @@ onClick={() => {
                   <input type="text" value={newUser.lastName}
                     onChange={(e) => setNewUser({...newUser, lastName: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'right'
                     }} />
                 </div>
@@ -761,7 +761,7 @@ onClick={() => {
   
                     onChange={(e) => setNewUser({...newUser, email: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'left'
                     }} />
                 </div>
@@ -773,7 +773,7 @@ onClick={() => {
 
                     onChange={(e) => setNewUser({...newUser, password: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'left'
                     }} />
                 </div>
@@ -783,7 +783,7 @@ onClick={() => {
   <input type="password" value={newUser.confirmPassword}
     onChange={(e) => setNewUser({...newUser, confirmPassword: e.target.value})}
     style={{
-      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'left'
     }} />
 </div>
@@ -793,7 +793,7 @@ onClick={() => {
                   <input type="tel" value={newUser.phone}
                     onChange={(e) => setNewUser({...newUser, phone: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'right'
                     }} />
                 </div>
@@ -803,7 +803,7 @@ onClick={() => {
                   <select value={newUser.role}
                     onChange={(e) => setNewUser({...newUser, role: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box'
                     }}>
                     <option value="secretary">מזכירות</option>
@@ -820,14 +820,14 @@ onClick={() => {
 }}
 
                     style={{
-                      padding: '0.75rem 2rem', background: '#f5f5f5', color: '#666',
+                      padding: '0.75rem 2rem', background: '#f4f7f7', color: '#607482',
                       border: 'none', borderRadius: '8px', cursor: 'pointer'
                     }}>
                     ביטול
                   </button>
                   <button onClick={createUser}
                     style={{
-                      padding: '0.75rem 2rem', background: '#4CAF50', color: 'white',
+                      padding: '0.75rem 2rem', background: '#75a843', color: 'white',
                       border: 'none', borderRadius: '8px', cursor: 'pointer'
                     }}>
                     צור משתמש
@@ -855,7 +855,7 @@ onClick={() => {
                   <input type="text" value={editingUser.first_name || ''}
                     onChange={(e) => setEditingUser({...editingUser, first_name: e.target.value, firstName: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'right'
                     }} />
                 </div>
@@ -865,7 +865,7 @@ onClick={() => {
                   <input type="text" value={editingUser.last_name || ''}
                     onChange={(e) => setEditingUser({...editingUser, last_name: e.target.value, lastName: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'right'
                     }} />
                 </div>
@@ -875,7 +875,7 @@ onClick={() => {
                   <input type="email" value={editingUser.email || ''}
                     onChange={(e) => setEditingUser({...editingUser, email: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'left'
                     }} />
                 </div>
@@ -885,7 +885,7 @@ onClick={() => {
                   <input type="tel" value={editingUser.phone || ''}
                     onChange={(e) => setEditingUser({...editingUser, phone: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'right'
                     }} />
                 </div>
@@ -895,7 +895,7 @@ onClick={() => {
                   <select value={editingUser.role || 'secretary'}
                     onChange={(e) => setEditingUser({...editingUser, role: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box'
                     }}>
                     <option value="secretary">מזכירות</option>
@@ -904,9 +904,9 @@ onClick={() => {
                   </select>
                 </div>
 
-                <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '2px solid #f0f0f0' }} />
+                <hr style={{ margin: '1.5rem 0', border: 'none', borderTop: '2px solid #dce6e9' }} />
                 
-                <p style={{ fontSize: '0.9rem', color: '#666', marginBottom: '1rem' }}>
+                <p style={{ fontSize: '0.9rem', color: '#607482', marginBottom: '1rem' }}>
                   💡 השאר ריק אם אינך רוצה לשנות את הסיסמה
                 </p>
 
@@ -916,7 +916,7 @@ onClick={() => {
                     autoComplete="new-password"
                     onChange={(e) => setEditingUser({...editingUser, newPassword: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'left'
                     }} />
                 </div>
@@ -926,7 +926,7 @@ onClick={() => {
                   <input type="password" value={editingUser.confirmPassword || ''}
                     onChange={(e) => setEditingUser({...editingUser, confirmPassword: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', boxSizing: 'border-box', textAlign: 'left'
                     }} />
                 </div>
@@ -937,14 +937,14 @@ onClick={() => {
                     setEditingUser(null);
                   }}
                     style={{
-                      padding: '0.75rem 2rem', background: '#f5f5f5', color: '#666',
+                      padding: '0.75rem 2rem', background: '#f4f7f7', color: '#607482',
                       border: 'none', borderRadius: '8px', cursor: 'pointer'
                     }}>
                     ביטול
                   </button>
                   <button onClick={updateUser}
                     style={{
-                      padding: '0.75rem 2rem', background: '#5b9bd5', color: 'white',
+                      padding: '0.75rem 2rem', background: '#356b8c', color: 'white',
                       border: 'none', borderRadius: '8px', cursor: 'pointer'
                     }}>
                     💾 עדכן משתמש
@@ -956,7 +956,7 @@ onClick={() => {
       {/* ניהול סרטוני הסבר */}
       <div style={{ maxWidth: '1200px', margin: '2rem auto', padding: '0 2rem' }}>
         <div style={{ background: 'white', borderRadius: '16px', padding: '2rem', boxShadow: '0 4px 16px rgba(0,0,0,0.05)' }}>
-          <h2 style={{ marginBottom: '1.5rem', color: '#333' }}>🎬 ניהול סרטוני הסבר</h2>
+          <h2 style={{ marginBottom: '1.5rem', color: '#17324a' }}>🎬 ניהול סרטוני הסבר</h2>
           <VideoManager />
         </div>
       </div>
@@ -976,14 +976,14 @@ onClick={() => {
             {/* כותרת */}
             <div style={{
               display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '2px solid #f0f0f0'
+              marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '2px solid #dce6e9'
             }}>
-              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#333', margin: 0 }}>
+              <h2 style={{ fontSize: '1.8rem', fontWeight: 'bold', color: '#17324a', margin: 0 }}>
                 ⚙️ הגדרות - {editingSchool.name}
               </h2>
               <button onClick={() => setShowSettingsModal(false)}
                 style={{
-                  background: '#f5f5f5', border: 'none', borderRadius: '50%',
+                  background: '#f4f7f7', border: 'none', borderRadius: '50%',
                   width: '40px', height: '40px', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center'
                 }}>
@@ -993,83 +993,83 @@ onClick={() => {
 
             {/* פרטי בית הספר */}
             <div style={{
-              background: '#f8f9fa', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem'
+              background: '#f4f7f7', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem'
             }}>
-              <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.2rem', color: '#333' }}>
+              <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.2rem', color: '#17324a' }}>
                 📋 פרטי בית הספר
               </h3>
               
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
                     שם בית הספר *
                   </label>
                   <input type="text" value={editingSchool.name || ''}
                     onChange={(e) => setEditingSchool({...editingSchool, name: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
                     }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
                     טלפון בית ספר
                   </label>
                   <input type="tel" value={editingSchool.school_phone || ''}
                     onChange={(e) => setEditingSchool({...editingSchool, school_phone: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
                     }} />
                 </div>
               </div>
 
               <div style={{ marginBottom: '1rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
                   כתובת
                 </label>
                 <input type="text" value={editingSchool.address || ''}
                   onChange={(e) => setEditingSchool({...editingSchool, address: e.target.value})}
                   style={{
-                    width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                    width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                     borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
                   }} />
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
                     איש קשר
                   </label>
                   <input type="text" value={editingSchool.contact_person || ''}
                     onChange={(e) => setEditingSchool({...editingSchool, contact_person: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
                     }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
                     טלפון איש קשר
                   </label>
                   <input type="tel" value={editingSchool.contact_phone || ''}
                     onChange={(e) => setEditingSchool({...editingSchool, contact_phone: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
                     }} />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
                     מייל איש קשר
                   </label>
                   <input type="email" value={editingSchool.contact_email || ''}
                     onChange={(e) => setEditingSchool({...editingSchool, contact_email: e.target.value})}
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                      width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                       borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', textAlign: 'left'
                     }} />
                 </div>
@@ -1078,15 +1078,15 @@ onClick={() => {
 
             {/* הגדרות מערכת */}
             <div style={{
-              background: '#f8f9fa', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem'
+              background: '#f4f7f7', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem'
             }}>
-              <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.2rem', color: '#333' }}>
+              <h3 style={{ margin: '0 0 1.5rem 0', fontSize: '1.2rem', color: '#17324a' }}>
                 ⚙️ הגדרות מערכת
               </h3>
 
               {/* סוג תפריט */}
               <div style={{ marginBottom: '1.5rem' }}>
-                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: '#555' }}>
+                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: '#607482' }}>
                   סוג תפריט
                 </label>
                 <div style={{ display: 'flex', gap: '1rem' }}>
@@ -1095,9 +1095,9 @@ onClick={() => {
                     style={{
                       flex: 1, padding: '1rem', borderRadius: '8px',
                       border: '2px solid',
-                      borderColor: editingSchool.menu_type === 'items' ? '#5b9bd5' : '#e0e0e0',
-                      background: editingSchool.menu_type === 'items' ? '#5b9bd5' : 'white',
-                      color: editingSchool.menu_type === 'items' ? 'white' : '#666',
+                      borderColor: editingSchool.menu_type === 'items' ? '#356b8c' : '#dce6e9',
+                      background: editingSchool.menu_type === 'items' ? '#356b8c' : 'white',
+                      color: editingSchool.menu_type === 'items' ? 'white' : '#607482',
                       cursor: 'pointer', fontWeight: '600'
                     }}
                   >
@@ -1108,9 +1108,9 @@ onClick={() => {
                     style={{
                       flex: 1, padding: '1rem', borderRadius: '8px',
                       border: '2px solid',
-                      borderColor: editingSchool.menu_type === 'daily' ? '#5b9bd5' : '#e0e0e0',
-                      background: editingSchool.menu_type === 'daily' ? '#5b9bd5' : 'white',
-                      color: editingSchool.menu_type === 'daily' ? 'white' : '#666',
+                      borderColor: editingSchool.menu_type === 'daily' ? '#356b8c' : '#dce6e9',
+                      background: editingSchool.menu_type === 'daily' ? '#356b8c' : 'white',
+                      color: editingSchool.menu_type === 'daily' ? 'white' : '#607482',
                       cursor: 'pointer', fontWeight: '600'
                     }}
                   >
@@ -1140,7 +1140,7 @@ onClick={() => {
 
                 {editingSchool.allow_negative_balance && (
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#555' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#607482' }}>
                       מינוס מקסימלי מותר (₪)
                     </label>
                     <input type="number" step="0.5"
@@ -1150,7 +1150,7 @@ onClick={() => {
                         max_negative_balance: -Math.abs(parseFloat(e.target.value) || 0)
                       })}
                       style={{
-                        width: '200px', padding: '0.75rem', border: '2px solid #e0e0e0',
+                        width: '200px', padding: '0.75rem', border: '2px solid #dce6e9',
                         borderRadius: '8px', fontSize: '1rem'
                       }}
                     />
@@ -1160,12 +1160,12 @@ onClick={() => {
 
               {/* שעות מטבח */}
               <div>
-                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: '#555' }}>
+                <label style={{ display: 'block', marginBottom: '0.75rem', fontWeight: '600', color: '#607482' }}>
                   ⏰ שעות פעילות המטבח
                 </label>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#607482' }}>
                       שעת פתיחה
                     </label>
                     <input type="time"
@@ -1175,14 +1175,14 @@ onClick={() => {
                         kitchen_open_time: e.target.value
                       })}
                       style={{
-                        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                        width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                         borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
                       }}
                     />
                   </div>
 
                   <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#666' }}>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', color: '#607482' }}>
                       שעת סגירה
                     </label>
                     <input type="time"
@@ -1192,7 +1192,7 @@ onClick={() => {
                         kitchen_close_time: e.target.value
                       })}
                       style={{
-                        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+                        width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
                         borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box'
                       }}
                     />
@@ -1203,19 +1203,19 @@ onClick={() => {
 
             {/* הגדרות מייל */}
             <div style={{
-              background: '#fff3cd', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem',
-              border: '2px solid #ffc107'
+              background: '#fdf1e2', padding: '1.5rem', borderRadius: '12px', marginBottom: '2rem',
+              border: '2px solid #b87920'
             }}>
-              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', color: '#856404' }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.2rem', color: '#b87920' }}>
                 📧 הגדרות מייל (לשליחת QR Code)
               </h3>
-              <p style={{ fontSize: '0.9rem', color: '#856404', marginBottom: '1rem' }}>
+              <p style={{ fontSize: '0.9rem', color: '#b87920', marginBottom: '1rem' }}>
                 ⚠️ השדות הללו מוצפנים. יש להזין Gmail App Password (לא הסיסמה הרגילה!)
               </p>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#856404' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#b87920' }}>
                     כתובת Gmail
                   </label>
                   <input type="email"
@@ -1223,14 +1223,14 @@ onClick={() => {
                     onChange={(e) => setEditingSchool({...editingSchool, email_user: e.target.value})}
                     placeholder="example@gmail.com"
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #ffc107',
+                      width: '100%', padding: '0.75rem', border: '2px solid #b87920',
                       borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', textAlign: 'left'
                     }}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#856404' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#b87920' }}>
                     Gmail App Password
                   </label>
                   <input type="password"
@@ -1238,7 +1238,7 @@ onClick={() => {
                     onChange={(e) => setEditingSchool({...editingSchool, email_pass: e.target.value})}
                     placeholder="xxxx xxxx xxxx xxxx"
                     style={{
-                      width: '100%', padding: '0.75rem', border: '2px solid #ffc107',
+                      width: '100%', padding: '0.75rem', border: '2px solid #b87920',
                       borderRadius: '8px', fontSize: '1rem', boxSizing: 'border-box', textAlign: 'left'
                     }}
                   />
@@ -1248,7 +1248,7 @@ onClick={() => {
 
 {/* Payment Settings */}
 <div style={{
-  background: '#f8f9fa',
+  background: '#f4f7f7',
   padding: '1.5rem',
   borderRadius: '12px',
   marginBottom: '1.5rem'
@@ -1258,7 +1258,7 @@ onClick={() => {
   </h3>
 
   {/* Paybox */}
-  <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
+  <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #dce6e9' }}>
     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
       <input
         type="checkbox"
@@ -1282,7 +1282,7 @@ onClick={() => {
             style={{
               width: '100%',
               padding: '0.75rem',
-              border: '2px solid #e0e0e0',
+              border: '2px solid #dce6e9',
               borderRadius: '8px',
               boxSizing: 'border-box'
             }}
@@ -1300,7 +1300,7 @@ onClick={() => {
             style={{
               width: '100%',
               padding: '0.75rem',
-              border: '2px solid #e0e0e0',
+              border: '2px solid #dce6e9',
               borderRadius: '8px',
               boxSizing: 'border-box'
             }}
@@ -1311,7 +1311,7 @@ onClick={() => {
   </div>
 
   {/* Bit Link */}
-  <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #e0e0e0' }}>
+  <div style={{ marginBottom: '1.5rem', paddingBottom: '1.5rem', borderBottom: '1px solid #dce6e9' }}>
     <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
       <input
         type="checkbox"
@@ -1334,7 +1334,7 @@ onClick={() => {
           style={{
             width: '100%',
             padding: '0.75rem',
-            border: '2px solid #e0e0e0',
+            border: '2px solid #dce6e9',
             borderRadius: '8px',
             boxSizing: 'border-box',
             textAlign: 'left',
@@ -1362,7 +1362,7 @@ onClick={() => {
 
 {/* שיטת חיוב ארוחות */}
 <div style={{
-  background: '#f8f9fa', padding: '1.5rem',
+  background: '#f4f7f7', padding: '1.5rem',
   borderRadius: '12px', marginBottom: '1.5rem'
 }}>
   <h3 style={{ marginBottom: '1rem' }}>🍽️ שיטת חיוב ארוחות</h3>
@@ -1377,7 +1377,7 @@ onClick={() => {
       />
       <strong>🆓 חופשי (טעינת יתרה + סריקת QR)</strong>
     </label>
-    <p style={{ fontSize: '0.85rem', color: '#666', marginRight: '1.5rem' }}>
+    <p style={{ fontSize: '0.85rem', color: '#607482', marginRight: '1.5rem' }}>
       ההורה טוען יתרה וכל ארוחה מנוכה בסריקה - המצב הרגיל
     </p>
   </div>
@@ -1392,14 +1392,14 @@ onClick={() => {
       />
       <strong>📅 חבילה חודשית (לפי שכבה)</strong>
     </label>
-    <p style={{ fontSize: '0.85rem', color: '#666', marginRight: '1.5rem' }}>
+    <p style={{ fontSize: '0.85rem', color: '#607482', marginRight: '1.5rem' }}>
       ההורה משלם לפי מספר ימי ארוחה בחודש × מחיר שכבה
     </p>
   </div>
 
 {isSuperAdmin && (
 <div style={{ marginBottom: '1.5rem' }}>
-  <h4 style={{ margin: '0 0 1rem 0', color: '#333' }}>💳 הגדרות סליקה</h4>
+  <h4 style={{ margin: '0 0 1rem 0', color: '#17324a' }}>💳 הגדרות סליקה</h4>
   
   <div style={{ marginBottom: '1rem' }}>
     <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
@@ -1409,7 +1409,7 @@ onClick={() => {
       value={editingSchool.payment_gateway || 'none'}
       onChange={(e) => setEditingSchool({...editingSchool, payment_gateway: e.target.value})}
       style={{
-        width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+        width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
         borderRadius: '8px', fontSize: '1rem'
       }}
     >
@@ -1431,7 +1431,7 @@ onClick={() => {
         onChange={(e) => setEditingSchool({...editingSchool, gateway_webhook_url: e.target.value})}
         placeholder="https://hook.eu1.make.com/..."
         style={{
-          width: '100%', padding: '0.75rem', border: '2px solid #e0e0e0',
+          width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
           borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box'
         }}
       />
@@ -1473,7 +1473,7 @@ onClick={() => {
               <button onClick={() => setShowSettingsModal(false)}
                 style={{
                   flex: 1, padding: '1rem', borderRadius: '12px',
-                  border: '2px solid #e0e0e0', background: 'white', color: '#666',
+                  border: '2px solid #dce6e9', background: 'white', color: '#607482',
                   fontSize: '1rem', fontWeight: '600', cursor: 'pointer'
                 }}>
                 ביטול
@@ -1482,7 +1482,7 @@ onClick={() => {
               <button onClick={saveSchoolSettings}
                 style={{
                   flex: 2, padding: '1rem', borderRadius: '12px',
-                  border: 'none', background: '#5cb85c', color: 'white',
+                  border: 'none', background: '#75a843', color: 'white',
                   fontSize: '1rem', fontWeight: '600', cursor: 'pointer',
                   display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem'
                 }}>

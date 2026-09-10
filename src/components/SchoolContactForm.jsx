@@ -62,7 +62,7 @@ const SchoolContactForm = () => {
   const styles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
@@ -85,7 +85,7 @@ const SchoolContactForm = () => {
     logo: {
       width: '80px',
       height: '80px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+      background: 'linear-gradient(135deg, #356b8c, #17324a)',
       borderRadius: '20px',
       display: 'flex',
       alignItems: 'center',
@@ -95,11 +95,11 @@ const SchoolContactForm = () => {
     title: {
       fontSize: '2rem',
       fontWeight: 'bold',
-      color: '#333',
+      color: '#17324a',
       margin: '0 0 0.5rem 0'
     },
     subtitle: {
-      color: '#666',
+      color: '#607482',
       fontSize: '1rem',
       margin: 0
     },
@@ -110,7 +110,7 @@ const SchoolContactForm = () => {
       display: 'block',
       fontSize: '0.9rem',
       fontWeight: '600',
-      color: '#555',
+      color: '#607482',
       marginBottom: '0.5rem'
     },
     inputWrapper: {
@@ -119,7 +119,7 @@ const SchoolContactForm = () => {
     input: {
       width: '100%',
       padding: '1rem 1rem 1rem 3rem',
-      border: '2px solid #e1e5e9',
+      border: '2px solid #dce6e9',
       borderRadius: '12px',
       fontSize: '1rem',
       transition: 'all 0.3s',
@@ -131,11 +131,11 @@ const SchoolContactForm = () => {
       left: '1rem',
       top: '50%',
       transform: 'translateY(-50%)',
-      color: '#999'
+      color: '#607482'
     },
     submitButton: {
       width: '100%',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+      background: 'linear-gradient(135deg, #356b8c, #17324a)',
       color: 'white',
       border: 'none',
       padding: '1rem 2rem',
@@ -173,24 +173,24 @@ const SchoolContactForm = () => {
       gap: '0.5rem'
     },
     successMessage: {
-      background: '#efe',
-      color: '#393',
-      border: '1px solid #cfc'
+      background: '#eef6e9',
+      color: '#75a843',
+      border: '1px solid #eef6e9'
     },
     errorMessage: {
-      background: '#fee',
-      color: '#c33',
-      border: '1px solid #fcc'
+      background: '#f7e8e8',
+      color: '#b94b4b',
+      border: '1px solid #f7e8e8'
     },
     infoBox: {
-      background: '#f0f4ff',
+      background: '#eaf3f7',
       padding: '1.5rem',
       borderRadius: '12px',
       marginTop: '1.5rem',
-      border: '2px solid #667eea'
+      border: '2px solid #356b8c'
     },
     infoText: {
-      color: '#667eea',
+      color: '#356b8c',
       fontSize: '0.95rem',
       lineHeight: '1.6',
       margin: 0,
@@ -205,7 +205,7 @@ const SchoolContactForm = () => {
         onClick={() => navigate('/')}
         title="חזרה לדף הבית"
       >
-        <Home size={20} color="#667eea" />
+        <Home size={20} color="#356b8c" />
       </button>
 
       <div style={styles.formContainer}>

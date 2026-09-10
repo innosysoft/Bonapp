@@ -39,7 +39,7 @@ const MainHomepage = () => {
       title: 'כניסה למערכת',
       description: 'כניסה עם שם משתמש וסיסמה - המערכת תכוון אותך לאזור המתאים',
       icon: UserCheck,
-      color: '#2196F3',
+      color: '#356b8c',
       features: ['הורים', 'עובדי מטבח', 'מזכירות', 'מנהלי מערכת']
     },
     {
@@ -47,20 +47,20 @@ const MainHomepage = () => {
       title: 'הרשמה חדשה',
       description: 'הרשמה חדשה למערכת עבור הורים חדשים',
       icon: Users,
-      color: '#4CAF50',
+      color: '#75a843',
       features: ['הרשמת הורים', 'הוספת ילדים', 'פתיחת חשבון', 'יצירת כרטיס QR']
     }
   ];
 
   const stats = [
-    { label: 'בתי ספר במערכת', value: schoolCount.toString(), icon: School, color: '#4CAF50' },
-    { label: 'גרסת מערכת', value: 'v1.0', icon: TrendingUp, color: '#2196F3' }
+    { label: 'בתי ספר במערכת', value: schoolCount.toString(), icon: School, color: '#75a843' },
+    { label: 'גרסת מערכת', value: 'v1.0', icon: TrendingUp, color: '#356b8c' }
   ];
 
   const mainStyles = {
     container: {
       minHeight: '100vh',
-      background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+      background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     },
     topBar: {
@@ -80,7 +80,7 @@ const MainHomepage = () => {
     logoIcon: {
       width: '50px',
       height: '50px',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+      background: 'linear-gradient(135deg, #356b8c, #17324a)',
       borderRadius: '12px',
       display: 'flex',
       alignItems: 'center',
@@ -89,18 +89,18 @@ const MainHomepage = () => {
     logoText: {
       fontSize: '1.5rem',
       fontWeight: 'bold',
-      color: '#667eea'
+      color: '#356b8c'
     },
     schoolName: {
       fontSize: '0.9rem',
-      color: '#666',
+      color: '#607482',
       marginTop: '0.25rem'
     },
     systemStatus: {
       display: 'flex',
       alignItems: 'center',
       gap: '0.5rem',
-      color: '#4CAF50',
+      color: '#75a843',
       fontSize: '0.9rem',
       fontWeight: '600'
     },
@@ -227,12 +227,12 @@ const MainHomepage = () => {
     cardTitle: {
       fontSize: '1.6rem',
       fontWeight: 'bold',
-      color: '#333',
+      color: '#17324a',
       margin: '0 0 1rem 0',
       textAlign: 'center'
     },
     cardDescription: {
-      color: '#666',
+      color: '#607482',
       fontSize: '1rem',
       lineHeight: 1.6,
       marginBottom: '1.5rem',
@@ -247,7 +247,7 @@ const MainHomepage = () => {
       gap: '0.75rem',
       marginBottom: '0.75rem',
       fontSize: '0.9rem',
-      color: '#555'
+      color: '#607482'
     },
     featureBullet: {
       width: '6px',
@@ -257,7 +257,7 @@ const MainHomepage = () => {
     },
     cardButton: {
       width: '100%',
-      background: 'linear-gradient(135deg, #667eea, #764ba2)',
+      background: 'linear-gradient(135deg, #356b8c, #17324a)',
       color: 'white',
       border: 'none',
       padding: '1rem 2rem',
@@ -451,7 +451,7 @@ const MainHomepage = () => {
           borderRadius: '50%',
           cursor: 'pointer',
           fontSize: '0.7rem',
-          color: '#667eea',
+          color: '#356b8c',
           zIndex: 999
         }}
         title="Super Admin Access"

@@ -246,9 +246,9 @@ const loadSchoolGroups = async (schoolId) => {
   };
 
   const getStepColor = (step) => {
-    if (currentStep > step) return '#4caf50'; // ירוק - הושלם
-    if (currentStep === step) return '#2196f3'; // כחול - פעיל
-    return '#e0e0e0'; // אפור - לא פעיל
+    if (currentStep > step) return '#75a843'; // ירוק - הושלם
+    if (currentStep === step) return '#356b8c'; // כחול - פעיל
+    return '#dce6e9'; // אפור - לא פעיל
   };
 
   const handleNext = () => {
@@ -313,7 +313,7 @@ const loadSchoolGroups = async (schoolId) => {
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#f5f7fa',
+      backgroundColor: '#f4f7f7',
       padding: '20px',
       fontFamily: "'Segoe UI', Tahoma, Geneva, Verdana, sans-serif"
     }}>
@@ -327,7 +327,7 @@ const loadSchoolGroups = async (schoolId) => {
       }}>
         {/* כותרת */}
         <div style={{
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+          background: 'linear-gradient(135deg, #356b8c 0%, #17324a 100%)',
           color: 'white',
           padding: '30px',
           textAlign: 'center'
@@ -385,14 +385,14 @@ const loadSchoolGroups = async (schoolId) => {
 
 {currentStep === 1 && (
   <div style={{ padding: '30px' }}>
-    <h3 style={{ color: '#333', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+    <h3 style={{ color: '#17324a', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
       <User size={24} />
       פרטי הורה ובחירת בית ספר
     </h3>
 
     {/* בחירת בית ספר */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
         בית ספר *
       </label>
       <select 
@@ -404,7 +404,7 @@ const loadSchoolGroups = async (schoolId) => {
         style={{ 
           width: '100%', 
           padding: '12px', 
-          border: '2px solid #e1e5e9', 
+          border: '2px solid #dce6e9', 
           borderRadius: '8px', 
           fontSize: '16px', 
           textAlign: 'right',
@@ -421,7 +421,7 @@ const loadSchoolGroups = async (schoolId) => {
 
     {/* שם פרטי */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
         שם פרטי ההורה *
       </label>
       <input
@@ -433,7 +433,7 @@ const loadSchoolGroups = async (schoolId) => {
         style={{
           width: '100%',
           padding: '12px',
-          border: '2px solid #e1e5e9',
+          border: '2px solid #dce6e9',
           borderRadius: '8px',
           fontSize: '16px',
           textAlign: 'right',
@@ -445,7 +445,7 @@ const loadSchoolGroups = async (schoolId) => {
 
     {/* שם משפחה */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
         שם משפחה *
       </label>
       <input
@@ -457,7 +457,7 @@ const loadSchoolGroups = async (schoolId) => {
         style={{
           width: '100%',
           padding: '12px',
-          border: '2px solid #e1e5e9',
+          border: '2px solid #dce6e9',
           borderRadius: '8px',
           fontSize: '16px',
           textAlign: 'right',
@@ -469,7 +469,7 @@ const loadSchoolGroups = async (schoolId) => {
 
     {/* טלפון */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
         טלפון *
       </label>
       <input
@@ -481,7 +481,7 @@ const loadSchoolGroups = async (schoolId) => {
         style={{
           width: '100%',
           padding: '12px',
-          border: '2px solid #e1e5e9',
+          border: '2px solid #dce6e9',
           borderRadius: '8px',
           fontSize: '16px',
           textAlign: 'right',
@@ -493,7 +493,7 @@ const loadSchoolGroups = async (schoolId) => {
 
     {/* מייל */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
         כתובת מייל *
       </label>
       <input
@@ -506,7 +506,7 @@ const loadSchoolGroups = async (schoolId) => {
         style={{
           width: '100%',
           padding: '12px',
-          border: '2px solid #e1e5e9',
+          border: '2px solid #dce6e9',
           borderRadius: '8px',
           fontSize: '16px',
           textAlign: 'left',
@@ -515,29 +515,29 @@ const loadSchoolGroups = async (schoolId) => {
         placeholder="parent@example.com"
       />
       {checkingEmail && (
-        <p style={{ color: '#888', fontSize: '13px', marginTop: '6px' }}>בודק אם קיים חשבון עם המייל הזה...</p>
+        <p style={{ color: '#607482', fontSize: '13px', marginTop: '6px' }}>בודק אם קיים חשבון עם המייל הזה...</p>
       )}
       {emailExists === true && (
         <div style={{
           marginTop: '10px',
           padding: '12px 14px',
-          backgroundColor: '#e3f2fd',
-          border: '1px solid #90caf9',
+          backgroundColor: '#eaf3f7',
+          border: '1px solid #dce6e9',
           borderRadius: '8px',
           fontSize: '14px',
-          color: '#1565c0',
+          color: '#356b8c',
           lineHeight: '1.5'
         }}>
           כבר יש חשבון הורה עם המייל הזה במערכת. אם ממשיכים, הילד/ה יתווספו לחשבון הקיים ולא ייווצר חשבון חדש
           (אין צורך למלא סיסמה חדשה - היא לא תשנה את הסיסמה הקיימת). אם שכחתם את הסיסמה, אפשר לאפס אותה
-          {' '}<a href="/login" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', fontWeight: 600 }}>בדף הכניסה</a>.
+          {' '}<a href="/login" target="_blank" rel="noopener noreferrer" style={{ color: '#2c5a75', fontWeight: 600 }}>בדף הכניסה</a>.
         </div>
       )}
     </div>
 
     {/* סיסמה */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
         סיסמה *
       </label>
       <input
@@ -549,7 +549,7 @@ const loadSchoolGroups = async (schoolId) => {
         style={{
           width: '100%',
           padding: '12px',
-          border: '2px solid #e1e5e9',
+          border: '2px solid #dce6e9',
           borderRadius: '8px',
           fontSize: '16px',
           textAlign: 'left',
@@ -561,7 +561,7 @@ const loadSchoolGroups = async (schoolId) => {
 
     {/* אימות סיסמה */}
     <div style={{ marginBottom: '20px' }}>
-      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
         אימות סיסמה *
       </label>
       <input
@@ -573,7 +573,7 @@ const loadSchoolGroups = async (schoolId) => {
         style={{
           width: '100%',
           padding: '12px',
-          border: '2px solid #e1e5e9',
+          border: '2px solid #dce6e9',
           borderRadius: '8px',
           fontSize: '16px',
           textAlign: 'left',
@@ -591,7 +591,7 @@ const loadSchoolGroups = async (schoolId) => {
           {/* שלב 2: פרטי ילדים מפורטים + הגדרות עצמאות */}
           {currentStep === 2 && (
             <div>
-              <h3 style={{ color: '#333', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h3 style={{ color: '#17324a', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <User size={24} />
                 פרטי ילדים והגדרות עצמאות
               </h3>
@@ -599,7 +599,7 @@ const loadSchoolGroups = async (schoolId) => {
               
 
               <h4 style={{
-                color: '#2e7d32',
+                color: '#5f8a36',
                 margin: '0 0 25px 0',
                 fontSize: '18px',
                 fontWeight: 'bold',
@@ -612,11 +612,11 @@ const loadSchoolGroups = async (schoolId) => {
               </h4>
                   {formData.children.map((child, index) => (
   <div key={index} style={{
-    border: '2px solid #e1e5e9',
+    border: '2px solid #dce6e9',
     borderRadius: '12px',
     padding: '25px',
     marginBottom: '25px',
-    backgroundColor: '#fafbfc',
+    backgroundColor: '#f4f7f7',
     position: 'relative'
   }}>
 
@@ -631,7 +631,7 @@ const loadSchoolGroups = async (schoolId) => {
       position: 'absolute',
       top: '15px',
       left: '15px',
-      background: '#f44336',
+      background: '#b94b4b',
       color: 'white',
       border: 'none',
       borderRadius: '50%',
@@ -647,7 +647,7 @@ const loadSchoolGroups = async (schoolId) => {
                   {/* פרטי ילד בסיסיים */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '20px', marginBottom: '25px' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
                         שם פרטי *
                       </label>
                       <input
@@ -658,20 +658,20 @@ const loadSchoolGroups = async (schoolId) => {
                         style={{
                           width: '100%',
                           padding: '12px',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid #dce6e9',
                           borderRadius: '8px',
                           fontSize: '16px',
                           textAlign: 'right',
                           outline: 'none'
                         }}
                         placeholder="שם פרטי"
-                        onFocus={(e) => e.target.style.borderColor = '#2196f3'}
-                        onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                        onFocus={(e) => e.target.style.borderColor = '#356b8c'}
+                        onBlur={(e) => e.target.style.borderColor = '#dce6e9'}
                       />
                     </div>
                     
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
                         שם משפחה *
                       </label>
                       <input
@@ -682,20 +682,20 @@ const loadSchoolGroups = async (schoolId) => {
                         style={{
                           width: '100%',
                           padding: '12px',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid #dce6e9',
                           borderRadius: '8px',
                           fontSize: '16px',
                           textAlign: 'right',
                           outline: 'none'
                         }}
                         placeholder="שם משפחה"
-                        onFocus={(e) => e.target.style.borderColor = '#2196f3'}
-                        onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                        onFocus={(e) => e.target.style.borderColor = '#356b8c'}
+                        onBlur={(e) => e.target.style.borderColor = '#dce6e9'}
                       />
                     </div>
                     
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
                         כיתה *
                       </label>
                       <select
@@ -706,15 +706,15 @@ const loadSchoolGroups = async (schoolId) => {
                         style={{
                           width: '100%',
                           padding: '12px',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid #dce6e9',
                           borderRadius: '8px',
                           fontSize: '16px',
                           textAlign: 'right',
                           outline: 'none',
                           backgroundColor: 'white'
                         }}
-                        onFocus={(e) => e.target.style.borderColor = '#2196f3'}
-                        onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                        onFocus={(e) => e.target.style.borderColor = '#356b8c'}
+                        onBlur={(e) => e.target.style.borderColor = '#dce6e9'}
                       >
                         <option value="">בחר שכבה</option>
                         {schoolGroups.length === 0 ? (
@@ -728,7 +728,7 @@ const loadSchoolGroups = async (schoolId) => {
                     </div>
                     
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
                         טלפון התלמיד *
                       </label>
                       <input
@@ -742,15 +742,15 @@ const loadSchoolGroups = async (schoolId) => {
                         style={{
                           width: '100%',
                           padding: '12px',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid #dce6e9',
                           borderRadius: '8px',
                           fontSize: '16px',
                           textAlign: 'right',
                           outline: 'none'
                         }}
                         placeholder="050-1234567"
-                        onFocus={(e) => e.target.style.borderColor = '#2196f3'}
-                        onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                        onFocus={(e) => e.target.style.borderColor = '#356b8c'}
+                        onBlur={(e) => e.target.style.borderColor = '#dce6e9'}
                       />
                     </div>
                   </div>
@@ -758,7 +758,7 @@ const loadSchoolGroups = async (schoolId) => {
                   {/* תעודת זהות ותמונה */}
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px', marginBottom: '25px' }}>
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
                         מספר תעודת זהות (אופציונלי)
                       </label>
                       <input
@@ -768,20 +768,20 @@ const loadSchoolGroups = async (schoolId) => {
                         style={{
                           width: '100%',
                           padding: '12px',
-                          border: '2px solid #e1e5e9',
+                          border: '2px solid #dce6e9',
                           borderRadius: '8px',
                           fontSize: '16px',
                           textAlign: 'right',
                           outline: 'none'
                         }}
                         placeholder="123456789"
-                        onFocus={(e) => e.target.style.borderColor = '#2196f3'}
-                        onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                        onFocus={(e) => e.target.style.borderColor = '#356b8c'}
+                        onBlur={(e) => e.target.style.borderColor = '#dce6e9'}
                       />
                     </div>
 
                     <div>
-                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333' }}>
+                      <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a' }}>
                         תמונה (אופציונלי - לזיהוי במטבח)
                       </label>
                       <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
@@ -790,20 +790,20 @@ const loadSchoolGroups = async (schoolId) => {
                           alignItems: 'center',
                           gap: '8px',
                           padding: '12px 20px',
-                          backgroundColor: '#f5f5f5',
-                          border: '2px dashed #ccc',
+                          backgroundColor: '#f4f7f7',
+                          border: '2px dashed #dce6e9',
                           borderRadius: '8px',
                           cursor: 'pointer',
                           transition: 'all 0.3s ease',
                           fontSize: '14px'
                         }}
                         onMouseOver={(e) => {
-                          e.target.style.backgroundColor = '#e8f4f8';
-                          e.target.style.borderColor = '#2196f3';
+                          e.target.style.backgroundColor = '#eaf3f7';
+                          e.target.style.borderColor = '#356b8c';
                         }}
                         onMouseOut={(e) => {
-                          e.target.style.backgroundColor = '#f5f5f5';
-                          e.target.style.borderColor = '#ccc';
+                          e.target.style.backgroundColor = '#f4f7f7';
+                          e.target.style.borderColor = '#dce6e9';
                         }}>
                           <Camera size={20} />
                           העלה תמונה
@@ -823,7 +823,7 @@ const loadSchoolGroups = async (schoolId) => {
                               height: '50px',
                               borderRadius: '50%',
                               objectFit: 'cover',
-                              border: '2px solid #ddd'
+                              border: '2px solid #dce6e9'
                             }}
                           />
                         )}
@@ -833,14 +833,14 @@ const loadSchoolGroups = async (schoolId) => {
                   
                   {/* הגדרות עצמאות */}
                   <div style={{
-                    backgroundColor: '#f0f8ff',
-                    border: '2px solid #e3f2fd',
+                    backgroundColor: '#eaf3f7',
+                    border: '2px solid #eaf3f7',
                     borderRadius: '10px',
                     padding: '20px'
                   }}>
                     <h5 style={{
                       margin: '0 0 15px 0',
-                      color: '#1565c0',
+                      color: '#356b8c',
                       fontSize: '16px',
                       fontWeight: 'bold',
                       display: 'flex',
@@ -912,7 +912,7 @@ const loadSchoolGroups = async (schoolId) => {
                     {/* מגבלות כמותיות */}
                     <div style={{ marginTop: '20px', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px' }}>
                       <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a', fontSize: '14px' }}>
                           מגבלת הוצאה יומית (₪)
                         </label>
                         <input
@@ -924,7 +924,7 @@ const loadSchoolGroups = async (schoolId) => {
                           style={{
                             width: '100%',
                             padding: '10px',
-                            border: '2px solid #e1e5e9',
+                            border: '2px solid #dce6e9',
                             borderRadius: '6px',
                             fontSize: '14px',
                             textAlign: 'center',
@@ -934,7 +934,7 @@ const loadSchoolGroups = async (schoolId) => {
                       </div>
 
                       <div>
-                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
+                        <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a', fontSize: '14px' }}>
                           מקסימום ארוחות ביום
                         </label>
                         <input
@@ -946,7 +946,7 @@ const loadSchoolGroups = async (schoolId) => {
                           style={{
                             width: '100%',
                             padding: '10px',
-                            border: '2px solid #e1e5e9',
+                            border: '2px solid #dce6e9',
                             borderRadius: '6px',
                             fontSize: '14px',
                             textAlign: 'center',
@@ -967,7 +967,7 @@ const loadSchoolGroups = async (schoolId) => {
                   alignItems: 'center',
                   gap: '10px',
                   padding: '15px 25px',
-                  backgroundColor: '#4caf50',
+                  backgroundColor: '#75a843',
                   color: 'white',
                   border: 'none',
                   borderRadius: '10px',
@@ -977,8 +977,8 @@ const loadSchoolGroups = async (schoolId) => {
                   transition: 'all 0.3s ease',
                   margin: '0 auto'
                 }}
-                onMouseOver={(e) => e.target.style.backgroundColor = '#45a049'}
-                onMouseOut={(e) => e.target.style.backgroundColor = '#4caf50'}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#5f8a36'}
+                onMouseOut={(e) => e.target.style.backgroundColor = '#75a843'}
               >
                 <UserPlus size={20} />
                 הוסף ילד נוסף
@@ -991,20 +991,20 @@ const loadSchoolGroups = async (schoolId) => {
 
 
             <div>
-              <h3 style={{ color: '#333', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
+              <h3 style={{ color: '#17324a', marginBottom: '25px', fontSize: '20px', display: 'flex', alignItems: 'center', gap: '10px' }}>
                 <Bell size={24} />
                 הגדרות התראות והסכמות
               </h3>
               
               {/* הגדרות התראות */}
               <div style={{
-                backgroundColor: '#f8f9fa',
-                border: '2px solid #e9ecef',
+                backgroundColor: '#f4f7f7',
+                border: '2px solid #dce6e9',
                 borderRadius: '12px',
                 padding: '25px',
                 marginBottom: '25px'
               }}>
-                <h4 style={{ margin: '0 0 20px 0', color: '#495057', fontSize: '18px', fontWeight: 'bold' }}>
+                <h4 style={{ margin: '0 0 20px 0', color: '#17324a', fontSize: '18px', fontWeight: 'bold' }}>
                   הגדרות התראות
                 </h4>
                 
@@ -1095,8 +1095,8 @@ const loadSchoolGroups = async (schoolId) => {
                 </div>
 
                 {/* הגדרות ערוץ התראות */}
-                <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #dee2e6' }}>
-                  <h5 style={{ margin: '0 0 15px 0', color: '#6c757d', fontSize: '16px' }}>
+                <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #dce6e9' }}>
+                  <h5 style={{ margin: '0 0 15px 0', color: '#607482', fontSize: '16px' }}>
                     ערוצי התראות
                   </h5>
                   <div style={{ display: 'flex', gap: '25px', alignItems: 'center' }}>
@@ -1131,7 +1131,7 @@ const loadSchoolGroups = async (schoolId) => {
                 {/* סף יתרה נמוכה */}
                 {formData.notificationSettings.lowBalance && (
                   <div style={{ marginTop: '20px' }}>
-                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#333', fontSize: '14px' }}>
+                    <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#17324a', fontSize: '14px' }}>
                       סף התראה יתרה נמוכה (₪)
                     </label>
                     <input
@@ -1143,7 +1143,7 @@ const loadSchoolGroups = async (schoolId) => {
                       style={{
                         width: '150px',
                         padding: '10px',
-                        border: '2px solid #e1e5e9',
+                        border: '2px solid #dce6e9',
                         borderRadius: '6px',
                         fontSize: '14px',
                         textAlign: 'center',
@@ -1160,13 +1160,13 @@ const loadSchoolGroups = async (schoolId) => {
 
               {/* הסכמות */}
               <div style={{
-                backgroundColor: '#fff3e0',
-                border: '2px solid #ffcc02',
+                backgroundColor: '#fdf1e2',
+                border: '2px solid #f0d9c2',
                 borderRadius: '12px',
                 padding: '25px',
                 marginBottom: '25px'
               }}>
-                <h4 style={{ margin: '0 0 20px 0', color: '#ef6c00', fontSize: '18px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
+                <h4 style={{ margin: '0 0 20px 0', color: '#b87920', fontSize: '18px', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '10px' }}>
                   <Shield size={20} />
                   הסכמות חובה
                 </h4>
@@ -1182,7 +1182,7 @@ const loadSchoolGroups = async (schoolId) => {
                     />
                     <label htmlFor="terms" style={{ cursor: 'pointer', fontSize: '15px', lineHeight: '1.4' }}>
                       אני מסכים/ה ל
-                      <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
+                      <a href="/terms" target="_blank" rel="noopener noreferrer" style={{ color: '#2c5a75', textDecoration: 'underline', margin: '0 4px' }}>
                         תנאי השימוש
                       </a>
                       של המערכת *
@@ -1199,7 +1199,7 @@ const loadSchoolGroups = async (schoolId) => {
                     />
                     <label htmlFor="privacy" style={{ cursor: 'pointer', fontSize: '15px', lineHeight: '1.4' }}>
                       אני מסכים/ה ל
-                      <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
+                      <a href="/privacy" target="_blank" rel="noopener noreferrer" style={{ color: '#2c5a75', textDecoration: 'underline', margin: '0 4px' }}>
                         מדיניות הפרטיות
                       </a>
                       ולשימוש בנתונים האישיים *
@@ -1216,7 +1216,7 @@ const loadSchoolGroups = async (schoolId) => {
                     />
                     <label htmlFor="schoolPolicy" style={{ cursor: 'pointer', fontSize: '15px', lineHeight: '1.4' }}>
                       אני מסכים/ה ל
-                      <a href="/school-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#1976d2', textDecoration: 'underline', margin: '0 4px' }}>
+                      <a href="/school-policy" target="_blank" rel="noopener noreferrer" style={{ color: '#2c5a75', textDecoration: 'underline', margin: '0 4px' }}>
                         מדיניות בית הספר
                       </a>
                       בנוגע לארוחות ותשלומים *
@@ -1227,7 +1227,7 @@ const loadSchoolGroups = async (schoolId) => {
 
               {/* הערות */}
               <div>
-                <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#333', fontSize: '16px' }}>
+                <label style={{ display: 'block', marginBottom: '10px', fontWeight: '600', color: '#17324a', fontSize: '16px' }}>
                   הערות נוספות (אופציונלי)
                 </label>
                 <textarea
@@ -1237,7 +1237,7 @@ const loadSchoolGroups = async (schoolId) => {
                     width: '100%',
                     minHeight: '100px',
                     padding: '15px',
-                    border: '2px solid #e1e5e9',
+                    border: '2px solid #dce6e9',
                     borderRadius: '10px',
                     fontSize: '15px',
                     textAlign: 'right',
@@ -1246,8 +1246,8 @@ const loadSchoolGroups = async (schoolId) => {
                     fontFamily: 'inherit'
                   }}
                   placeholder="אלרגיות מזון, העדפות תזונתיות, בקשות מיוחדות או כל מידע נוסף שחשוב לבית הספר לדעת..."
-                  onFocus={(e) => e.target.style.borderColor = '#2196f3'}
-                  onBlur={(e) => e.target.style.borderColor = '#e1e5e9'}
+                  onFocus={(e) => e.target.style.borderColor = '#356b8c'}
+                  onBlur={(e) => e.target.style.borderColor = '#dce6e9'}
                 />
               </div>
             </div>
@@ -1261,7 +1261,7 @@ const loadSchoolGroups = async (schoolId) => {
               <div style={{
                 width: '120px',
                 height: '120px',
-                backgroundColor: '#4caf50',
+                backgroundColor: '#75a843',
                 borderRadius: '50%',
                 margin: '0 auto 30px',
                 display: 'flex',
@@ -1284,7 +1284,7 @@ const loadSchoolGroups = async (schoolId) => {
               </style>
 
               <h2 style={{
-                color: '#4caf50',
+                color: '#75a843',
                 fontSize: '32px',
                 fontWeight: 'bold',
                 margin: '0 0 15px 0'
@@ -1294,7 +1294,7 @@ const loadSchoolGroups = async (schoolId) => {
 
               <p style={{
                 fontSize: '18px',
-                color: '#666',
+                color: '#607482',
                 margin: '0 0 30px 0',
                 lineHeight: '1.6'
               }}>
@@ -1303,15 +1303,15 @@ const loadSchoolGroups = async (schoolId) => {
               </p>
 
               <div style={{
-                backgroundColor: '#e3f2fd',
-                border: '2px solid #2196f3',
+                backgroundColor: '#eaf3f7',
+                border: '2px solid #356b8c',
                 borderRadius: '12px',
                 padding: '18px 22px',
                 margin: '0 auto 30px',
                 maxWidth: '500px',
                 textAlign: 'right',
                 fontSize: '15px',
-                color: '#1565c0',
+                color: '#356b8c',
                 lineHeight: '1.6'
               }}>
                 <strong>לא מוצאים את המייל?</strong> בדקו גם בתיקיית הספאם / דואר זבל.
@@ -1320,8 +1320,8 @@ const loadSchoolGroups = async (schoolId) => {
 
               {/* קוד זיהוי משפחה */}
               <div style={{
-                backgroundColor: '#e8f5e8',
-                border: '2px solid #4caf50',
+                backgroundColor: '#eef6e9',
+                border: '2px solid #75a843',
                 borderRadius: '15px',
                 padding: '25px',
                 margin: '30px 0',
@@ -1330,7 +1330,7 @@ const loadSchoolGroups = async (schoolId) => {
                 marginRight: 'auto'
               }}>
                 <h3 style={{
-                  color: '#2e7d32',
+                  color: '#5f8a36',
                   margin: '0 0 15px 0',
                   fontSize: '20px',
                   fontWeight: 'bold'
@@ -1341,10 +1341,10 @@ const loadSchoolGroups = async (schoolId) => {
                   backgroundColor: 'white',
                   padding: '15px 25px',
                   borderRadius: '10px',
-                  border: '2px dashed #4caf50',
+                  border: '2px dashed #75a843',
                   fontSize: '28px',
                   fontWeight: 'bold',
-                  color: '#2e7d32',
+                  color: '#5f8a36',
                   fontFamily: 'monospace',
                   letterSpacing: '2px'
                 }}>
@@ -1353,7 +1353,7 @@ const loadSchoolGroups = async (schoolId) => {
                 <p style={{
                   margin: '15px 0 0 0',
                   fontSize: '14px',
-                  color: '#666',
+                  color: '#607482',
                   lineHeight: '1.4'
                 }}>
                   <strong>חשוב:</strong> שמרו את הקוד הזה! תצטרכו אותו לתשלומים בביט ולפניות לתמיכה.
@@ -1362,15 +1362,15 @@ const loadSchoolGroups = async (schoolId) => {
 
               {/* סיכום ההרשמה */}
               <div style={{
-                backgroundColor: '#f8f9fa',
-                border: '2px solid #e9ecef',
+                backgroundColor: '#f4f7f7',
+                border: '2px solid #dce6e9',
                 borderRadius: '15px',
                 padding: '25px',
                 margin: '30px 0',
                 textAlign: 'right'
               }}>
                 <h3 style={{
-                  color: '#495057',
+                  color: '#17324a',
                   margin: '0 0 20px 0',
                   fontSize: '18px',
                   fontWeight: 'bold',
@@ -1394,7 +1394,7 @@ const loadSchoolGroups = async (schoolId) => {
                   </div>
                 </div>
 
-                <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #dee2e6' }}>
+                <div style={{ marginTop: '20px', paddingTop: '20px', borderTop: '1px solid #dce6e9' }}>
                   <strong>ילדים רשומים:</strong>
                   {formData.children.map((child, index) => (
                     <div key={index} style={{
@@ -1402,7 +1402,7 @@ const loadSchoolGroups = async (schoolId) => {
                       padding: '10px',
                       backgroundColor: 'white',
                       borderRadius: '8px',
-                      border: '1px solid #e9ecef'
+                      border: '1px solid #dce6e9'
                     }}>
                       {child.firstName} {child.lastName} - כיתה {child.grade} - {child.phone}
                     </div>
@@ -1412,15 +1412,15 @@ const loadSchoolGroups = async (schoolId) => {
 
               {/* הוראות לצעדים הבאים */}
               <div style={{
-                backgroundColor: '#fff3cd',
-                border: '2px solid #ffc107',
+                backgroundColor: '#fdf1e2',
+                border: '2px solid #b87920',
                 borderRadius: '15px',
                 padding: '25px',
                 margin: '30px 0',
                 textAlign: 'right'
               }}>
                 <h3 style={{
-                  color: '#856404',
+                  color: '#b87920',
                   margin: '0 0 20px 0',
                   fontSize: '18px',
                   fontWeight: 'bold',
@@ -1429,10 +1429,10 @@ const loadSchoolGroups = async (schoolId) => {
                   מה קורה עכשיו?
                 </h3>
                 
-                <div style={{ fontSize: '15px', lineHeight: '1.6', color: '#856404' }}>
+                <div style={{ fontSize: '15px', lineHeight: '1.6', color: '#b87920' }}>
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px', marginBottom: '15px' }}>
                     <div style={{
-                      backgroundColor: '#ffc107',
+                      backgroundColor: '#b87920',
                       color: 'white',
                       width: '25px',
                       height: '25px',
@@ -1451,7 +1451,7 @@ const loadSchoolGroups = async (schoolId) => {
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px', marginBottom: '15px' }}>
                     <div style={{
-                      backgroundColor: '#ffc107',
+                      backgroundColor: '#b87920',
                       color: 'white',
                       width: '25px',
                       height: '25px',
@@ -1470,7 +1470,7 @@ const loadSchoolGroups = async (schoolId) => {
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px', marginBottom: '15px' }}>
                     <div style={{
-                      backgroundColor: '#ffc107',
+                      backgroundColor: '#b87920',
                       color: 'white',
                       width: '25px',
                       height: '25px',
@@ -1489,7 +1489,7 @@ const loadSchoolGroups = async (schoolId) => {
 
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '15px' }}>
                     <div style={{
-                      backgroundColor: '#ffc107',
+                      backgroundColor: '#b87920',
                       color: 'white',
                       width: '25px',
                       height: '25px',
@@ -1519,7 +1519,7 @@ const loadSchoolGroups = async (schoolId) => {
                   onClick={() => window.location.reload()}
                   style={{
                     padding: '15px 30px',
-                    backgroundColor: '#2196f3',
+                    backgroundColor: '#356b8c',
                     color: 'white',
                     border: 'none',
                     borderRadius: '10px',
@@ -1528,8 +1528,8 @@ const loadSchoolGroups = async (schoolId) => {
                     cursor: 'pointer',
                     transition: 'all 0.3s ease'
                   }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#1976d2'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#2196f3'}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#2c5a75'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#356b8c'}
                 >
                   רישום משפחה נוספת
                 </button>
@@ -1538,7 +1538,7 @@ const loadSchoolGroups = async (schoolId) => {
                   onClick={() => window.location.href = '/login'}
                   style={{
                     padding: '15px 30px',
-                    backgroundColor: '#4caf50',
+                    backgroundColor: '#75a843',
                     color: 'white',
                     border: 'none',
                     borderRadius: '10px',
@@ -1547,8 +1547,8 @@ const loadSchoolGroups = async (schoolId) => {
                     cursor: 'pointer',
                     transition: 'all 0.3s ease'
                   }}
-                  onMouseOver={(e) => e.target.style.backgroundColor = '#45a049'}
-                  onMouseOut={(e) => e.target.style.backgroundColor = '#4caf50'}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#5f8a36'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#75a843'}
                 >
                   כניסה למערכת
                 </button>
@@ -1556,18 +1556,18 @@ const loadSchoolGroups = async (schoolId) => {
 
               {/* פרטי צור קשר */}
               <div style={{
-                backgroundColor: '#e3f2fd',
-                border: '2px solid #2196f3',
+                backgroundColor: '#eaf3f7',
+                border: '2px solid #356b8c',
                 borderRadius: '10px',
                 padding: '20px',
                 margin: '30px 0',
                 fontSize: '14px',
-                color: '#1565c0'
+                color: '#356b8c'
               }}>
                 <strong>צריכים עזרה?</strong>
                 <div style={{ marginTop: '10px' }}>
-                  📧 מייל: <a href="mailto:Bonapp.support@gmail.com" style={{ color: '#1976d2' }}>Bonapp.support@gmail.com</a><br />
-                  💬 WhatsApp: <a href={`https://wa.me/${SUPPORT_WHATSAPP_NUMBER}`} style={{ color: '#1976d2' }}>צרו קשר בוואטסאפ</a>
+                  📧 מייל: <a href="mailto:Bonapp.support@gmail.com" style={{ color: '#2c5a75' }}>Bonapp.support@gmail.com</a><br />
+                  💬 WhatsApp: <a href={`https://wa.me/${SUPPORT_WHATSAPP_NUMBER}`} style={{ color: '#2c5a75' }}>צרו קשר בוואטסאפ</a>
                 </div>
               </div>
             </div>
@@ -1588,9 +1588,9 @@ const loadSchoolGroups = async (schoolId) => {
                 onClick={() => setCurrentStep(currentStep - 1)}
                 style={{
                   padding: '12px 30px',
-                  backgroundColor: '#f5f5f5',
-                  color: '#666',
-                  border: '2px solid #e0e0e0',
+                  backgroundColor: '#f4f7f7',
+                  color: '#607482',
+                  border: '2px solid #dce6e9',
                   borderRadius: '8px',
                   fontSize: '16px',
                   fontWeight: '600',
@@ -1598,12 +1598,12 @@ const loadSchoolGroups = async (schoolId) => {
                   transition: 'all 0.3s ease'
                 }}
                 onMouseOver={(e) => {
-                  e.target.style.backgroundColor = '#e0e0e0';
-                  e.target.style.borderColor = '#bdbdbd';
+                  e.target.style.backgroundColor = '#dce6e9';
+                  e.target.style.borderColor = '#607482';
                 }}
                 onMouseOut={(e) => {
-                  e.target.style.backgroundColor = '#f5f5f5';
-                  e.target.style.borderColor = '#e0e0e0';
+                  e.target.style.backgroundColor = '#f4f7f7';
+                  e.target.style.borderColor = '#dce6e9';
                 }}
               >
                 חזור לשלב הקודם
@@ -1619,7 +1619,7 @@ const loadSchoolGroups = async (schoolId) => {
 
               style={{
                 padding: '12px 30px',
-                backgroundColor: (currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? '#2196f3' : '#ccc',
+                backgroundColor: (currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true) ? '#356b8c' : '#dce6e9',
                 color: 'white',
                 border: 'none',
                 borderRadius: '8px',
@@ -1634,12 +1634,12 @@ const loadSchoolGroups = async (schoolId) => {
               }}
               onMouseOver={(e) => {
                 if ((currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
-                  e.target.style.backgroundColor = '#1976d2';
+                  e.target.style.backgroundColor = '#2c5a75';
                 }
               }}
               onMouseOut={(e) => {
                 if ((currentStep === 1 ? isPasswordValid() : currentStep === 2 ? isStep2Valid() : currentStep === 3 ? (isStep3Valid() && !isSubmitting) : true)) {
-                  e.target.style.backgroundColor = '#2196f3';
+                  e.target.style.backgroundColor = '#356b8c';
                 }
               }}
             >

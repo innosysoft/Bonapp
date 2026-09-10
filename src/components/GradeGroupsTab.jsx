@@ -334,7 +334,7 @@ console.log('action:', data.action);
               <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                 {studyDays.length > 0 && schedule.meal_price && (
                   <div style={{ background: 'var(--green2)', padding: '1rem', borderRadius: '8px', textAlign: 'center' }}>
-                    <p style={{ margin: 0, color: '#2e7d32', fontWeight: 600, fontSize: '1.2rem' }}>
+                    <p style={{ margin: 0, color: '#5f8a36', fontWeight: 600, fontSize: '1.2rem' }}>
                       {studyDays.filter(d => d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)).length} ימים × ₪{schedule.meal_price} = ₪{(studyDays.filter(d => d.startsWith(`${calendarYear}-${String(calendarMonth).padStart(2, '0')}`)).length * schedule.meal_price).toFixed(2)}
                     </p>
                   </div>
