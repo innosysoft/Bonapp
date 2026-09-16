@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getKitchenOrders, completeKitchenOrder, getSchools } from '../api';
-import { ChefHat, CheckCircle, Printer, LogOut, Clock } from 'lucide-react';
+import { ChefHat, CheckCircle, Printer, LogOut, Clock, LayoutGrid, ListOrdered } from 'lucide-react';
 
 // מסך ייצור/מטבח - רשימת הזמנות ממתינות בגדול וברור, מתעדכן אוטומטית כל כמה שניות
 // (אין תשתית real-time בפרויקט, אז רענון שקט ברקע הוא הפתרון הפשוט והאמין ביותר).
@@ -17,6 +17,7 @@ const ProductionDisplay = () => {
   const [loading, setLoading] = useState(true);
   const [completingId, setCompletingId] = useState(null);
   const [printOrder, setPrintOrder] = useState(null);
+  const [viewMode, setViewMode] = useState('orders'); // 'orders' | 'summary'
   const pollRef = useRef(null);
 
   const loadOrders = useCallback(async (schoolId) => {
@@ -84,6 +85,18 @@ const ProductionDisplay = () => {
     navigate('/login');
   };
 
+  // סיכום כמויות לפי מוצר מתוך ההזמנות הפתוחות שכבר בזיכרון - בלי קריאת שרת נוספת.
+  // מצטבר לפי שם המוצר בלבד (בלי תוספות), כדי לתת למטבח תמונה פשוטה של "כמה להכין
+  // מכל מנה" - מוצג רק מוצר שבאמת הוזמן (count > 0).
+  const productSummary = orders.reduce((acc, order) => {
+    (order.items || []).forEach(item => {
+      const name = item.name || 'לא ידוע';
+      acc[name] = (acc[name] || 0) + (item.quantity || 1);
+    });
+    return acc;
+  }, {});
+  const summaryRows = Object.entries(productSummary).sort((a, b) => b[1] - a[1]);
+
   if (loading) {
     return (
       <div className="bap-prod">
@@ -115,6 +128,12 @@ const ProductionDisplay = () => {
         .bap-prod .count-pill{background:var(--green2);color:var(--green);border-radius:20px;padding:8px 18px;font-weight:700;font-size:18px}
         .bap-prod .logout-btn{border:1px solid var(--line);background:#fff;color:var(--navy);border-radius:10px;padding:10px 16px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;font-weight:600}
         .bap-prod .logout-btn:hover{background:var(--paper)}
+        .bap-prod .view-toggle{display:inline-flex;background:var(--paper);border:1px solid var(--line);border-radius:12px;padding:4px;gap:4px}
+        .bap-prod .view-toggle button{border:none;background:transparent;border-radius:9px;padding:9px 16px;font-weight:700;color:var(--muted);display:inline-flex;align-items:center;gap:6px;cursor:pointer}
+        .bap-prod .view-toggle button.active{background:var(--blue);color:#fff}
+        .bap-prod .summary-card{background:#fff;border:2px solid var(--line);border-radius:20px;padding:28px 22px;box-shadow:0 6px 20px rgba(23,50,74,.07);text-align:center;display:flex;flex-direction:column;gap:8px}
+        .bap-prod .summary-qty{font-size:48px;font-weight:800;color:var(--blue);line-height:1}
+        .bap-prod .summary-name{font-size:19px;font-weight:700;color:var(--navy)}
 
         .bap-prod .grid{
           padding:24px 32px;display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:20px;
@@ -162,6 +181,14 @@ const ProductionDisplay = () => {
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
           <div className="count-pill">{orders.length} הזמנות ממתינות</div>
+          <div className="view-toggle">
+            <button className={viewMode === 'orders' ? 'active' : ''} onClick={() => setViewMode('orders')}>
+              <ListOrdered size={16} /> הזמנות
+            </button>
+            <button className={viewMode === 'summary' ? 'active' : ''} onClick={() => setViewMode('summary')}>
+              <LayoutGrid size={16} /> סיכום
+            </button>
+          </div>
           <button className="logout-btn" onClick={handleLogout}>
             <LogOut size={18} />
             יציאה
@@ -169,7 +196,20 @@ const ProductionDisplay = () => {
         </div>
       </header>
 
-      {orders.length === 0 ? (
+      {viewMode === 'summary' ? (
+        summaryRows.length === 0 ? (
+          <div className="empty">אין מוצרים בהזמנות פתוחות כרגע</div>
+        ) : (
+          <div className="grid">
+            {summaryRows.map(([name, qty]) => (
+              <div key={name} className="summary-card">
+                <div className="summary-qty">{qty}</div>
+                <div className="summary-name">{name}</div>
+              </div>
+            ))}
+          </div>
+        )
+      ) : orders.length === 0 ? (
         <div className="empty">אין הזמנות ממתינות כרגע</div>
       ) : (
         <div className="grid">

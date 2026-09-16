@@ -254,7 +254,7 @@ const SelfServiceKiosk = () => {
         cartTotal
       );
       if (result.success) {
-        setSuccessInfo({ newBalance: student.balance - cartTotal, total: cartTotal });
+        setSuccessInfo({ newBalance: student.balance - cartTotal, total: cartTotal, orderNumber: result.orderNumber });
         setTimeout(resetToIdle, 5000);
       } else {
         setPurchaseError(result.message || 'שגיאה בביצוע הרכישה');
@@ -408,6 +408,9 @@ const SelfServiceKiosk = () => {
         .bap-kiosk .success-icon{width:96px;height:96px;border-radius:50%;background:var(--green2);color:var(--green);display:grid;place-items:center;margin-bottom:10px}
         .bap-kiosk .success-screen h2{font-size:28px;color:var(--green);margin:0}
         .bap-kiosk .success-screen p{font-size:19px;color:var(--muted);margin:4px 0 0}
+        .bap-kiosk .success-order-number{margin-top:14px;background:var(--paper);border:2px solid var(--blue);border-radius:16px;padding:14px 28px}
+        .bap-kiosk .success-order-number .label{font-size:14px;color:var(--muted);font-weight:600}
+        .bap-kiosk .success-order-number .value{font-size:42px;font-weight:800;color:var(--blue);line-height:1.2}
 
         .bap-kiosk .modal-overlay{position:fixed;inset:0;background:rgba(23,50,74,.6);display:flex;align-items:center;justify-content:center;z-index:1000;padding:20px}
         .bap-kiosk .modal-card{background:#fff;border-radius:18px;padding:32px;width:100%;max-width:380px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.3)}
@@ -563,6 +566,12 @@ const SelfServiceKiosk = () => {
           <h2>הרכישה בוצעה בהצלחה!</h2>
           <p>שולם: ₪{successInfo.total.toFixed(2)}</p>
           <p>יתרה חדשה: ₪{successInfo.newBalance.toFixed(2)}</p>
+          {successInfo.orderNumber && (
+            <div className="success-order-number">
+              <div className="label">מספר ההזמנה שלך</div>
+              <div className="value">#{successInfo.orderNumber}</div>
+            </div>
+          )}
         </div>
       ) : (
         // מסך קניה

@@ -12,6 +12,7 @@ import KitchenQRScanner from './components/KitchenQRScanner';
 import KitchenPOS from './components/KitchenPOS';
 import ProductionDisplay from './components/ProductionDisplay';
 import KitchenReports from './components/KitchenReports';
+import ParentMenuPreview from './components/ParentMenuPreview';
 import SecretaryPanel from './components/SecretaryPanel';
 import SuperAdminPanel from './components/SuperAdminPanel';
 import MenuManagement from './components/MenuManagement';
@@ -67,6 +68,7 @@ function App() {
           <Route path="/kitchen-pos" element={<KitchenPOS />} />
           <Route path="/production-display" element={<ProductionDisplay />} />
           <Route path="/kitchen-reports" element={<KitchenReports />} />
+          <Route path="/parent-menu-preview" element={<ParentMenuPreview />} />
           <Route path="/secretary-panel" element={<SecretaryPanel />} />
           <Route path="/admin" element={<SuperAdminPanel />} />
           <Route path="/menu-management" element={<MenuManagement />} />

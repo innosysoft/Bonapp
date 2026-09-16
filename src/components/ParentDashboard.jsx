@@ -1385,10 +1385,18 @@ const handleSendEmail = async () => {
                   <History size={16} />
                   היסטוריה מלאה
                 </button>
-                
+
                 <button style={{...styles.quickButton, ...styles.secondaryButton}}>
                   <Download size={16} />
                   הורד דוח
+                </button>
+
+                <button
+                  onClick={() => navigate('/parent-menu-preview')}
+                  style={{...styles.quickButton, ...styles.secondaryButton}}
+                >
+                  <ChefHat size={16} />
+                  תפריט הקיוסק
                 </button>
               </div>
             </div>
