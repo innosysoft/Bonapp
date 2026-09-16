@@ -3108,9 +3108,12 @@ app.get('/api/all-registrations/:schoolId', authenticateToken, requireRole('secr
   try {
     const { schoolId } = req.params;
 
+    // לא כוללים children_data בכוונה - התצוגה הזו (היסטוריית כל ההרשמות) לא מציגה
+    // אותו בכלל, ואצל חלק מההרשמות הישנות (מלפני דחיסת התמונה בטופס ההרשמה) השדה הזה
+    // מכיל תמונה לא דחוסה של כמה מגה-בייט - זו הייתה הסיבה בפועל ל-statement timeout.
     const { data: registrations, error } = await supabase
       .from('pending_registrations')
-      .select('*')
+      .select('id, school_id, parent_name, parent_phone, parent_email, status, created_at')
       .eq('school_id', schoolId)
       .order('created_at', { ascending: false });
 
