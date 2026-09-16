@@ -41,8 +41,10 @@ const [warningData, setWarningData] = useState(null);
 const [studentPaymentType, setStudentPaymentType] = useState('daily');
 const [schoolSettings, setSchoolSettings] = useState({
   monthly_meal_price: 0,
-  daily_meal_price: 0
+  daily_meal_price: 0,
+  auto_print_receipt: false
 });
+const [printOrder, setPrintOrder] = useState(null);
 
 useEffect(() => {
   if (selectedStudent) {
@@ -158,7 +160,8 @@ useEffect(() => {
             setMenuType(school.menu_type || 'items');
             setSchoolSettings({
   monthly_meal_price: school.monthly_meal_price || 0,
-  daily_meal_price: school.daily_meal_price || 0
+  daily_meal_price: school.daily_meal_price || 0,
+  auto_print_receipt: school.auto_print_receipt || false
 });
 
             if (school.menu_type === 'daily') {
@@ -292,6 +295,19 @@ const stopScanning = () => {
 
     if (result.success) {
   alert(`תשלום בוצע בהצלחה!\nסה"כ: ₪${total.toFixed(2)}\nיתרה חדשה: ₪${result.newBalance.toFixed(2)}`);
+
+  if (schoolSettings.auto_print_receipt) {
+    setPrintOrder({
+      orderNumber: result.orderNumber,
+      studentName: `${selectedStudent.first_name} ${selectedStudent.last_name}`,
+      items: [...cart],
+      createdAt: new Date().toISOString()
+    });
+    setTimeout(() => {
+      window.print();
+      setPrintOrder(null);
+    }, 50);
+  }
 
   // איפוס
   setSelectedStudent(null);
@@ -433,6 +449,16 @@ const stopScanning = () => {
           .bap-pos .action{padding:0 12px}
           .bap-pos .card{padding:22px}
         }
+
+        .bap-pos .print-ticket{display:none}
+        @media print {
+          .bap-pos > *:not(.print-ticket){display:none !important}
+          .bap-pos .print-ticket{display:block !important;width:280px;padding:12px;font-family:monospace}
+          .bap-pos .print-ticket h2{text-align:center;font-size:20px;margin:0 0 8px}
+          .bap-pos .print-ticket .pt-num{text-align:center;font-size:32px;font-weight:800;margin:8px 0}
+          .bap-pos .print-ticket .pt-line{border-top:1px dashed #000;margin:8px 0}
+          .bap-pos .print-ticket .pt-item{font-size:15px;margin:4px 0}
+        }
       `}</style>
 
       {/* Header */}
@@ -514,6 +540,21 @@ const stopScanning = () => {
             setWarningData(null);
           }}
         />
+      )}
+
+      {printOrder && (
+        <div className="print-ticket">
+          <h2>BonApp</h2>
+          {printOrder.orderNumber && <div className="pt-num">#{printOrder.orderNumber}</div>}
+          <div className="pt-line" />
+          <div className="pt-item">{printOrder.studentName}</div>
+          <div className="pt-line" />
+          {(printOrder.items || []).map((item, idx) => (
+            <div key={idx} className="pt-item">{item.quantity}x {item.name}</div>
+          ))}
+          <div className="pt-line" />
+          <div className="pt-item">{new Date(printOrder.createdAt).toLocaleString('he-IL')}</div>
+        </div>
       )}
 
     </div>

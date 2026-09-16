@@ -34,6 +34,7 @@ const KitchenQRScanner = () => {
   // הודעות מצב - מציגות בתוך המסך במקום alert() של הדפדפן
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const [printOrder, setPrintOrder] = useState(null);
   const [isProcessingPayment, setIsProcessingPayment] = useState(false);
 
   // סינון וחיפוש מקומי בתפריט (לא משנה API/DB - רק תצוגה)
@@ -56,7 +57,8 @@ const KitchenQRScanner = () => {
     kitchen_open_time: '08:00',
     kitchen_close_time: '16:00',
     monthly_meal_price: 0,
-    daily_meal_price: 0
+    daily_meal_price: 0,
+    auto_print_receipt: false
   });
 
   const getMealPrice = () => {
@@ -201,7 +203,8 @@ const KitchenQRScanner = () => {
               kitchen_open_time: school.kitchen_open_time || '08:00',
               kitchen_close_time: school.kitchen_close_time || '16:00',
               monthly_meal_price: school.monthly_meal_price || 0,
-              daily_meal_price: school.daily_meal_price || 0
+              daily_meal_price: school.daily_meal_price || 0,
+              auto_print_receipt: school.auto_print_receipt || false
             });
 
             // טען תפריט לפי סוג
@@ -413,6 +416,19 @@ const KitchenQRScanner = () => {
 
         setSuccessMessage(`תשלום בוצע בהצלחה! סה"כ: ₪${total.toFixed(2)} · יתרה חדשה: ₪${result.newBalance.toFixed(2)}`);
 
+        if (schoolSettings.auto_print_receipt) {
+          setPrintOrder({
+            orderNumber: result.orderNumber,
+            studentName: `${scannedStudent.first_name} ${scannedStudent.last_name}`,
+            items: [...cart],
+            createdAt: new Date().toISOString()
+          });
+          setTimeout(() => {
+            window.print();
+            setPrintOrder(null);
+          }, 50);
+        }
+
         // איפוס וחזרה אוטומטית למצב סריקה, מוכן לתלמיד הבא
         clearStudent();
         setScanning(true);
@@ -593,6 +609,16 @@ const KitchenQRScanner = () => {
           .bap-kitchen .cart{margin:0 14px 14px}
           .bap-kitchen .banner{margin:0 14px 14px}
           .bap-kitchen .scan-box{margin:0 14px 14px}
+        }
+
+        .bap-kitchen .print-ticket{display:none}
+        @media print {
+          .bap-kitchen > *:not(.print-ticket){display:none !important}
+          .bap-kitchen .print-ticket{display:block !important;width:280px;padding:12px;font-family:monospace}
+          .bap-kitchen .print-ticket h2{text-align:center;font-size:20px;margin:0 0 8px}
+          .bap-kitchen .print-ticket .pt-num{text-align:center;font-size:32px;font-weight:800;margin:8px 0}
+          .bap-kitchen .print-ticket .pt-line{border-top:1px dashed #000;margin:8px 0}
+          .bap-kitchen .print-ticket .pt-item{font-size:15px;margin:4px 0}
         }
       `}</style>
 
@@ -1048,6 +1074,22 @@ const KitchenQRScanner = () => {
                 <p style={{ margin: '1rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>השעות יוצגו למנהל המטבח בכותרת העליונה</p>
               </div>
 
+              <div className="settings-block">
+                <h3>🖨️ הדפסת בון</h3>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={schoolSettings.auto_print_receipt}
+                    onChange={(e) => setSchoolSettings({ ...schoolSettings, auto_print_receipt: e.target.checked })}
+                    style={{ width: 22, height: 22, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: 600 }}>הדפס בון אוטומטית אחרי כל מכירה</span>
+                </label>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  חל על קופת המטבח וגם על "קופה מהירה". דורש מדפסת מוגדרת בעמדה.
+                </p>
+              </div>
+
               <button className="save-btn" onClick={saveSchoolSettings}>
                 <CheckCircle size={22} />
                 שמור הגדרות
@@ -1056,6 +1098,21 @@ const KitchenQRScanner = () => {
           </div>
         )}
       </main>
+
+      {printOrder && (
+        <div className="print-ticket">
+          <h2>BonApp</h2>
+          {printOrder.orderNumber && <div className="pt-num">#{printOrder.orderNumber}</div>}
+          <div className="pt-line" />
+          <div className="pt-item">{printOrder.studentName}</div>
+          <div className="pt-line" />
+          {(printOrder.items || []).map((item, idx) => (
+            <div key={idx} className="pt-item">{item.quantity}x {item.name}</div>
+          ))}
+          <div className="pt-line" />
+          <div className="pt-item">{new Date(printOrder.createdAt).toLocaleString('he-IL')}</div>
+        </div>
+      )}
     </div>
   );
 };

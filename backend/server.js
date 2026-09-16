@@ -508,7 +508,7 @@ app.get('/api/schools', async (req, res) => {
   try {
     const { data: schools, error } = await supabase
       .from('schools')
-      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash')
+      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt')
       .order('name');
 
     if (error) throw error;
@@ -670,7 +670,8 @@ const {
   enable_daily_payment,
   daily_meal_price,
   charge_absent_students,
-  enable_free_payment
+  enable_free_payment,
+  auto_print_receipt
 } = req.body;
 
 if (paybox_merchant_id !== undefined) updateData.paybox_merchant_id = paybox_merchant_id;
@@ -687,6 +688,7 @@ if (enable_daily_payment !== undefined) updateData.enable_daily_payment = enable
 if (daily_meal_price !== undefined) updateData.daily_meal_price = daily_meal_price;
 if (charge_absent_students !== undefined) updateData.charge_absent_students = charge_absent_students;
 if (enable_free_payment !== undefined) updateData.enable_free_payment = enable_free_payment;
+if (auto_print_receipt !== undefined) updateData.auto_print_receipt = auto_print_receipt;
 if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.body.payment_gateway;
 if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
 
