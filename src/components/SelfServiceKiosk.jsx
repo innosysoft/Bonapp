@@ -16,6 +16,12 @@ const SelfServiceKiosk = () => {
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // מזהה ייחודי לעמדת הקיוסק הזו (נוצר פעם אחת בטעינת הדף) - משמש רק לנעילת
+  // קיוסק אופציונלית (מונע זיהוי כפול של אותו תלמיד בשני קיוסקים בו-זמנית).
+  const kioskSessionTokenRef = useRef(
+    (typeof crypto !== 'undefined' && crypto.randomUUID) ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`
+  );
+
   // זיהוי תלמיד
   const [identifyMode, setIdentifyMode] = useState('scan'); // 'scan' | 'pin'
   const [isScanning, setIsScanning] = useState(true);
@@ -85,7 +91,7 @@ const SelfServiceKiosk = () => {
       const response = await authFetch(`${API_URL}/kiosk/identify`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({ ...payload, sessionToken: kioskSessionTokenRef.current })
       });
       const data = await response.json();
       if (data.success) {

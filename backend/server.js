@@ -508,7 +508,7 @@ app.get('/api/schools', async (req, res) => {
   try {
     const { data: schools, error } = await supabase
       .from('schools')
-      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt')
+      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt, enable_kiosk_lock')
       .order('name');
 
     if (error) throw error;
@@ -671,7 +671,8 @@ const {
   daily_meal_price,
   charge_absent_students,
   enable_free_payment,
-  auto_print_receipt
+  auto_print_receipt,
+  enable_kiosk_lock
 } = req.body;
 
 if (paybox_merchant_id !== undefined) updateData.paybox_merchant_id = paybox_merchant_id;
@@ -689,6 +690,7 @@ if (daily_meal_price !== undefined) updateData.daily_meal_price = daily_meal_pri
 if (charge_absent_students !== undefined) updateData.charge_absent_students = charge_absent_students;
 if (enable_free_payment !== undefined) updateData.enable_free_payment = enable_free_payment;
 if (auto_print_receipt !== undefined) updateData.auto_print_receipt = auto_print_receipt;
+if (enable_kiosk_lock !== undefined) updateData.enable_kiosk_lock = enable_kiosk_lock;
 if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.body.payment_gateway;
 if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
 
@@ -1882,17 +1884,19 @@ app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 
       throw getError;
     }
 
-    const newBalance = student.balance + parseFloat(amount);
-    const { data, error } = await supabase
-      .from('students')
-      .update({ balance: newBalance })
-      .eq('id', studentId)
-      .select()
+    // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
+    // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
+    const { data: creditResult, error } = await supabase
+      .rpc('credit_student_balance', { p_student_id: studentId, p_amount: parseFloat(amount) })
       .single();
 
     if (error) {
       throw error;
     }
+    if (creditResult.result_status !== 'ok') {
+      return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+    const newBalance = creditResult.new_balance;
 
     const { error: transactionError } = await supabase
       .from('transactions')
@@ -1928,7 +1932,7 @@ app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 
     res.json({
       success: true,
       message: 'כסף נוסף בהצלחה',
-      newBalance: data.balance
+      newBalance: newBalance
     });
 
   } catch (error) {
@@ -2443,41 +2447,76 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
       }
     }
 
-    const newBalance = student.balance - chargeAmount;
+    // הגנה מפני חיוב כפול (לחיצה כפולה / ניסיון חוזר של הרשת) - אם כבר נוצרה
+    // עסקת ארוחה זהה (אותו תלמיד, אותו סכום) בשניות האחרונות, לא מחייבים שוב.
+    const dupWindowStart = new Date(Date.now() - 5000).toISOString();
+    const { data: recentDup } = await supabase
+      .from('transactions')
+      .select('id')
+      .eq('student_id', studentId)
+      .eq('type', 'meal')
+      .eq('amount', chargeAmount)
+      .gte('transaction_date', dupWindowStart)
+      .limit(1)
+      .maybeSingle();
 
-    if (student.balance < chargeAmount && !forceOverride) {
-      if (school.allow_negative_balance) {
-        if (newBalance < school.max_negative_balance) {
-          return res.status(400).json({ 
-            success: false, 
-            message: `יתרה לא מספיקה! מינוס מקסימלי מותר: ₪${Math.abs(school.max_negative_balance).toFixed(2)}`,
-            currentBalance: student.balance,
-            newBalance: newBalance,
-            maxNegative: school.max_negative_balance
-          });
-        }
-        return res.json({
-          success: false,
-          requireConfirmation: true,
-          message: `אזהרה: יתרה תרד למינוס!\nיתרה נוכחית: ₪${student.balance.toFixed(2)}\nיתרה לאחר רכישה: ₪${newBalance.toFixed(2)}`,
-          currentBalance: student.balance,
-          newBalance: newBalance
-        });
-      } else {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'יתרה לא מספיקה',
-          currentBalance: student.balance 
-        });
-      }
+    if (recentDup && !forceOverride) {
+      return res.status(409).json({ success: false, message: 'זוהתה בקשה כפולה - הרכישה כבר בוצעה, נסה שוב בעוד רגע אם זו לא טעות' });
     }
 
-    const { error: updateError } = await supabase
-      .from('students')
-      .update({ balance: newBalance })
-      .eq('id', studentId);
+    // חיוב אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
+    // נועל את שורת התלמיד לכל משך הפעולה, כך ששתי עמדות שמחייבות את אותו תלמיד
+    // בו-זמנית לא דורסות אחת את השנייה. שומר על אותה לוגיקת עסקים בדיוק כמו קודם.
+    const { data: chargeResult, error: chargeError } = await supabase
+      .rpc('charge_student_balance', {
+        p_student_id: studentId,
+        p_amount: chargeAmount,
+        p_force_override: !!forceOverride,
+        p_allow_negative: !!school.allow_negative_balance,
+        p_max_negative: school.max_negative_balance
+      })
+      .single();
 
-    if (updateError) throw updateError;
+    if (chargeError) throw chargeError;
+
+    if (chargeResult.result_status === 'insufficient_exceeds_max') {
+      return res.status(400).json({
+        success: false,
+        message: `יתרה לא מספיקה! מינוס מקסימלי מותר: ₪${Math.abs(school.max_negative_balance).toFixed(2)}`,
+        currentBalance: chargeResult.current_balance,
+        newBalance: chargeResult.new_balance,
+        maxNegative: school.max_negative_balance
+      });
+    }
+    if (chargeResult.result_status === 'requires_confirmation') {
+      return res.json({
+        success: false,
+        requireConfirmation: true,
+        message: `אזהרה: יתרה תרד למינוס!\nיתרה נוכחית: ₪${chargeResult.current_balance.toFixed(2)}\nיתרה לאחר רכישה: ₪${chargeResult.new_balance.toFixed(2)}`,
+        currentBalance: chargeResult.current_balance,
+        newBalance: chargeResult.new_balance
+      });
+    }
+    if (chargeResult.result_status === 'insufficient_no_negative') {
+      return res.status(400).json({
+        success: false,
+        message: 'יתרה לא מספיקה',
+        currentBalance: chargeResult.current_balance
+      });
+    }
+    if (chargeResult.result_status !== 'ok') {
+      return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+    }
+
+    const newBalance = chargeResult.new_balance;
+
+    // שחרור נעילת קיוסק (אם קיימת) - לא שגיאה אם אין נעילה בכלל (למשל חיוב שלא
+    // דרך הקיוסק העצמאי, או שההגדרה כבויה).
+    try {
+      await supabase.from('kiosk_active_sessions').delete().eq('student_id', studentId);
+    } catch (lockErr) {
+      console.error('Kiosk lock release error:', lockErr.message);
+    }
 
     const { data: newTransaction, error: transactionError } = await supabase
       .from('transactions')
@@ -3738,27 +3777,29 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
     }
     
     const amount = parseFloat(payment_sum) || 0;
-    
-    
-    // קבל יתרה נוכחית
+
+
+    // קבל school_id (לצורך רישום העסקה בהמשך)
     const { data: student, error: studentError } = await supabase
       .from('students')
-      .select('balance, school_id')
+      .select('school_id')
       .eq('id', studentId)
       .single();
-    
+
     if (studentError || !student) {
       console.error('Student not found:', studentId);
       return res.json({ success: true });
     }
-    
-    const newBalance = (student.balance || 0) + amount;
-    
-    // עדכן יתרה
-    await supabase
-      .from('students')
-      .update({ balance: newBalance })
-      .eq('id', studentId);
+
+    // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
+    // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
+    const { error: creditError } = await supabase
+      .rpc('credit_student_balance', { p_student_id: studentId, p_amount: amount })
+      .single();
+    if (creditError) {
+      console.error('Credit balance error:', creditError.message);
+      return res.json({ success: true });
+    }
     
     // שמור עסקה
     await supabase
@@ -3828,22 +3869,13 @@ app.post('/api/grow-webhook', async (req, res) => {
       
       
       if (studentId) {
-        // קבל יתרה נוכחית
-        const { data: student, error: studentError } = await supabase
-          .from('students')
-          .select('balance')
-          .eq('id', studentId)
+        // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
+        // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
+        const { data: creditResult, error: creditError } = await supabase
+          .rpc('credit_student_balance', { p_student_id: studentId, p_amount: amount })
           .single();
-        
-        if (!studentError && student) {
-          const newBalance = (student.balance || 0) + amount;
-          
-          // עדכן יתרה
-          await supabase
-            .from('students')
-            .update({ balance: newBalance })
-            .eq('id', studentId);
-          
+
+        if (!creditError && creditResult && creditResult.result_status === 'ok') {
           // קבל school_id של התלמיד
 const { data: studentData } = await supabase
   .from('students')
@@ -4009,6 +4041,40 @@ app.post('/api/kiosk/identify', authenticateToken, requireRole('kitchen', 'secre
 
     if (student.status !== 'active') {
       return res.status(400).json({ success: false, message: 'תלמיד זה אינו פעיל' });
+    }
+
+    // נעילת קיוסק אופציונלית (כבויה כברירת מחדל בהגדרות בית הספר) - מונעת מאותו
+    // תלמיד להיות מזוהה בשני קיוסקים עצמאיים בו-זמנית (למשל שיתוף קוד QR עם חבר).
+    // נעילה עם תפוגה אוטומטית - לא נשארת תקועה אם קיוסק נסגר/קורס באמצע.
+    const { sessionToken } = req.body;
+    const { data: schoolLockSettings } = await supabase
+      .from('schools')
+      .select('enable_kiosk_lock')
+      .eq('id', student.school_id)
+      .single();
+
+    if (schoolLockSettings?.enable_kiosk_lock && sessionToken) {
+      const LOCK_TTL_MS = 3 * 60 * 1000; // 3 דקות
+      const { data: existingLock } = await supabase
+        .from('kiosk_active_sessions')
+        .select('session_token, created_at')
+        .eq('student_id', studentId)
+        .maybeSingle();
+
+      const isLockedByOther = existingLock
+        && existingLock.session_token !== sessionToken
+        && (Date.now() - new Date(existingLock.created_at).getTime()) < LOCK_TTL_MS;
+
+      if (isLockedByOther) {
+        return res.status(409).json({ success: false, message: 'תלמיד זה כבר בתהליך הזמנה בקיוסק אחר, נסה שוב בעוד רגע' });
+      }
+
+      await supabase
+        .from('kiosk_active_sessions')
+        .upsert(
+          { student_id: studentId, session_token: sessionToken, created_at: new Date().toISOString() },
+          { onConflict: 'student_id' }
+        );
     }
 
     // כמה הוציא היום כבר, כדי לאפשר בדיקת מגבלת הוצאה יומית גם בצד הלקוח לפני התשלום
@@ -4581,19 +4647,11 @@ app.post('/api/paybox-callback', async (req, res) => {
         })
         .eq('id', payment.id);
       
-      // עדכן יתרת תלמיד
-      const { data: student } = await supabase
-        .from('students')
-        .select('balance')
-        .eq('id', payment.student_id)
-        .single();
-      
-      const newBalance = student.balance + parseFloat(amount);
-      
+      // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
+      // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
       await supabase
-        .from('students')
-        .update({ balance: newBalance })
-        .eq('id', payment.student_id);
+        .rpc('credit_student_balance', { p_student_id: payment.student_id, p_amount: parseFloat(amount) })
+        .single();
       
       // צור עסקה
       await supabase

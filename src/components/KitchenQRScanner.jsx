@@ -58,7 +58,8 @@ const KitchenQRScanner = () => {
     kitchen_close_time: '16:00',
     monthly_meal_price: 0,
     daily_meal_price: 0,
-    auto_print_receipt: false
+    auto_print_receipt: false,
+    enable_kiosk_lock: false
   });
 
   const getMealPrice = () => {
@@ -204,7 +205,8 @@ const KitchenQRScanner = () => {
               kitchen_close_time: school.kitchen_close_time || '16:00',
               monthly_meal_price: school.monthly_meal_price || 0,
               daily_meal_price: school.daily_meal_price || 0,
-              auto_print_receipt: school.auto_print_receipt || false
+              auto_print_receipt: school.auto_print_receipt || false,
+              enable_kiosk_lock: school.enable_kiosk_lock || false
             });
 
             // טען תפריט לפי סוג
@@ -1087,6 +1089,23 @@ const KitchenQRScanner = () => {
                 </label>
                 <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
                   חל על קופת המטבח וגם על "קופה מהירה". דורש מדפסת מוגדרת בעמדה.
+                </p>
+              </div>
+
+              <div className="settings-block">
+                <h3>🔒 נעילת קיוסק</h3>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={schoolSettings.enable_kiosk_lock}
+                    onChange={(e) => setSchoolSettings({ ...schoolSettings, enable_kiosk_lock: e.target.checked })}
+                    style={{ width: 22, height: 22, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: 600 }}>מנע מאותו תלמיד להזדהות בו-זמנית בשני קיוסקים</span>
+                </label>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  מיועד לבתי ספר עם יותר מקיוסק עצמאי אחד. אם תלמיד כבר מזוהה בקיוסק אחד,
+                  קיוסק אחר שינסה לזהות אותו יקבל הודעה במקום לאפשר הזמנה כפולה.
                 </p>
               </div>
 

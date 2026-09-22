@@ -247,7 +247,7 @@ useEffect(() => {
       if (data.success) {
         setChildren(data.children);
       }
-    }, 30000); // כל 30 שניות
+    }, 5000); // כל 5 שניות - קוצר מ-30 שניות כדי שעדכון יתרה אחרי תשלום ייראה כמעט מיד
   }
   return () => clearInterval(interval);
 }, [isPolling]);
