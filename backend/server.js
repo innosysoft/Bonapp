@@ -258,6 +258,74 @@ const getUserSchoolId = async (req) => {
   return data?.school_id;
 };
 
+// מחזיר (ויוצר אם צריך) את שורת "תלמיד" מדומה קבועה לבית ספר, שמשמשת כ-student_id
+// למכירות ישירות ("לקוח מזדמן") בלי לפגוע ב-NOT NULL הקיים על transactions.student_id.
+// השם/טלפון האמיתיים של הלקוח (אם הוזנו) נשמרים בנפרד על העסקה עצמה (guest_name/
+// guest_phone) - שורת התלמיד המדומה היא רק "וו" טכני, לא מוצגת כשלעצמה בשום מקום.
+const getOrCreateWalkinStudent = async (schoolId) => {
+  const { data: existing } = await supabase
+    .from('students')
+    .select('id')
+    .eq('school_id', schoolId)
+    .eq('is_walkin_placeholder', true)
+    .maybeSingle();
+  if (existing) return existing.id;
+
+  const { data: created, error } = await supabase
+    .from('students')
+    .insert({
+      school_id: schoolId,
+      first_name: 'לקוח',
+      last_name: 'מזדמן',
+      status: 'active',
+      balance: 0,
+      is_walkin_placeholder: true
+    })
+    .select('id')
+    .single();
+  if (error) throw error;
+  return created.id;
+};
+
+// מחשב סכום חיוב לעגלת פריטים (מוצרים+תוספות) לפי המחירים האמיתיים בתפריט - לא סומך
+// על סכום שנשלח מהלקוח. משותף בין מכירה ישירה (קופה מהירה) לתשלום אשראי/ביט של
+// "לקוח מזדמן" בקיוסק - שתיהן תמיד במצב "פריטים", לא תפריט יומי/מנוי.
+const computeItemsCharge = async (schoolId, items) => {
+  const itemIds = [...new Set(items.map(i => i.id).filter(Boolean))];
+  const { data: realItems } = await supabase
+    .from('menu_items')
+    .select('id, name, price')
+    .in('id', itemIds)
+    .eq('school_id', schoolId);
+  const itemById = new Map((realItems || []).map(mi => [mi.id, mi]));
+
+  const addonIds = [...new Set(items.flatMap(i => Array.isArray(i.addonIds) ? i.addonIds : []))];
+  let addonById = new Map();
+  if (addonIds.length > 0) {
+    const { data: realAddons } = await supabase
+      .from('menu_item_addons')
+      .select('id, name, price_delta, menu_item_id')
+      .in('id', addonIds);
+    addonById = new Map((realAddons || []).map(a => [a.id, a]));
+  }
+
+  let chargeAmount = 0;
+  const kitchenOrderItems = [];
+  items.forEach(cartItem => {
+    const menuItem = itemById.get(cartItem.id);
+    if (!menuItem) return;
+    const qty = parseInt(cartItem.quantity, 10) || 1;
+    const selectedAddons = (Array.isArray(cartItem.addonIds) ? cartItem.addonIds : [])
+      .map(id => addonById.get(id))
+      .filter(a => a && a.menu_item_id === cartItem.id);
+    const addonsTotal = selectedAddons.reduce((s, a) => s + (parseFloat(a.price_delta) || 0), 0);
+    chargeAmount += ((parseFloat(menuItem.price) || 0) + addonsTotal) * qty;
+    kitchenOrderItems.push({ name: menuItem.name, quantity: qty, addons: selectedAddons.map(a => a.name) });
+  });
+
+  return { chargeAmount, kitchenOrderItems };
+};
+
 // Resolves the school_id of a grade_groups row, from :groupId (params).
 const getGroupSchoolId = async (req) => {
   const { data } = await supabase
@@ -727,6 +795,7 @@ app.get('/api/school-students/:schoolId', authenticateToken, requireRole('kitche
         users (first_name, last_name, phone, email, status)
       `)
       .eq('school_id', schoolId)
+      .eq('is_walkin_placeholder', false)
       .order('first_name');
 
     if (error) {
@@ -2079,7 +2148,8 @@ app.get('/api/schools/:schoolId/kitchen-summary', authenticateToken, requireRole
     const { data: students, error: studentsError } = await supabase
       .from('students')
       .select('id, balance')
-      .eq('school_id', schoolId);
+      .eq('school_id', schoolId)
+      .eq('is_walkin_placeholder', false);
     if (studentsError) throw studentsError;
 
     const { data: payments, error: paymentsError } = await supabase
@@ -2567,6 +2637,85 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
   } catch (error) {
     console.error('Meal purchase error:', error);
     res.status(500).json({ success: false, message: 'שגיאה בעיבוד רכישה' });
+  }
+});
+
+// מכירה ישירה ("לקוח מזדמן") - תלמיד רשום בלי יתרה מספקת שמשלם במקום, או מישהו
+// שבכלל לא רשום. לא נוגעת ביתרה של אף תלמיד בכלל - הצוות מאשר שקיבל תשלום (מזומן/
+// אשראי/ביט) ישירות מול הלקוח, בלי שער תשלום מקוון. school_id נלקח אך ורק מהמשתמש
+// המחובר (לא מהלקוח) - אותה הגנה כמו בכל שאר ה-endpoints.
+app.post('/api/process-direct-sale', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
+  try {
+    const { items, paymentMethod, guestName, guestPhone } = req.body;
+    const schoolId = req.user.school_id;
+
+    if (!['cash', 'credit', 'bit'].includes(paymentMethod)) {
+      return res.status(400).json({ success: false, message: 'אמצעי תשלום לא תקין' });
+    }
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'העגלה ריקה' });
+    }
+
+    // חישוב הסכום בשרת לפי מחירי התפריט האמיתיים - לא סומכים על סכום שנשלח מהלקוח.
+    const { chargeAmount, kitchenOrderItems } = await computeItemsCharge(schoolId, items);
+
+    if (chargeAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'לא נמצאו פריטים תקינים בעגלה' });
+    }
+
+    const walkinStudentId = await getOrCreateWalkinStudent(schoolId);
+
+    const paymentMethodLabel = { cash: 'מזומן', credit: 'אשראי', bit: 'ביט' }[paymentMethod];
+    const { data: newTransaction, error: transactionError } = await supabase
+      .from('transactions')
+      .insert({
+        student_id: walkinStudentId,
+        school_id: schoolId,
+        items: items,
+        amount: chargeAmount,
+        type: 'meal',
+        transaction_type: 'purchase',
+        status: 'completed',
+        payment_method: paymentMethod,
+        guest_name: guestName || null,
+        guest_phone: guestPhone || null,
+        description: `מכירה ישירה - תשלום ב${paymentMethodLabel}`,
+        transaction_date: new Date().toISOString()
+      })
+      .select()
+      .single();
+
+    if (transactionError) throw transactionError;
+
+    let kitchenOrder = null;
+    try {
+      const { data: koData, error: koError } = await supabase
+        .from('kitchen_orders')
+        .insert({
+          transaction_id: newTransaction?.id || null,
+          school_id: schoolId,
+          student_name: guestName ? guestName : 'לקוח מזדמן',
+          items: kitchenOrderItems,
+          status: 'pending'
+        })
+        .select()
+        .single();
+      if (koError) throw koError;
+      kitchenOrder = koData;
+    } catch (koErr) {
+      console.error('Kitchen order creation error:', koErr.message);
+    }
+
+    res.json({
+      success: true,
+      chargeAmount: chargeAmount,
+      orderNumber: kitchenOrder?.order_number || null,
+      message: 'המכירה נרשמה בהצלחה'
+    });
+
+  } catch (error) {
+    console.error('Direct sale error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בעיבוד המכירה' });
   }
 });
 
@@ -3738,9 +3887,65 @@ const growPaymentLinks = {}; // זיכרון זמני
 // Webhook חדש מ-Grow דרך Make
 app.post('/api/grow-webhook-v2', async (req, res) => {
   try {
-    
+
     const { payment_sum, payment_desc } = req.body;
-    
+
+    // מכירת "לקוח מזדמן" מהקיוסק ששילמה באשראי/ביט - ראו create-guest-grow-payment.
+    // ענף נפרד ומוקדם, לא נוגע כלל בפירוק/בטיפול הרגיל של תשלום הורה לתלמיד קיים.
+    if (payment_desc && payment_desc.startsWith('BonAppGuest-')) {
+      const pendingSaleId = payment_desc.replace('BonAppGuest-', '');
+      const { data: pendingSale, error: pendingErr } = await supabase
+        .from('pending_guest_sales')
+        .select('*')
+        .eq('id', pendingSaleId)
+        .eq('status', 'pending')
+        .maybeSingle();
+
+      if (pendingErr || !pendingSale) {
+        return res.json({ success: true });
+      }
+
+      try {
+        const walkinStudentId = await getOrCreateWalkinStudent(pendingSale.school_id);
+        const { chargeAmount, kitchenOrderItems } = await computeItemsCharge(pendingSale.school_id, pendingSale.items);
+
+        const { data: newTransaction } = await supabase
+          .from('transactions')
+          .insert({
+            student_id: walkinStudentId,
+            school_id: pendingSale.school_id,
+            items: pendingSale.items,
+            amount: chargeAmount || pendingSale.amount,
+            type: 'meal',
+            transaction_type: 'purchase',
+            status: 'completed',
+            payment_method: 'grow',
+            guest_name: pendingSale.guest_name,
+            guest_phone: pendingSale.guest_phone,
+            description: 'מכירה ישירה - תשלום אונליין (Grow)',
+            transaction_date: new Date().toISOString()
+          })
+          .select()
+          .single();
+
+        await supabase
+          .from('kitchen_orders')
+          .insert({
+            transaction_id: newTransaction?.id || null,
+            school_id: pendingSale.school_id,
+            student_name: pendingSale.guest_name || 'לקוח מזדמן',
+            items: kitchenOrderItems,
+            status: 'pending'
+          });
+
+        await supabase.from('pending_guest_sales').update({ status: 'completed' }).eq('id', pendingSaleId);
+      } catch (guestErr) {
+        console.error('Guest sale finalization error:', guestErr.message);
+      }
+
+      return res.json({ success: true });
+    }
+
     // חלץ student_id וסוג תשלום מה-description
     // פורמטים נתמכים: "BonApp-{student_id}-monthly" / "BonApp-{student_id}-daily"
     // או, לתשלום חודשי מתויג לחודש ספציפי: "BonApp-{student_id}-monthly-{year}-{month}"
@@ -3986,6 +4191,72 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
 
   } catch (error) {
     console.error('Create Grow payment error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// יוצר לינק תשלום Grow למכירת "לקוח מזדמן" בקיוסק העצמאי (בלי הזדהות, בלי תלמיד) -
+// תשלום באשראי/ביט בלבד (הקיוסק לא יכול לקבל מזומן פיזית). בניגוד ל-create-grow-payment
+// (שמקושר לתלמיד קיים), כאן שומרים את פרטי העגלה זמנית ב-pending_guest_sales ומעבירים
+// ל-Grow רק מזהה קצר - grow-webhook-v2 משלים את המכירה בפועל אחרי אישור תשלום אמיתי.
+app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
+  try {
+    const { items, guestName, guestPhone } = req.body;
+    const schoolId = req.user.school_id;
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({ success: false, message: 'העגלה ריקה' });
+    }
+
+    const { chargeAmount } = await computeItemsCharge(schoolId, items);
+    if (chargeAmount <= 0) {
+      return res.status(400).json({ success: false, message: 'לא נמצאו פריטים תקינים בעגלה' });
+    }
+
+    const { data: school } = await supabase
+      .from('schools')
+      .select('gateway_webhook_url')
+      .eq('id', schoolId)
+      .single();
+
+    const { data: pendingSale, error: pendingError } = await supabase
+      .from('pending_guest_sales')
+      .insert({ school_id: schoolId, items, amount: chargeAmount, guest_name: guestName || null, guest_phone: guestPhone || null })
+      .select('id')
+      .single();
+    if (pendingError) throw pendingError;
+
+    const makeWebhookUrl = school?.gateway_webhook_url
+      || process.env.MAKE_WEBHOOK_URL
+      || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
+
+    const response = await fetch(makeWebhookUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        parent_name: guestName || 'לקוח מזדמן',
+        parent_phone: guestPhone || '',
+        amount: chargeAmount,
+        student_name: guestName || 'לקוח מזדמן',
+        description: `BonAppGuest-${pendingSale.id}`,
+        student_id: pendingSale.id
+      })
+    });
+
+    const text = await response.text();
+    let paymentUrl;
+    try {
+      const data = JSON.parse(text);
+      paymentUrl = data.url || data;
+    } catch (e) {
+      const urlMatch = text.match(/https:\/\/pay\.grow\.link\/[^\s"'}]+/);
+      paymentUrl = urlMatch ? urlMatch[0] : text;
+    }
+
+    res.json({ success: true, paymentUrl });
+
+  } catch (error) {
+    console.error('Create guest Grow payment error:', error);
     res.status(500).json({ success: false, message: error.message });
   }
 });

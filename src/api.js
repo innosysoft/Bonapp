@@ -299,6 +299,36 @@ export const processMealPurchase = async (studentId, items, total, forceOverride
   }
 };
 
+// מכירה ישירה ("לקוח מזדמן") - בלי הזדהות, תשלום מזומן/אשראי/ביט ישירות מול הלקוח.
+export const processDirectSale = async (items, paymentMethod, guestName, guestPhone) => {
+  try {
+    const response = await authFetch(`${API_URL}/process-direct-sale`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, paymentMethod, guestName, guestPhone })
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Process direct sale error:', error);
+    throw error;
+  }
+};
+
+// לינק תשלום Grow למכירת "לקוח מזדמן" בקיוסק (אשראי/ביט בלי הזדהות).
+export const createGuestGrowPayment = async (items, guestName, guestPhone) => {
+  try {
+    const response = await authFetch(`${API_URL}/create-guest-grow-payment`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ items, guestName, guestPhone })
+    });
+    return await response.json();
+  } catch (error) {
+    console.error('Create guest Grow payment error:', error);
+    throw error;
+  }
+};
+
 // ===== תוספות/תת-מוצרים לפריטי תפריט =====
 
 export const addMenuItemAddon = async (itemId, addonData) => {

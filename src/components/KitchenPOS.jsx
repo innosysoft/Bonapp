@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchStudents, getMenuItems, processMealPurchase, getSchools, scanStudent } from '../api';
+import { searchStudents, getMenuItems, processMealPurchase, processDirectSale, getSchools, scanStudent } from '../api';
 import { authFetch } from '../auth';
-import { QrCode, Search, ShoppingCart, DollarSign, X, Plus, Minus, Settings, ChefHat, AlertCircle } from 'lucide-react';
+import { QrCode, Search, ShoppingCart, DollarSign, X, Plus, Minus, Settings, ChefHat, AlertCircle, UserPlus, Wallet, Banknote, CreditCard, Smartphone, ArrowRight } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
 
 // עיצוב לפי דגם bonapp-kitchen-dashboard-design.html שאושר (אותה שפת עיצוב כמו KitchenQRScanner.jsx).
@@ -45,6 +45,19 @@ const [schoolSettings, setSchoolSettings] = useState({
   auto_print_receipt: false
 });
 const [printOrder, setPrintOrder] = useState(null);
+
+// "לקוח מזדמן" - בחירת מנות בלי הזדהות מראש. הזדהות (אם בכלל) קורית רק בשלב
+// התשלום, ורק אם בוחרים לשלם מיתרה. לא נוגע בכלל בזרימת הזיהוי הרגילה למעלה.
+const [walkinMode, setWalkinMode] = useState(false);
+const [showPaymentChoice, setShowPaymentChoice] = useState(false);
+const [identifyForBalance, setIdentifyForBalance] = useState(false);
+const [balanceSearchTerm, setBalanceSearchTerm] = useState('');
+const [balanceSearchResults, setBalanceSearchResults] = useState([]);
+const [directSaleMethod, setDirectSaleMethod] = useState(null); // 'cash' | 'credit' | 'bit'
+const [guestName, setGuestName] = useState('');
+const [guestPhone, setGuestPhone] = useState('');
+const [directSaleProcessing, setDirectSaleProcessing] = useState(false);
+const [directSaleResult, setDirectSaleResult] = useState(null);
 
 useEffect(() => {
   if (selectedStudent) {
@@ -272,8 +285,9 @@ const stopScanning = () => {
     return cart.reduce((total, item) => total + (item.price * item.quantity), 0);
   };
 
-  const processPayment = async (forceOverride = false) => {
-  if (!selectedStudent || cart.length === 0) {
+  const processPayment = async (forceOverride = false, studentOverride = null) => {
+  const student = studentOverride || selectedStudent;
+  if (!student || cart.length === 0) {
     alert('אין פריטים בעגלה');
     return;
   }
@@ -281,7 +295,7 @@ const stopScanning = () => {
   const total = calculateTotal();
 
   try {
-    const result = await processMealPurchase(selectedStudent.id, cart, total, forceOverride);
+    const result = await processMealPurchase(student.id, cart, total, forceOverride);
 
     if (result.requireConfirmation) {
       // הצג אזהרת מינוס
@@ -299,7 +313,7 @@ const stopScanning = () => {
   if (schoolSettings.auto_print_receipt) {
     setPrintOrder({
       orderNumber: result.orderNumber,
-      studentName: `${selectedStudent.first_name} ${selectedStudent.last_name}`,
+      studentName: `${student.first_name} ${student.last_name}`,
       items: [...cart],
       createdAt: new Date().toISOString()
     });
@@ -310,16 +324,7 @@ const stopScanning = () => {
   }
 
   // איפוס
-  setSelectedStudent(null);
-  setShowConfirm(false);
-  setCart([]);
-  setSearchTerm('');
-  setSearchResults([]);
-
-  // חזרה למסך הזיהוי הראשוני - באותו מצב (סריקה/חיפוש) שהיה פעיל
-  if (searchMode === 'scan') {
-    setIsScanning(true);
-  }
+  resetToIdentify();
 
     } else {
       alert(result.message || 'שגיאה בעיבוד התשלום');
@@ -328,6 +333,83 @@ const stopScanning = () => {
     alert('שגיאה בעיבוד התשלום');
   }
 };
+
+  // מאפס הכל בחזרה למסך הזיהוי הראשוני (אחרי מכירה מוצלחת מכל סוג - רגילה, לקוח
+  // מזדמן ששילם מיתרה, או מכירה ישירה) - באותו מצב (סריקה/חיפוש) שהיה פעיל.
+  const resetToIdentify = () => {
+    setSelectedStudent(null);
+    setShowConfirm(false);
+    setCart([]);
+    setSearchTerm('');
+    setSearchResults([]);
+    setWalkinMode(false);
+    setShowPaymentChoice(false);
+    setIdentifyForBalance(false);
+    setBalanceSearchTerm('');
+    setBalanceSearchResults([]);
+    setDirectSaleMethod(null);
+    setGuestName('');
+    setGuestPhone('');
+    setDirectSaleResult(null);
+    if (searchMode === 'scan') {
+      setIsScanning(true);
+    }
+  };
+
+  const handleStartWalkin = () => {
+    setWalkinMode(true);
+    setCart([]);
+  };
+
+  const handleBalanceSearch = async (term) => {
+    setBalanceSearchTerm(term);
+    if (term.length < 2) {
+      setBalanceSearchResults([]);
+      return;
+    }
+    try {
+      const result = await searchStudents(currentUser.school_id, term);
+      if (result.success) setBalanceSearchResults(result.students);
+    } catch (error) {
+      console.error('Balance identify search error:', error);
+    }
+  };
+
+  const handleIdentifyForBalance = async (student) => {
+    setSelectedStudent(student);
+    setWalkinMode(false);
+    setShowPaymentChoice(false);
+    setIdentifyForBalance(false);
+    await processPayment(false, student);
+  };
+
+  const handleDirectSale = async (method) => {
+    setDirectSaleProcessing(true);
+    try {
+      const result = await processDirectSale(cart, method, guestName || null, guestPhone || null);
+      if (result.success) {
+        setDirectSaleResult({ orderNumber: result.orderNumber, chargeAmount: result.chargeAmount });
+        if (schoolSettings.auto_print_receipt) {
+          setPrintOrder({
+            orderNumber: result.orderNumber,
+            studentName: guestName || 'לקוח מזדמן',
+            items: [...cart],
+            createdAt: new Date().toISOString()
+          });
+          setTimeout(() => {
+            window.print();
+            setPrintOrder(null);
+          }, 50);
+        }
+      } else {
+        alert(result.message || 'שגיאה בעיבוד המכירה');
+      }
+    } catch (error) {
+      alert('שגיאה בעיבוד המכירה');
+    } finally {
+      setDirectSaleProcessing(false);
+    }
+  };
 
   return (
     <div className="bap-pos">
@@ -450,6 +532,16 @@ const stopScanning = () => {
           .bap-pos .card{padding:22px}
         }
 
+        .bap-pos .walkin-btn{width:100%;padding:14px;border-radius:12px;border:2px dashed var(--line);background:var(--paper);color:var(--navy);font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;margin-top:6px}
+        .bap-pos .walkin-btn:hover{background:#eef2f3;border-color:var(--blue)}
+        .bap-pos .walkin-avatar{width:104px;height:104px;border-radius:50%;background:var(--green2);color:var(--green);display:flex;align-items:center;justify-content:center;margin:0 auto 14px}
+        .bap-pos .payment-choice-btn{width:100%;padding:18px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--navy);cursor:pointer;display:flex;align-items:center;gap:14px;text-align:right;margin-bottom:14px}
+        .bap-pos .payment-choice-btn:hover{border-color:var(--blue);background:var(--paper)}
+        .bap-pos .payment-choice-btn strong{display:block;font-size:16px}
+        .bap-pos .payment-choice-btn span{display:block;font-size:13px;color:var(--muted);margin-top:2px}
+        .bap-pos .payment-choice-row{display:flex;gap:10px;margin-bottom:6px}
+        .bap-pos .payment-choice-btn.small{flex:1;flex-direction:column;padding:16px 8px;text-align:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:0}
+
         .bap-pos .print-ticket{display:none}
         @media print {
           .bap-pos > *:not(.print-ticket){display:none !important}
@@ -484,7 +576,7 @@ const stopScanning = () => {
       </header>
 
       <div className="main">
-        {!selectedStudent ? (
+        {!selectedStudent && !walkinMode ? (
           // מסך חיפוש
           <SearchScreen
   searchTerm={searchTerm}
@@ -499,6 +591,7 @@ const stopScanning = () => {
   setIsScanning={setIsScanning}
   setScannerReady={setScannerReady}
   isMobile={isMobile}
+  onWalkin={handleStartWalkin}
 />
         ) : showConfirm ? (
           // מסך אישור תלמיד
@@ -508,10 +601,42 @@ const stopScanning = () => {
             onCancel={cancelStudent}
             isMobile={isMobile}
           />
+        ) : showPaymentChoice ? (
+          identifyForBalance ? (
+            <BalanceIdentifyScreen
+              searchTerm={balanceSearchTerm}
+              onSearchChange={handleBalanceSearch}
+              searchResults={balanceSearchResults}
+              onSelectStudent={handleIdentifyForBalance}
+              onBack={() => setIdentifyForBalance(false)}
+            />
+          ) : directSaleResult ? (
+            <DirectSaleSuccessScreen result={directSaleResult} onDone={resetToIdentify} />
+          ) : directSaleMethod ? (
+            <DirectSaleDetailsScreen
+              method={directSaleMethod}
+              total={calculateTotal()}
+              guestName={guestName}
+              guestPhone={guestPhone}
+              onGuestNameChange={setGuestName}
+              onGuestPhoneChange={setGuestPhone}
+              onConfirm={() => handleDirectSale(directSaleMethod)}
+              onBack={() => setDirectSaleMethod(null)}
+              processing={directSaleProcessing}
+            />
+          ) : (
+            <PaymentChoiceScreen
+              total={calculateTotal()}
+              onPayFromBalance={() => setIdentifyForBalance(true)}
+              onDirectPayment={(method) => setDirectSaleMethod(method)}
+              onBack={() => setShowPaymentChoice(false)}
+            />
+          )
         ) : (
           // מסך מכירה
           <SalesScreen
             student={selectedStudent}
+            walkinMode={walkinMode}
             menuType={menuType}
             menuItems={menuItems}
             dailyMenuData={dailyMenuData}
@@ -519,8 +644,8 @@ const stopScanning = () => {
             onAddToCart={addToCart}
             onUpdateQuantity={updateQuantity}
             onCalculateTotal={calculateTotal}
-            onProcessPayment={processPayment}
-            onCancel={cancelStudent}
+            onProcessPayment={() => walkinMode ? setShowPaymentChoice(true) : processPayment()}
+            onCancel={walkinMode ? resetToIdentify : cancelStudent}
             isMobile={isMobile}
             getMealPrice={getMealPrice}
           />
@@ -561,7 +686,7 @@ const stopScanning = () => {
   );
 };
 
-const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, searchMode, onSearchModeChange, isScanning, onStartScanning, onStopScanning, setIsScanning, setScannerReady, isMobile }) => (
+const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, searchMode, onSearchModeChange, isScanning, onStartScanning, onStopScanning, setIsScanning, setScannerReady, isMobile, onWalkin }) => (
   <div className="center-wrap">
     <div className="card">
       <div className="card-head">
@@ -586,6 +711,11 @@ const SearchScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStude
           🔍 חיפוש
         </button>
       </div>
+
+      <button className="walkin-btn" onClick={onWalkin}>
+        <UserPlus size={20} />
+        לקוח מזדמן - בחירת מנות בלי הזדהות
+      </button>
 
       {searchMode === 'scan' ? (
         // מצב סריקה
@@ -706,28 +836,38 @@ const WarningModal = ({ warningData, onConfirm, onCancel }) => (
 );
 
 
-const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddToCart, onUpdateQuantity, onCalculateTotal, onProcessPayment, onCancel, getMealPrice, isMobile }) => {
+const SalesScreen = ({ student, walkinMode, menuType, menuItems, dailyMenuData, cart, onAddToCart, onUpdateQuantity, onCalculateTotal, onProcessPayment, onCancel, getMealPrice, isMobile }) => {
   const today = new Date().getDay();
   const todayMenu = dailyMenuData.find(d => d.day_of_week === today);
 
   return (
     <div className="sales-grid" style={{ gridTemplateColumns: isMobile ? '1fr' : '280px 1fr 360px' }}>
-      {/* עמודה - פרטי תלמיד */}
+      {/* עמודה - פרטי תלמיד (או "לקוח מזדמן" אם אין הזדהות) */}
       <div className="side-panel" style={{ position: isMobile ? 'static' : 'sticky', top: '20px' }}>
-        <img
-          className="student-photo"
-          src={student.photo_url || `https://via.placeholder.com/120/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
-          alt={student.first_name}
-        />
-        <h3 className="student-name">{student.first_name} {student.last_name}</h3>
-        <div className="student-meta">כיתה {student.grade}</div>
+        {walkinMode ? (
+          <>
+            <div className="walkin-avatar"><UserPlus size={40} /></div>
+            <h3 className="student-name">לקוח מזדמן</h3>
+            <div className="student-meta">אמצעי התשלום ייבחר בסוף</div>
+          </>
+        ) : (
+          <>
+            <img
+              className="student-photo"
+              src={student.photo_url || `https://via.placeholder.com/120/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
+              alt={student.first_name}
+            />
+            <h3 className="student-name">{student.first_name} {student.last_name}</h3>
+            <div className="student-meta">כיתה {student.grade}</div>
 
-        <div className="balance-box">
-          <div className="label">יתרה נוכחית</div>
-          <div className="value" style={{ color: getBalanceColorVar(student.balance) }}>
-            ₪{student.balance.toFixed(2)}
-          </div>
-        </div>
+            <div className="balance-box">
+              <div className="label">יתרה נוכחית</div>
+              <div className="value" style={{ color: getBalanceColorVar(student.balance) }}>
+                ₪{student.balance.toFixed(2)}
+              </div>
+            </div>
+          </>
+        )}
 
         <button className="cancel-btn" onClick={onCancel}>
           <X size={18} />
@@ -827,7 +967,7 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
 
             <button className="pay-btn" onClick={() => onProcessPayment()}>
               <DollarSign size={22} />
-              בצע תשלום
+              {walkinMode ? 'המשך לתשלום' : 'בצע תשלום'}
             </button>
           </>
         )}
@@ -835,5 +975,162 @@ const SalesScreen = ({ student, menuType, menuItems, dailyMenuData, cart, onAddT
     </div>
   );
 };
+
+// מסך "איך לשלם?" - מוצג רק בנתיב "לקוח מזדמן", אחרי בחירת המנות.
+const PaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, onBack }) => (
+  <div className="center-wrap">
+    <div className="card narrow">
+      <div className="card-head">
+        <div className="card-icon"><Wallet size={34} /></div>
+        <h2>איך לשלם?</h2>
+        <p>סה"כ לתשלום: ₪{total.toFixed(2)}</p>
+      </div>
+
+      <button className="payment-choice-btn" onClick={onPayFromBalance}>
+        <Wallet size={22} />
+        <div>
+          <strong>שלם מיתרה</strong>
+          <span>יש להזדהות (QR / חיפוש)</span>
+        </div>
+      </button>
+
+      <div className="payment-choice-row">
+        <button className="payment-choice-btn small" onClick={() => onDirectPayment('cash')}>
+          <Banknote size={20} />
+          מזומן
+        </button>
+        <button className="payment-choice-btn small" onClick={() => onDirectPayment('credit')}>
+          <CreditCard size={20} />
+          אשראי
+        </button>
+        <button className="payment-choice-btn small" onClick={() => onDirectPayment('bit')}>
+          <Smartphone size={20} />
+          ביט
+        </button>
+      </div>
+
+      <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={onBack}>
+        <ArrowRight size={18} />
+        חזרה לעגלה
+      </button>
+    </div>
+  </div>
+);
+
+// זיהוי תלמיד בשלב התשלום (רק כשבוחרים "שלם מיתרה" בנתיב לקוח מזדמן) - חיפוש קצר
+// לפי שם/טלפון, בלי המנגנון המלא של סריקת מצלמה (מהיר יותר לצורך הזיהוי הנקודתי הזה).
+const BalanceIdentifyScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, onBack }) => (
+  <div className="center-wrap">
+    <div className="card">
+      <div className="card-head">
+        <div className="card-icon"><Search size={34} /></div>
+        <h2>הזדהות לתשלום מיתרה</h2>
+        <p>חפש לפי שם או טלפון</p>
+      </div>
+
+      <div className="search-input-wrap">
+        <Search size={20} />
+        <input
+          type="text"
+          value={searchTerm}
+          onChange={(e) => onSearchChange(e.target.value)}
+          placeholder="הקלד לפחות 2 תווים..."
+          autoFocus
+        />
+      </div>
+
+      {searchResults.length > 0 && (
+        <div className="results">
+          {searchResults.map(student => (
+            <button key={student.id} className="result-row" onClick={() => onSelectStudent(student)}>
+              <img
+                className="avatar"
+                src={student.photo_url || `https://via.placeholder.com/60/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
+                alt={student.first_name}
+              />
+              <div style={{ flex: 1 }}>
+                <strong>{student.first_name} {student.last_name}</strong>
+                <div className="meta">כיתה {student.grade} • {student.student_phone}</div>
+                <div className="bal" style={{ color: getBalanceColorVar(student.balance) }}>
+                  יתרה: ₪{student.balance.toFixed(2)}
+                </div>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+
+      {searchTerm.length >= 2 && searchResults.length === 0 && (
+        <div className="no-results">לא נמצאו תוצאות</div>
+      )}
+
+      <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={onBack}>
+        <ArrowRight size={18} />
+        חזרה
+      </button>
+    </div>
+  </div>
+);
+
+// פרטים אחרונים לפני מכירה ישירה - שם/טלפון אופציונליים (יוצגו בבון), ואישור סופי.
+const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuestNameChange, onGuestPhoneChange, onConfirm, onBack, processing }) => {
+  const methodLabel = { cash: 'מזומן', credit: 'אשראי', bit: 'ביט' }[method];
+  const methodIcon = { cash: <Banknote size={34} />, credit: <CreditCard size={34} />, bit: <Smartphone size={34} /> }[method];
+  return (
+    <div className="center-wrap">
+      <div className="card narrow">
+        <div className="card-head">
+          <div className="card-icon">{methodIcon}</div>
+          <h2>תשלום ב{methodLabel}</h2>
+          <p>סה"כ: ₪{total.toFixed(2)}</p>
+        </div>
+
+        <div style={{ textAlign: 'right', marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 14 }}>שם (יופיע בבון, אופציונלי)</label>
+          <input
+            type="text"
+            value={guestName}
+            onChange={(e) => onGuestNameChange(e.target.value)}
+            placeholder="לדוגמה: דני כהן"
+            style={{ width: '100%', padding: 12, border: '2px solid var(--line)', borderRadius: 10, fontSize: 15, boxSizing: 'border-box', marginBottom: 12 }}
+          />
+          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 14 }}>טלפון (אופציונלי)</label>
+          <input
+            type="tel"
+            value={guestPhone}
+            onChange={(e) => onGuestPhoneChange(e.target.value)}
+            placeholder="050-1234567"
+            style={{ width: '100%', padding: 12, border: '2px solid var(--line)', borderRadius: 10, fontSize: 15, boxSizing: 'border-box' }}
+          />
+        </div>
+
+        <div className="confirm-actions">
+          <button className="btn-secondary" onClick={onBack} disabled={processing}>ביטול</button>
+          <button className="btn-primary" onClick={onConfirm} disabled={processing}>
+            {processing ? 'מעבד...' : `✓ אשר תשלום ב${methodLabel}`}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const DirectSaleSuccessScreen = ({ result, onDone }) => (
+  <div className="center-wrap">
+    <div className="card narrow">
+      <div className="card-head">
+        <div className="card-icon" style={{ background: 'var(--green2)', color: 'var(--green)' }}>✓</div>
+        <h2>המכירה נרשמה בהצלחה!</h2>
+        <p>שולם: ₪{(result.chargeAmount || 0).toFixed(2)}</p>
+      </div>
+      {result.orderNumber && (
+        <div style={{ textAlign: 'center', margin: '0 0 20px', fontSize: 32, fontWeight: 800, color: 'var(--blue)' }}>
+          #{result.orderNumber}
+        </div>
+      )}
+      <button className="btn-primary" style={{ width: '100%' }} onClick={onDone}>סיום - חזרה למסך הזיהוי</button>
+    </div>
+  </div>
+);
 
 export default KitchenPOS;

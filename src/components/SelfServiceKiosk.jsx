@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getMenuItems, processMealPurchase } from '../api';
+import { getMenuItems, processMealPurchase, createGuestGrowPayment } from '../api';
 import { authFetch } from '../auth';
 import { Html5QrcodeScanner } from 'html5-qrcode';
-import { Lock, ShoppingCart, Plus, Minus, CheckCircle, CreditCard, UtensilsCrossed, Delete, Check, X } from 'lucide-react';
+import { Lock, ShoppingCart, Plus, Minus, CheckCircle, CreditCard, UtensilsCrossed, Delete, Check, X, UserPlus, Wallet, Smartphone, ArrowRight } from 'lucide-react';
 
 const API_URL = 'https://api.bonapp.dev/api';
 
@@ -45,6 +45,16 @@ const SelfServiceKiosk = () => {
   const [exitPassword, setExitPassword] = useState('');
   const [exitError, setExitError] = useState('');
 
+  // "לקוח מזדמן" - בחירת מנות בלי הזדהות. הזדהות (אם בכלל) קורית רק בשלב התשלום,
+  // ורק אם בוחרים לשלם מיתרה - לא נוגע בזרימת הזיהוי הרגילה בתחילת השימוש בקיוסק.
+  const [walkinMode, setWalkinMode] = useState(false);
+  const [showPaymentChoice, setShowPaymentChoice] = useState(false);
+  const [identifyForBalance, setIdentifyForBalance] = useState(false);
+  const [directPaymentMethod, setDirectPaymentMethod] = useState(null); // 'credit' | 'bit'
+  const [directPaymentProcessing, setDirectPaymentProcessing] = useState(false);
+  const [guestName, setGuestName] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+
   useEffect(() => {
     const user = JSON.parse(localStorage.getItem('currentUser') || 'null');
     if (!user || !['kitchen', 'secretary', 'admin'].includes(user.type)) {
@@ -81,7 +91,21 @@ const SelfServiceKiosk = () => {
     setCartOpen(false);
     setIsScanning(true);
     setIdentifyMode('scan');
+    setWalkinMode(false);
+    setShowPaymentChoice(false);
+    setIdentifyForBalance(false);
+    setDirectPaymentMethod(null);
+    setGuestName('');
+    setGuestPhone('');
   }, []);
+
+  const handleStartWalkin = () => {
+    setWalkinMode(true);
+    setCart([]);
+    setIsScanning(false);
+    const availableCategories = [...new Set(menuItems.filter(i => i.available).map(i => i.category))];
+    setSelectedCategory(availableCategories[0] || '');
+  };
 
   // --- זיהוי תלמיד ---
 
@@ -97,8 +121,17 @@ const SelfServiceKiosk = () => {
       if (data.success) {
         setStudent(data.student);
         setIsScanning(false);
-        const categories = [...new Set(menuItems.filter(i => i.available).map(i => i.category))];
-        setSelectedCategory(categories[0] || '');
+        if (identifyForBalance) {
+          // לקוח מזדמן שבחר לשלם מיתרה - כבר יש עגלה, ממשיכים ישר לחיוב, לא
+          // חוזרים למסך בחירת מנות (בדיוק כמו זרימת הזיהוי הרגילה בהמשך).
+          setWalkinMode(false);
+          setShowPaymentChoice(false);
+          setIdentifyForBalance(false);
+          await handleCheckout(data.student);
+        } else {
+          const categories = [...new Set(menuItems.filter(i => i.available).map(i => i.category))];
+          setSelectedCategory(categories[0] || '');
+        }
       } else {
         setIdentifyError(data.message || 'תלמיד לא נמצא');
       }
@@ -232,21 +265,20 @@ const SelfServiceKiosk = () => {
     setSelectedAddonIds([]);
   };
 
-  const remainingDailyLimit = student?.spending_limit
-    ? Math.max(0, student.spending_limit - (student.spent_today || 0))
-    : null;
-
   const exceedsBalance = student && cartTotal > student.balance;
-  const exceedsDailyLimit = remainingDailyLimit !== null && cartTotal > remainingDailyLimit;
 
-  const handleCheckout = async () => {
-    if (!student || cart.length === 0) return;
+  const handleCheckout = async (studentOverride = null) => {
+    const effectiveStudent = studentOverride || student;
+    if (!effectiveStudent || cart.length === 0) return;
 
-    if (exceedsDailyLimit) {
-      setPurchaseError(`חריגה ממגבלת ההוצאה היומית שקבע ההורה (נותרו ₪${remainingDailyLimit.toFixed(2)} להיום)`);
+    const effRemainingDailyLimit = effectiveStudent.spending_limit
+      ? Math.max(0, effectiveStudent.spending_limit - (effectiveStudent.spent_today || 0))
+      : null;
+    if (effRemainingDailyLimit !== null && cartTotal > effRemainingDailyLimit) {
+      setPurchaseError(`חריגה ממגבלת ההוצאה היומית שקבע ההורה (נותרו ₪${effRemainingDailyLimit.toFixed(2)} להיום)`);
       return;
     }
-    if (exceedsBalance) {
+    if (cartTotal > effectiveStudent.balance) {
       setPurchaseError('אין מספיק יתרה');
       return;
     }
@@ -255,12 +287,12 @@ const SelfServiceKiosk = () => {
     setPurchaseError('');
     try {
       const result = await processMealPurchase(
-        student.id,
+        effectiveStudent.id,
         cart.map(c => ({ id: c.id, quantity: c.quantity, addonIds: c.addonIds || [] })),
         cartTotal
       );
       if (result.success) {
-        setSuccessInfo({ newBalance: student.balance - cartTotal, total: cartTotal, orderNumber: result.orderNumber });
+        setSuccessInfo({ newBalance: effectiveStudent.balance - cartTotal, total: cartTotal, orderNumber: result.orderNumber });
         setTimeout(resetToIdle, 5000);
       } else {
         setPurchaseError(result.message || 'שגיאה בביצוע הרכישה');
@@ -295,6 +327,30 @@ const SelfServiceKiosk = () => {
       }
     } catch (error) {
       setPurchaseError('שגיאה ביצירת קישור תשלום');
+    }
+  };
+
+  // תשלום ישיר באשראי/ביט ל"לקוח מזדמן" - אין מזומן בקיוסק (אין מי שיקבל אותו),
+  // אז מפנים לתשלום Grow בדיוק כמו handlePayForBalance, רק בלי studentId בכלל.
+  const handleGuestDirectPayment = async () => {
+    setDirectPaymentProcessing(true);
+    try {
+      const result = await createGuestGrowPayment(
+        cart.map(c => ({ id: c.id, quantity: c.quantity, addonIds: c.addonIds || [] })),
+        guestName || null,
+        guestPhone || null
+      );
+      if (result.success && result.paymentUrl) {
+        window.location.href = result.paymentUrl;
+      } else {
+        setPurchaseError('שגיאה ביצירת קישור תשלום');
+        setDirectPaymentMethod(null);
+      }
+    } catch (error) {
+      setPurchaseError('שגיאה ביצירת קישור תשלום');
+      setDirectPaymentMethod(null);
+    } finally {
+      setDirectPaymentProcessing(false);
     }
   };
 
@@ -409,6 +465,19 @@ const SelfServiceKiosk = () => {
         .bap-kiosk .pin-key.muted{color:var(--muted)}
         .bap-kiosk .id-error{color:var(--danger);margin-top:1.5rem;font-weight:700;font-size:17px}
         .bap-kiosk .qr-box{width:340px;max-width:90vw;background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;box-shadow:var(--shadow)}
+        .bap-kiosk .walkin-btn{margin-top:28px;padding:14px 26px;border-radius:12px;border:2px dashed var(--line);background:#fff;color:var(--navy);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:10px}
+        .bap-kiosk .walkin-btn:hover{background:var(--paper);border-color:var(--blue)}
+
+        .bap-kiosk .payment-card{background:#fff;border-radius:20px;padding:36px;max-width:520px;width:100%;box-shadow:var(--shadow);text-align:center}
+        .bap-kiosk .payment-choice-btn{width:100%;padding:20px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--navy);cursor:pointer;display:flex;align-items:center;gap:16px;text-align:right;margin-bottom:16px}
+        .bap-kiosk .payment-choice-btn:hover{border-color:var(--blue);background:var(--paper)}
+        .bap-kiosk .payment-choice-btn strong{display:block;font-size:18px}
+        .bap-kiosk .payment-choice-btn span{display:block;font-size:14px;color:var(--muted);margin-top:2px}
+        .bap-kiosk .payment-choice-row{display:flex;gap:12px;margin-bottom:8px}
+        .bap-kiosk .payment-choice-btn.small{flex:1;flex-direction:column;padding:20px 10px;text-align:center;gap:10px;font-weight:700;font-size:16px;margin-bottom:0}
+        .bap-kiosk .guest-field{text-align:right;margin-bottom:14px}
+        .bap-kiosk .guest-field label{display:block;margin-bottom:6px;font-weight:600;font-size:15px}
+        .bap-kiosk .guest-field input{width:100%;padding:14px;border:2px solid var(--line);border-radius:10px;font-size:16px;box-sizing:border-box}
 
         .bap-kiosk .success-screen{min-height:calc(100vh - 96px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;text-align:center}
         .bap-kiosk .success-icon{width:96px;height:96px;border-radius:50%;background:var(--green2);color:var(--green);display:grid;place-items:center;margin-bottom:10px}
@@ -521,10 +590,11 @@ const SelfServiceKiosk = () => {
         <div className="center-screen">
           <p style={{ fontSize: 20, color: 'var(--muted)' }}>טוען...</p>
         </div>
-      ) : !student ? (
-        // מסך זיהוי
+      ) : !student && (!walkinMode || identifyForBalance) ? (
+        // מסך זיהוי - גם בכניסה הרגילה, וגם (בלי כפתור "לקוח מזדמן") כשמזדהים
+        // באמצע כדי לשלם מיתרה בנתיב "לקוח מזדמן"
         <div className="center-screen">
-          <h1 className="id-title">🍽️ ברוכים הבאים לקיוסק</h1>
+          <h1 className="id-title">{identifyForBalance ? '🔐 הזדהות לתשלום מיתרה' : '🍽️ ברוכים הבאים לקיוסק'}</h1>
 
           <div className="mode-tabs">
             <button
@@ -564,6 +634,19 @@ const SelfServiceKiosk = () => {
           {identifyError && (
             <p className="id-error" role="alert">{identifyError}</p>
           )}
+
+          {!identifyForBalance && (
+            <button className="walkin-btn" onClick={handleStartWalkin}>
+              <UserPlus size={20} />
+              לקוח מזדמן - בחירת מנות בלי הזדהות
+            </button>
+          )}
+          {identifyForBalance && (
+            <button className="walkin-btn" onClick={() => { setIdentifyForBalance(false); setShowPaymentChoice(true); }}>
+              <ArrowRight size={18} />
+              חזרה לבחירת אמצעי תשלום
+            </button>
+          )}
         </div>
       ) : successInfo ? (
         // מסך הצלחה
@@ -579,6 +662,28 @@ const SelfServiceKiosk = () => {
             </div>
           )}
         </div>
+      ) : walkinMode && showPaymentChoice ? (
+        // "איך לשלם?" - רק בנתיב לקוח מזדמן, אחרי בחירת מנות
+        directPaymentMethod ? (
+          <KioskDirectSaleScreen
+            method={directPaymentMethod}
+            total={cartTotal}
+            guestName={guestName}
+            guestPhone={guestPhone}
+            onGuestNameChange={setGuestName}
+            onGuestPhoneChange={setGuestPhone}
+            onConfirm={handleGuestDirectPayment}
+            onBack={() => setDirectPaymentMethod(null)}
+            processing={directPaymentProcessing}
+          />
+        ) : (
+          <KioskPaymentChoiceScreen
+            total={cartTotal}
+            onPayFromBalance={() => { setIdentifyForBalance(true); setShowPaymentChoice(false); }}
+            onDirectPayment={(method) => setDirectPaymentMethod(method)}
+            onBack={() => setShowPaymentChoice(false)}
+          />
+        )
       ) : (
         // מסך קניה
         <main className="content">
@@ -642,7 +747,7 @@ const SelfServiceKiosk = () => {
       )}
 
       {/* מגירת עגלה (תצוגה בלבד - אותה לוגיקת עגלה בדיוק) */}
-      {cartOpen && student && !successInfo && cart.length > 0 && (
+      {cartOpen && (student || walkinMode) && !successInfo && !showPaymentChoice && cart.length > 0 && (
         <div className="cart-drawer">
           <h3><ShoppingCart size={18} /> העגלה שלי</h3>
           {cart.map(c => (
@@ -669,7 +774,7 @@ const SelfServiceKiosk = () => {
       )}
 
       {/* סרגל סיכום קבוע */}
-      {student && !successInfo && (
+      {(student || walkinMode) && !successInfo && !showPaymentChoice && (
         <footer className="summary">
           <div>
             <div className="summary-title">סיכום ההזמנה</div>
@@ -691,13 +796,18 @@ const SelfServiceKiosk = () => {
             <strong>₪{cartTotal.toFixed(2)}</strong>
           </div>
 
-          {exceedsBalance ? (
+          {walkinMode ? (
+            <button className="pay" onClick={() => setShowPaymentChoice(true)} disabled={cart.length === 0}>
+              <CheckCircle size={22} />
+              המשך לתשלום
+            </button>
+          ) : exceedsBalance ? (
             <button className="pay warn" onClick={handlePayForBalance}>
               <CreditCard size={22} />
               תשלום להשלמת יתרה
             </button>
           ) : (
-            <button className="pay" onClick={handleCheckout} disabled={cart.length === 0 || processing}>
+            <button className="pay" onClick={() => handleCheckout()} disabled={cart.length === 0 || processing}>
               <CheckCircle size={22} />
               {processing ? 'מעבד...' : 'המשך לתשלום'}
             </button>
@@ -766,6 +876,72 @@ const SelfServiceKiosk = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+// מסך "איך לשלם?" - מוצג רק בנתיב "לקוח מזדמן", אחרי בחירת המנות. הקיוסק לא יכול
+// לקבל מזומן פיזית (אין מי שיקבל אותו), אז רק מיתרה/אשראי/ביט.
+const KioskPaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, onBack }) => (
+  <div className="center-screen">
+    <div className="payment-card">
+      <h1 className="id-title" style={{ fontSize: 26, marginBottom: 6 }}>איך לשלם?</h1>
+      <p style={{ color: 'var(--muted)', marginBottom: 24 }}>סה"כ לתשלום: ₪{total.toFixed(2)}</p>
+
+      <button className="payment-choice-btn" onClick={onPayFromBalance}>
+        <Wallet size={24} />
+        <div>
+          <strong>שלם מיתרה</strong>
+          <span>יש להזדהות (QR / PIN)</span>
+        </div>
+      </button>
+
+      <div className="payment-choice-row">
+        <button className="payment-choice-btn small" onClick={() => onDirectPayment('credit')}>
+          <CreditCard size={22} />
+          אשראי
+        </button>
+        <button className="payment-choice-btn small" onClick={() => onDirectPayment('bit')}>
+          <Smartphone size={22} />
+          ביט
+        </button>
+      </div>
+
+      <button className="btn-secondary" style={{ width: '100%', marginTop: 16 }} onClick={onBack}>
+        <ArrowRight size={18} style={{ marginLeft: 8 }} />
+        חזרה לעגלה
+      </button>
+    </div>
+  </div>
+);
+
+// פרטים אחרונים לפני תשלום ישיר (אשראי/ביט) - שם/טלפון אופציונליים (יוצגו בבון),
+// ואז מפנה לתשלום Grow (בדיוק כמו handlePayForBalance, רק בלי studentId).
+const KioskDirectSaleScreen = ({ method, total, guestName, guestPhone, onGuestNameChange, onGuestPhoneChange, onConfirm, onBack, processing }) => {
+  const methodLabel = method === 'credit' ? 'אשראי' : 'ביט';
+  return (
+    <div className="center-screen">
+      <div className="payment-card">
+        <h1 className="id-title" style={{ fontSize: 26, marginBottom: 6 }}>תשלום ב{methodLabel}</h1>
+        <p style={{ color: 'var(--muted)', marginBottom: 24 }}>סה"כ: ₪{total.toFixed(2)}</p>
+
+        <div className="guest-field">
+          <label>שם (יופיע בבון, אופציונלי)</label>
+          <input type="text" value={guestName} onChange={(e) => onGuestNameChange(e.target.value)} placeholder="לדוגמה: דני כהן" />
+        </div>
+        <div className="guest-field">
+          <label>טלפון (אופציונלי)</label>
+          <input type="tel" value={guestPhone} onChange={(e) => onGuestPhoneChange(e.target.value)} placeholder="050-1234567" />
+        </div>
+
+        <button className="btn-primary" style={{ width: '100%', padding: 16, fontSize: 17 }} onClick={onConfirm} disabled={processing}>
+          {processing ? 'מעביר לתשלום...' : `המשך לתשלום ב${methodLabel}`}
+        </button>
+        <button className="btn-secondary" style={{ width: '100%', marginTop: 12 }} onClick={onBack} disabled={processing}>
+          <ArrowRight size={18} style={{ marginLeft: 8 }} />
+          חזרה
+        </button>
+      </div>
     </div>
   );
 };
