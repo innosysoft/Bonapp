@@ -4207,6 +4207,11 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'העגלה ריקה' });
     }
+    // Grow/Make דורשים מספר טלפון תקין כדי להנפיק קישור תשלום - בלעדיו הבקשה
+    // ל-Make נכשלת ("Scenario failed to complete."), בדיוק כמו שנבדק ידנית מול ה-webhook.
+    if (!guestPhone || !guestPhone.trim()) {
+      return res.status(400).json({ success: false, message: 'נדרש מספר טלפון לתשלום באשראי/ביט' });
+    }
 
     const { chargeAmount } = await computeItemsCharge(schoolId, items);
     if (chargeAmount <= 0) {
@@ -4226,6 +4231,12 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
       .single();
     if (pendingError) throw pendingError;
 
+    // Grow/Make מצפים ל-student_id אמיתי הקיים ב-students (בדיוק כמו create-grow-payment
+    // הרגיל) - לא ניתן לשלוח את מזהה ה-pending_guest_sales עצמו, אחרת התרחיש נכשל אצל
+    // Make ("Scenario failed to complete."). מזהה המכירה הממתינה עדיין מועבר ב-description
+    // כדי שה-webhook ידע לאתר ולסיים אותה בפועל אחרי אישור תשלום.
+    const walkinStudentId = await getOrCreateWalkinStudent(schoolId);
+
     const makeWebhookUrl = school?.gateway_webhook_url
       || process.env.MAKE_WEBHOOK_URL
       || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
@@ -4239,7 +4250,7 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
         amount: chargeAmount,
         student_name: guestName || 'לקוח מזדמן',
         description: `BonAppGuest-${pendingSale.id}`,
-        student_id: pendingSale.id
+        student_id: walkinStudentId
       })
     });
 

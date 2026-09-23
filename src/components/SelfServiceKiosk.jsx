@@ -915,10 +915,13 @@ const KioskPaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, on
   </div>
 );
 
-// פרטים אחרונים לפני תשלום ישיר (אשראי/ביט) - שם/טלפון אופציונליים (יוצגו בבון),
-// ואז מפנה לתשלום Grow (בדיוק כמו handlePayForBalance, רק בלי studentId).
+// פרטים אחרונים לפני תשלום ישיר (אשראי/ביט) - שם אופציונלי (יופיע בבון), אבל טלפון
+// חובה: סולק Grow דורש מספר טלפון תקין כדי להנפיק קישור תשלום בכלל - בלעדיו הבקשה
+// ל-Make נכשלת ("Scenario failed to complete."), בדיוק כמו בתשלום להשלמת יתרה הרגיל
+// (handlePayForBalance) ששם תמיד יש טלפון אמיתי של הורה קיים.
 const KioskDirectSaleScreen = ({ method, total, guestName, guestPhone, onGuestNameChange, onGuestPhoneChange, onConfirm, onBack, processing }) => {
   const methodLabel = method === 'credit' ? 'אשראי' : 'ביט';
+  const phoneValid = guestPhone.trim().length >= 9;
   return (
     <div className="center-screen">
       <div className="payment-card">
@@ -930,11 +933,11 @@ const KioskDirectSaleScreen = ({ method, total, guestName, guestPhone, onGuestNa
           <input type="text" value={guestName} onChange={(e) => onGuestNameChange(e.target.value)} placeholder="לדוגמה: דני כהן" />
         </div>
         <div className="guest-field">
-          <label>טלפון (אופציונלי)</label>
-          <input type="tel" value={guestPhone} onChange={(e) => onGuestPhoneChange(e.target.value)} placeholder="050-1234567" />
+          <label>טלפון (חובה, לצורך התשלום)</label>
+          <input type="tel" value={guestPhone} onChange={(e) => onGuestPhoneChange(e.target.value)} placeholder="050-1234567" required />
         </div>
 
-        <button className="btn-primary" style={{ width: '100%', padding: 16, fontSize: 17 }} onClick={onConfirm} disabled={processing}>
+        <button className="btn-primary" style={{ width: '100%', padding: 16, fontSize: 17 }} onClick={onConfirm} disabled={processing || !phoneValid}>
           {processing ? 'מעביר לתשלום...' : `המשך לתשלום ב${methodLabel}`}
         </button>
         <button className="btn-secondary" style={{ width: '100%', marginTop: 12 }} onClick={onBack} disabled={processing}>
