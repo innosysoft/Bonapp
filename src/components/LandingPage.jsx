@@ -24,7 +24,7 @@ const LandingPage = () => {
     <div className="bap-lp">
       <style>{`
         .bap-lp{
-          --navy:#17324a;--blue:#356b8c;--blue2:#eaf3f7;--green:#75a843;--green2:#eef6e9;
+          --navy:#0f2547;--blue:#3370b9;--blue2:#eaf3fb;--green:#75a843;--green2:#eef6e9;
           --paper:#f8faf8;--white:#fff;--muted:#607482;--line:#dce6e9;--dark:#102b3d;
           font-family:'Heebo',Arial,sans-serif;color:var(--navy);background:var(--white);line-height:1.55;
         }
@@ -52,16 +52,32 @@ const LandingPage = () => {
         .bap-lp .mobile-menu .btn.primary{margin-top:6px;text-align:center;color:#fff}
         .bap-lp .mobile-menu a:focus-visible,.bap-lp .mobile-menu button:focus-visible{outline:3px solid var(--green);outline-offset:-2px}
 
-        .bap-lp .hero{position:relative;overflow:hidden;background:url('/images/hero-banner.png') center/cover no-repeat}
-        .bap-lp .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(9,28,39,.08),rgba(9,28,39,.18) 55%,rgba(9,28,39,.44))}
-        .bap-lp .hero-inner{position:relative;z-index:1;min-height:670px;display:flex;align-items:flex-end;justify-content:center;text-align:center}
-        .bap-lp .hero-copy{width:min(820px,100%);padding:70px 0 54px;color:#fff;text-shadow:0 2px 18px rgba(8,26,36,.5)}
-        .bap-lp .eyebrow{display:inline-block;color:#fff;font-weight:700;margin-bottom:10px;background:rgba(17,50,70,.66);padding:7px 15px;border-radius:999px;backdrop-filter:blur(7px)}
-        .bap-lp .hero h1{font-size:51px;line-height:1.08;letter-spacing:-1.5px;margin:0 auto 14px;max-width:760px}
-        .bap-lp .hero p{font-size:19px;color:#fff;max-width:720px;margin:0 auto 25px}
+        .bap-lp .hero{position:relative;overflow:hidden;background:#8a9a6a url('/images/landing/hero-full.jpg') right center/cover no-repeat}
+        .bap-lp .hero::after{content:"";position:absolute;inset:0;background:linear-gradient(270deg,rgba(20,30,40,0) 40%,rgba(20,30,40,.34) 100%)}
+        .bap-lp .hero-inner{position:relative;z-index:1;min-height:400px;display:flex;align-items:center;justify-content:flex-end;text-align:center}
+        .bap-lp .hero-copy{width:min(470px,100%);padding:52px 0;color:#fff;text-shadow:0 1px 3px rgba(8,26,36,.55),0 2px 22px rgba(8,26,36,.6)}
+        .bap-lp .eyebrow{display:inline-block;color:#fff;font-weight:700;margin-bottom:12px;background:rgba(255,255,255,.16);padding:7px 15px;border-radius:999px;backdrop-filter:blur(7px)}
+        .bap-lp .hero h1{font-size:42px;line-height:1.1;letter-spacing:-1.2px;margin:0 auto 14px;max-width:470px}
+        .bap-lp .hero p{font-size:17px;color:#fff;max-width:460px;margin:0 auto 24px}
         .bap-lp .hero .actions{margin-bottom:12px;justify-content:center;text-shadow:none}
-        .bap-lp .hero .btn.light{background:rgba(255,255,255,.94);border-color:#fff}
+        .bap-lp .hero .btn{border-radius:999px;padding:12px 26px}
+        .bap-lp .hero .btn.light{background:#fff;border-color:#fff;color:var(--blue)}
+        .bap-lp .hero .btn.primary{box-shadow:0 6px 18px rgba(51,112,185,.35)}
         .bap-lp .micro{font-size:13px;color:#fff}
+
+        .bap-lp .solutions{padding:64px 0 72px;background:#fff;text-align:center}
+        .bap-lp .solutions .section-kicker{color:#3b7a1f;font-size:21px;font-weight:600;margin-bottom:10px}
+        .bap-lp .solutions .section-title{font-size:38px}
+        .bap-lp .solutions .section-desc{margin-bottom:38px}
+        .bap-lp .solution-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;text-align:center}
+        .bap-lp .solution-card{background:#f8fbfc;border:1px solid var(--line);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 24px rgba(23,50,74,.06)}
+        .bap-lp .solution-card img{display:block;width:100%;aspect-ratio:2/1;object-fit:cover}
+        .bap-lp .solution-body{padding:20px 22px 24px;display:flex;flex-direction:column;align-items:center;gap:6px;flex:1}
+        .bap-lp .solution-body h3{margin:0;font-size:22px}
+        .bap-lp .solution-body p{margin:0 0 12px;color:var(--muted);font-size:15px}
+        .bap-lp .solution-body .btn{margin-top:auto;background:#dbedfa;border-color:#dbedfa;color:#0b3a7a;border-radius:999px;padding:10px 34px}
+        .bap-lp .solutions-cta{margin-top:30px}
+        .bap-lp .solutions-cta .btn{border-radius:999px;padding:13px 40px}
 
         .bap-lp .audiences{background:#fff;border-bottom:1px solid var(--line)}
         .bap-lp .audience-grid{display:grid;grid-template-columns:repeat(3,1fr);padding:30px 0;gap:0}
@@ -149,10 +165,12 @@ const LandingPage = () => {
           .bap-lp .hamburger{display:flex}
           .bap-lp header{position:relative}
           .bap-lp .mobile-menu{position:absolute;top:100%;left:0;right:0;z-index:999}
-          .bap-lp .hero{background-position:center center}
-          .bap-lp .hero::after{background:linear-gradient(180deg,rgba(9,28,39,.04),rgba(9,28,39,.18) 42%,rgba(9,28,39,.68))}
-          .bap-lp .hero-inner{min-height:520px;align-items:flex-end}
-          .bap-lp .hero-copy{width:100%;padding:48px 0 4px}
+          .bap-lp .hero{background-position:78% center}
+          .bap-lp .hero::after{background:linear-gradient(180deg,rgba(20,30,40,0) 0%,rgba(20,30,40,.1) 30%,rgba(20,30,40,.62) 100%)}
+          .bap-lp .hero-inner{min-height:560px;align-items:flex-end}
+          .bap-lp .hero-copy{width:100%;padding:48px 0 28px}
+          .bap-lp .solution-grid{grid-template-columns:1fr}
+          .bap-lp .solutions{padding:44px 0 52px}
           .bap-lp .hero h1{font-size:32px}
           .bap-lp .hero p{font-size:17px}
           .bap-lp .hero .actions{display:flex;flex-direction:row;flex-wrap:wrap;justify-content:center}
@@ -241,6 +259,44 @@ const LandingPage = () => {
                 <a className="btn light" href="#schools">אני מנהל/ת בית ספר</a>
               </div>
               <div className="micro">הרישום לוקח דקות ספורות</div>
+            </div>
+          </div>
+        </section>
+
+        {/* פתרונות בשטח - עמדות */}
+        <section className="solutions">
+          <div className="wrap">
+            <div className="section-kicker">פתרונות BonApp בשטח</div>
+            <h2 className="section-title">העמדה שמתאימה בדיוק לבית הספר שלכם</h2>
+            <p className="section-desc">מקופה מאוישת ועד קיוסק בשירות עצמי — בוחרים את הפתרון שמתאים לדרך העבודה שלכם.</p>
+            <div className="solution-grid">
+              <div className="solution-card">
+                <img src="/images/landing/station-desk.jpg" alt="עמדה שולחנית" loading="lazy" />
+                <div className="solution-body">
+                  <h3>עמדה שולחנית</h3>
+                  <p>פתרון קומפקטי ונוח להפעלה בעמדת השירות.</p>
+                  <button className="btn" onClick={() => navigate('/school-contact')}>לפרטים נוספים</button>
+                </div>
+              </div>
+              <div className="solution-card">
+                <img src="/images/landing/station-kiosk-pos.jpg" alt="קיוסק וקופה" loading="lazy" />
+                <div className="solution-body">
+                  <h3>קיוסק וקופה</h3>
+                  <p>עמדה מלאה להזמנה, תשלום וניהול מהיר.</p>
+                  <button className="btn" onClick={() => navigate('/school-contact')}>לפרטים נוספים</button>
+                </div>
+              </div>
+              <div className="solution-card">
+                <img src="/images/landing/station-kiosk.jpg" alt="קיוסק בשירות עצמי" loading="lazy" />
+                <div className="solution-body">
+                  <h3>קיוסק בשירות עצמי</h3>
+                  <p>חוויית רכישה עצמאית, פשוטה ומהירה.</p>
+                  <button className="btn" onClick={() => navigate('/school-contact')}>לפרטים נוספים</button>
+                </div>
+              </div>
+            </div>
+            <div className="solutions-cta">
+              <button className="btn primary" onClick={() => navigate('/school-contact')}>בואו נתאים לכם עמדה</button>
             </div>
           </div>
         </section>
