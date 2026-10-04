@@ -329,6 +329,11 @@ export const createGuestGrowPayment = async (items, guestName, guestPhone) => {
   }
 };
 
+export const getGuestSaleStatus = async (pendingSaleId) => {
+  const response = await authFetch(`${API_URL}/guest-sales/${pendingSaleId}/status`);
+  return await response.json();
+};
+
 // ===== תוספות/תת-מוצרים לפריטי תפריט =====
 
 export const addMenuItemAddon = async (itemId, addonData) => {

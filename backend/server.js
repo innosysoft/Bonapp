@@ -576,7 +576,7 @@ app.get('/api/schools', async (req, res) => {
   try {
     const { data: schools, error } = await supabase
       .from('schools')
-      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt, enable_kiosk_lock')
+      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt, enable_kiosk_lock, pos_credit_via_grow')
       .order('name');
 
     if (error) throw error;
@@ -740,7 +740,8 @@ const {
   charge_absent_students,
   enable_free_payment,
   auto_print_receipt,
-  enable_kiosk_lock
+  enable_kiosk_lock,
+  pos_credit_via_grow
 } = req.body;
 
 if (paybox_merchant_id !== undefined) updateData.paybox_merchant_id = paybox_merchant_id;
@@ -759,6 +760,7 @@ if (charge_absent_students !== undefined) updateData.charge_absent_students = ch
 if (enable_free_payment !== undefined) updateData.enable_free_payment = enable_free_payment;
 if (auto_print_receipt !== undefined) updateData.auto_print_receipt = auto_print_receipt;
 if (enable_kiosk_lock !== undefined) updateData.enable_kiosk_lock = enable_kiosk_lock;
+if (pos_credit_via_grow !== undefined) updateData.pos_credit_via_grow = pos_credit_via_grow;
 if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.body.payment_gateway;
 if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
 
@@ -3938,7 +3940,9 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
             status: 'pending'
           });
 
-        await supabase.from('pending_guest_sales').update({ status: 'completed' }).eq('id', pendingSaleId);
+        await supabase.from('pending_guest_sales')
+          .update({ status: 'completed', transaction_id: newTransaction?.id || null })
+          .eq('id', pendingSaleId);
       } catch (guestErr) {
         console.error('Guest sale finalization error:', guestErr.message);
       }
@@ -4264,10 +4268,39 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
       paymentUrl = urlMatch ? urlMatch[0] : text;
     }
 
-    res.json({ success: true, paymentUrl });
+    res.json({ success: true, paymentUrl, pendingSaleId: pendingSale.id });
 
   } catch (error) {
     console.error('Create guest Grow payment error:', error);
+    res.status(500).json({ success: false, message: error.message });
+  }
+});
+
+// הקופה המהירה בודקת כאן אם תשלום ה-Grow של "לקוח מזדמן" אושר (ה-webhook סוגר את המכירה).
+app.get('/api/guest-sales/:id/status', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
+  try {
+    const { data: sale } = await supabase
+      .from('pending_guest_sales')
+      .select('school_id, status, amount, transaction_id')
+      .eq('id', req.params.id)
+      .maybeSingle();
+
+    if (!sale || (req.user.role !== 'super_admin' && String(sale.school_id) !== String(req.user.school_id))) {
+      return res.status(404).json({ success: false, message: 'מכירה לא נמצאה' });
+    }
+
+    let orderNumber = null;
+    if (sale.status === 'completed' && sale.transaction_id) {
+      const { data: order } = await supabase
+        .from('kitchen_orders')
+        .select('order_number')
+        .eq('transaction_id', sale.transaction_id)
+        .maybeSingle();
+      orderNumber = order?.order_number || null;
+    }
+
+    res.json({ success: true, status: sale.status, chargeAmount: parseFloat(sale.amount), orderNumber });
+  } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 });

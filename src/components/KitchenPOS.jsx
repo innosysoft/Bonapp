@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { searchStudents, getMenuItems, processMealPurchase, processDirectSale, getSchools, scanStudent } from '../api';
+import { searchStudents, getMenuItems, processMealPurchase, processDirectSale, createGuestGrowPayment, getGuestSaleStatus, getSchools, scanStudent } from '../api';
 import { authFetch } from '../auth';
 import { QrCode, Search, ShoppingCart, DollarSign, X, Plus, Minus, Settings, ChefHat, AlertCircle, UserPlus, Wallet, Banknote, CreditCard, Smartphone, ArrowRight } from 'lucide-react';
 import { Html5QrcodeScanner } from 'html5-qrcode';
@@ -42,7 +42,8 @@ const [studentPaymentType, setStudentPaymentType] = useState('daily');
 const [schoolSettings, setSchoolSettings] = useState({
   monthly_meal_price: 0,
   daily_meal_price: 0,
-  auto_print_receipt: false
+  auto_print_receipt: false,
+  pos_credit_via_grow: false
 });
 const [printOrder, setPrintOrder] = useState(null);
 
@@ -58,6 +59,38 @@ const [guestName, setGuestName] = useState('');
 const [guestPhone, setGuestPhone] = useState('');
 const [directSaleProcessing, setDirectSaleProcessing] = useState(false);
 const [directSaleResult, setDirectSaleResult] = useState(null);
+// אשראי דרך Grow: דף התשלום נפתח בלשונית נפרדת והקופה בודקת לבד שהתשלום אושר.
+const [growPending, setGrowPending] = useState(null); // { id, url, total, startedAt }
+const growWindowRef = useRef(null);
+
+useEffect(() => {
+  if (!growPending) return;
+  let stopped = false;
+  const poll = async () => {
+    try {
+      const status = await getGuestSaleStatus(growPending.id);
+      if (stopped || !status.success) return;
+      if (status.status === 'completed') {
+        stopped = true;
+        try { growWindowRef.current?.close(); } catch (e) { /* החלון כבר נסגר */ }
+        growWindowRef.current = null;
+        setDirectSaleResult({ orderNumber: status.orderNumber, chargeAmount: status.chargeAmount || growPending.total });
+        setGrowPending(null);
+        if (schoolSettings.auto_print_receipt) {
+          setPrintOrder({
+            orderNumber: status.orderNumber,
+            studentName: guestName || 'לקוח מזדמן',
+            items: [...cart],
+            createdAt: new Date().toISOString()
+          });
+          setTimeout(() => { window.print(); setPrintOrder(null); }, 50);
+        }
+      }
+    } catch (e) { /* ננסה שוב בסבב הבא */ }
+  };
+  const interval = setInterval(poll, 3000);
+  return () => { stopped = true; clearInterval(interval); };
+}, [growPending]); // eslint-disable-line react-hooks/exhaustive-deps
 
 useEffect(() => {
   if (selectedStudent) {
@@ -174,7 +207,8 @@ useEffect(() => {
             setSchoolSettings({
   monthly_meal_price: school.monthly_meal_price || 0,
   daily_meal_price: school.daily_meal_price || 0,
-  auto_print_receipt: school.auto_print_receipt || false
+  auto_print_receipt: school.auto_print_receipt || false,
+  pos_credit_via_grow: school.pos_credit_via_grow || false
 });
 
             if (school.menu_type === 'daily') {
@@ -351,6 +385,11 @@ const stopScanning = () => {
     setGuestName('');
     setGuestPhone('');
     setDirectSaleResult(null);
+    setGrowPending(null);
+    if (growWindowRef.current) {
+      try { growWindowRef.current.close(); } catch (e) { /* כבר סגור */ }
+      growWindowRef.current = null;
+    }
     if (searchMode === 'scan') {
       setIsScanning(true);
     }
@@ -406,6 +445,35 @@ const stopScanning = () => {
       }
     } catch (error) {
       alert('שגיאה בעיבוד המכירה');
+    } finally {
+      setDirectSaleProcessing(false);
+    }
+  };
+
+  const growCreditEnabled = !!schoolSettings.pos_credit_via_grow;
+
+  // אשראי דרך Grow: חלון ריק נפתח מיד בלחיצה (אחרי הבקשה לשרת הדפדפן כבר היה חוסם אותו
+  // כחלון קופץ), ואז מנווטים אותו לקישור התשלום.
+  const handleGrowCredit = async () => {
+    const paymentWindow = window.open('', '_blank');
+    setDirectSaleProcessing(true);
+    try {
+      const result = await createGuestGrowPayment(
+        cart.map(c => ({ id: c.id, quantity: c.quantity, addonIds: [] })),
+        guestName || null,
+        guestPhone || null
+      );
+      if (result.success && result.paymentUrl && result.pendingSaleId) {
+        if (paymentWindow) paymentWindow.location.href = result.paymentUrl;
+        growWindowRef.current = paymentWindow;
+        setGrowPending({ id: result.pendingSaleId, url: result.paymentUrl, total: calculateTotal() });
+      } else {
+        if (paymentWindow) paymentWindow.close();
+        alert(result.message || 'שגיאה ביצירת קישור תשלום');
+      }
+    } catch (error) {
+      if (paymentWindow) paymentWindow.close();
+      alert('שגיאה ביצירת קישור תשלום');
     } finally {
       setDirectSaleProcessing(false);
     }
@@ -612,6 +680,12 @@ const stopScanning = () => {
             />
           ) : directSaleResult ? (
             <DirectSaleSuccessScreen result={directSaleResult} onDone={resetToIdentify} />
+          ) : growPending ? (
+            <GrowWaitingScreen
+              total={growPending.total}
+              url={growPending.url}
+              onCancel={resetToIdentify}
+            />
           ) : directSaleMethod ? (
             <DirectSaleDetailsScreen
               method={directSaleMethod}
@@ -620,7 +694,8 @@ const stopScanning = () => {
               guestPhone={guestPhone}
               onGuestNameChange={setGuestName}
               onGuestPhoneChange={setGuestPhone}
-              onConfirm={() => handleDirectSale(directSaleMethod)}
+              viaGrow={directSaleMethod === 'credit' && growCreditEnabled}
+              onConfirm={() => (directSaleMethod === 'credit' && growCreditEnabled) ? handleGrowCredit() : handleDirectSale(directSaleMethod)}
               onBack={() => setDirectSaleMethod(null)}
               processing={directSaleProcessing}
             />
@@ -1003,10 +1078,6 @@ const PaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, onBack 
           <CreditCard size={20} />
           אשראי
         </button>
-        <button className="payment-choice-btn small" onClick={() => onDirectPayment('bit')}>
-          <Smartphone size={20} />
-          ביט
-        </button>
       </div>
 
       <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={onBack}>
@@ -1073,8 +1144,10 @@ const BalanceIdentifyScreen = ({ searchTerm, onSearchChange, searchResults, onSe
 );
 
 // פרטים אחרונים לפני מכירה ישירה - שם/טלפון אופציונליים (יוצגו בבון), ואישור סופי.
-const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuestNameChange, onGuestPhoneChange, onConfirm, onBack, processing }) => {
+const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuestNameChange, onGuestPhoneChange, onConfirm, onBack, processing, viaGrow }) => {
   const methodLabel = { cash: 'מזומן', credit: 'אשראי', bit: 'ביט' }[method];
+  // Grow לא מפיק קישור תשלום בלי טלפון, לכן בנתיב הזה הטלפון חובה.
+  const phoneOk = !viaGrow || guestPhone.trim().length >= 9;
   const methodIcon = { cash: <Banknote size={34} />, credit: <CreditCard size={34} />, bit: <Smartphone size={34} /> }[method];
   return (
     <div className="center-wrap">
@@ -1094,7 +1167,7 @@ const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuest
             placeholder="לדוגמה: דני כהן"
             style={{ width: '100%', padding: 12, border: '2px solid var(--line)', borderRadius: 10, fontSize: 15, boxSizing: 'border-box', marginBottom: 12 }}
           />
-          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 14 }}>טלפון (אופציונלי)</label>
+          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 14 }}>{viaGrow ? 'טלפון (חובה, לצורך התשלום)' : 'טלפון (אופציונלי)'}</label>
           <input
             type="tel"
             value={guestPhone}
@@ -1106,14 +1179,35 @@ const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuest
 
         <div className="confirm-actions">
           <button className="btn-secondary" onClick={onBack} disabled={processing}>ביטול</button>
-          <button className="btn-primary" onClick={onConfirm} disabled={processing}>
-            {processing ? 'מעבד...' : `✓ אשר תשלום ב${methodLabel}`}
+          <button className="btn-primary" onClick={onConfirm} disabled={processing || !phoneOk}>
+            {processing ? 'מעבד...' : viaGrow ? 'המשך לתשלום באשראי' : `✓ אשר תשלום ב${methodLabel}`}
           </button>
         </div>
       </div>
     </div>
   );
 };
+
+// ממתין לאישור תשלום מ-Grow. דף התשלום נפתח בלשונית נפרדת; כשהתשלום מאושר הקופה עוברת
+// אוטומטית למסך האישור וסוגרת את הלשונית.
+const GrowWaitingScreen = ({ total, url, onCancel }) => (
+  <div className="center-wrap">
+    <div className="card narrow">
+      <div className="card-head">
+        <div className="card-icon"><CreditCard size={34} /></div>
+        <h2>ממתין לתשלום באשראי</h2>
+        <p>סה"כ: ₪{total.toFixed(2)}</p>
+      </div>
+      <p style={{ color: 'var(--muted)', margin: '0 0 18px', lineHeight: 1.6 }}>
+        דף התשלום של Grow נפתח בלשונית חדשה. בסיום התשלום הקופה תעבור לבד למסך האישור.
+      </p>
+      <a className="btn-secondary" style={{ textDecoration: 'none', marginBottom: 12 }} href={url} target="_blank" rel="noopener noreferrer">
+        פתח שוב את דף התשלום
+      </a>
+      <button className="btn-secondary" style={{ width: '100%' }} onClick={onCancel}>ביטול</button>
+    </div>
+  </div>
+);
 
 const DirectSaleSuccessScreen = ({ result, onDone }) => (
   <div className="center-wrap">

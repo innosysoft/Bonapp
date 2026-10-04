@@ -60,7 +60,8 @@ const KitchenQRScanner = () => {
     monthly_meal_price: 0,
     daily_meal_price: 0,
     auto_print_receipt: false,
-    enable_kiosk_lock: false
+    enable_kiosk_lock: false,
+    pos_credit_via_grow: false
   });
 
   const getMealPrice = () => {
@@ -207,7 +208,8 @@ const KitchenQRScanner = () => {
               monthly_meal_price: school.monthly_meal_price || 0,
               daily_meal_price: school.daily_meal_price || 0,
               auto_print_receipt: school.auto_print_receipt || false,
-              enable_kiosk_lock: school.enable_kiosk_lock || false
+              enable_kiosk_lock: school.enable_kiosk_lock || false,
+              pos_credit_via_grow: school.pos_credit_via_grow || false
             });
 
             // טען תפריט לפי סוג
@@ -1091,6 +1093,22 @@ const KitchenQRScanner = () => {
                 </label>
                 <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
                   חל על קופת המטבח וגם על "קופה מהירה". דורש מדפסת מוגדרת בעמדה.
+                </p>
+              </div>
+
+              <div className="settings-block">
+                <h3>💳 אשראי בקופה מהירה</h3>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}>
+                  <input
+                    type="checkbox"
+                    checked={schoolSettings.pos_credit_via_grow}
+                    onChange={(e) => setSchoolSettings({ ...schoolSettings, pos_credit_via_grow: e.target.checked })}
+                    style={{ width: 22, height: 22, cursor: 'pointer' }}
+                  />
+                  <span style={{ fontWeight: 600 }}>תשלום באשראי ל"לקוח מזדמן" דרך דף תשלום של Grow</span>
+                </label>
+                <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
+                  כשמופעל, הקופה המהירה פותחת דף תשלום ב-Grow ומחכה לאישור התשלום. כשכבוי, הצוות מאשר ידנית שהתשלום התקבל.
                 </p>
               </div>
 
