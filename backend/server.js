@@ -4260,27 +4260,33 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
       || process.env.MAKE_WEBHOOK_URL
       || 'https://hook.eu1.make.com/rxndk9i4dt1lqmry41ljb8lkssn9ck7l';
 
+    // Grow דורש שם מלא (לפחות שתי מילים) וטלפון ספרות בלבד - אחרת התרחיש ב-Make נכשל
+    // ("Scenario failed to complete."). ב-guest_name נשמר מה שהוקלד בפועל; רק לשליחה
+    // ל-Grow משלימים "מזדמן" לשם של מילה אחת.
+    const typedName = (guestName || '').trim().replace(/\s+/g, ' ');
+    const growName = !typedName ? 'לקוח מזדמן' : (typedName.includes(' ') ? typedName : `${typedName} מזדמן`);
+    const growPhone = String(guestPhone).replace(/\D/g, '').replace(/^972/, '0');
+
     const response = await fetch(makeWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        parent_name: guestName || 'לקוח מזדמן',
-        parent_phone: guestPhone || '',
+        parent_name: growName,
+        parent_phone: growPhone,
         amount: chargeAmount,
-        student_name: guestName || 'לקוח מזדמן',
+        student_name: growName,
         description: `BonAppGuest-${pendingSale.id}`,
         student_id: walkinStudentId
       })
     });
 
     const text = await response.text();
-    let paymentUrl;
-    try {
-      const data = JSON.parse(text);
-      paymentUrl = data.url || data;
-    } catch (e) {
-      const urlMatch = text.match(/https:\/\/pay\.grow\.link\/[^\s"'}]+/);
-      paymentUrl = urlMatch ? urlMatch[0] : text;
+    const urlMatch = text.match(/https:\/\/[^\s"'}]+/);
+    const paymentUrl = urlMatch ? urlMatch[0] : null;
+    if (!response.ok || !paymentUrl || !paymentUrl.startsWith('https://pay.grow.link/')) {
+      console.error('Guest Grow payment link failed:', response.status, text.slice(0, 200));
+      await supabase.from('pending_guest_sales').delete().eq('id', pendingSale.id);
+      return res.status(502).json({ success: false, message: 'לא הצלחנו ליצור קישור תשלום ב-Grow. בדקו את השם והטלפון ונסו שוב.' });
     }
 
     res.json({ success: true, paymentUrl, pendingSaleId: pendingSale.id });
