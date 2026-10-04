@@ -157,24 +157,6 @@ if (data.children && data.children.length > 0) {
 
       setSchoolSettings(school);
       
-      // אם חבילה חודשית - טען את לוח הארוחות לשכבת הילד
-      
-      console.log('child group_id:', data.children[0]?.group_id);
-console.log('enable_monthly_package:', school.enable_monthly_package);
-      
-      if (school.enable_monthly_package && data.children[0].group_id) {
-        const payableResponse = await authFetch(
-          `https://api.bonapp.dev/api/groups/${data.children[0].group_id}/payable-schedules?studentId=${data.children[0].id}`
-        );
-        const payableData = await payableResponse.json();
-        if (payableData.success) {
-          setPayableMonths(payableData.schedules.map(s => ({
-            ...s,
-            meal_price: school.monthly_meal_price || s.meal_price
-          })));
-        }
-      }
-      
       // טען תפריט לפי סוג
       if (school.menu_type === 'daily') {
         const dailyResponse = await authFetch(`https://api.bonapp.dev/api/daily-menu/${school.id}`);
@@ -235,6 +217,30 @@ if (parentSchoolId) {
   loadParentData();
   
 }, [navigate]);
+
+// חודשים לתשלום - לפי הילד שנבחר (שכבה ותשלומים שונים לכל ילד), לא לפי הילד הראשון ברשימה
+const payableChild = children[selectedChild];
+const payableChildId = payableChild?.id;
+const payableGroupId = payableChild?.group_id;
+const payableChildPaid = payableChild?.monthlyPaid;
+const monthlyPackageEnabled = schoolSettings?.enable_monthly_package;
+const monthlyMealPrice = schoolSettings?.monthly_meal_price;
+useEffect(() => {
+  setPayableMonths([]);
+  if (!monthlyPackageEnabled || !payableChildId || !payableGroupId) return;
+  let cancelled = false;
+  authFetch(`https://api.bonapp.dev/api/groups/${payableGroupId}/payable-schedules?studentId=${payableChildId}`)
+    .then(r => r.json())
+    .then(payableData => {
+      if (cancelled || !payableData.success) return;
+      setPayableMonths(payableData.schedules.map(s => ({
+        ...s,
+        meal_price: monthlyMealPrice || s.meal_price
+      })));
+    })
+    .catch(() => {});
+  return () => { cancelled = true; };
+}, [payableChildId, payableGroupId, payableChildPaid, monthlyPackageEnabled, monthlyMealPrice]);
 
 // Polling לרענון יתרה
 useEffect(() => {
