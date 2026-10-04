@@ -291,6 +291,21 @@ const getOrCreateWalkinStudent = async (schoolId) => {
 // על סכום שנשלח מהלקוח. משותף בין מכירה ישירה (קופה מהירה) לתשלום אשראי/ביט של
 // "לקוח מזדמן" בקיוסק - שתיהן תמיד במצב "פריטים", לא תפריט יומי/מנוי.
 const computeItemsCharge = async (schoolId, items) => {
+  // תפריט יומי (כמו process-meal-purchase): אין פריטי תפריט בעגלה אלא "ארוחת היום" עם
+  // מחיר קבוע לבית הספר, ולכן המחיר נקבע בשרת לפי daily_meal_price ולא לפי מזהי פריטים.
+  const { data: schoolRow } = await supabase
+    .from('schools')
+    .select('menu_type, daily_meal_price')
+    .eq('id', schoolId)
+    .single();
+  if (schoolRow && schoolRow.menu_type !== 'items') {
+    const mealCount = items.reduce((s, i) => s + (parseInt(i.quantity, 10) || 1), 0);
+    return {
+      chargeAmount: (parseFloat(schoolRow.daily_meal_price) || 0) * mealCount,
+      kitchenOrderItems: [{ name: 'ארוחת היום', quantity: mealCount, addons: [] }]
+    };
+  }
+
   const itemIds = [...new Set(items.map(i => i.id).filter(Boolean))];
   const { data: realItems } = await supabase
     .from('menu_items')
