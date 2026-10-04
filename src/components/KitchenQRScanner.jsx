@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { getMenuItems, scanStudent, processMealPurchase, getSchools, searchStudents, getRecentTransactions, getKitchenSummary } from '../api';
 import { authFetch } from '../auth';
+import InstallAppButton from './InstallAppButton';
 import { QrCode, ShoppingCart, Clock, CheckCircle, XCircle, Settings, LogOut, ChefHat, Plus, Minus, AlertCircle, MoreVertical, Search, Users, BarChart3 } from 'lucide-react';
 
 import { Html5QrcodeScanner } from 'html5-qrcode';
@@ -658,6 +659,7 @@ const KitchenQRScanner = () => {
         </div>
 
         <div className="top-actions">
+          <InstallAppButton />
           <button className="action scan" onClick={() => navigate('/kitchen-pos')} title="קופה מהירה">
             <QrCode size={18} />
             <span className="label">קופה מהירה</span>

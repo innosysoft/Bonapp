@@ -32,6 +32,7 @@ import {
 } from 'lucide-react';
 
 import SendToPhoneModal from './SendToPhoneModal';
+import InstallAppButton from './InstallAppButton';
 import { Smartphone } from 'lucide-react';  // אם אין כבר
 
 const monthNamesHeb = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני',
@@ -1134,17 +1135,8 @@ const handleSendEmail = async () => {
 
 
   {/* 👇 כפתור חדש - שלח לטלפון */}
-  <button 
-    style={{
-      ...styles.actionButton,
-      background: 'linear-gradient(135deg, #25D366, #128C7E)',
-      color: 'white'
-    }}
-    onClick={() => setShowSendToPhone(true)}
-    title="שלח אפליקציה לטלפון"
-  >
-    <Smartphone size={20} />
-  </button>
+  <InstallAppButton onClick={() => setShowSendToPhone(true)} />
+
 
 
 <button

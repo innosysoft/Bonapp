@@ -1,5 +1,6 @@
 import React, { useState, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
+import InstallAppButton from '../InstallAppButton';
 
 // רכיב תצוגה בלבד: כותרת עליונה + ניווט + עטיפת תוכן לפאנל המזכירה.
 // לא מחזיק activeTab, לא קורא ל-API, לא מנווט בעצמו - הכל מגיע כ-props.
@@ -96,6 +97,9 @@ const SecretaryShell = ({
               <strong>{s.value}</strong>
             </div>
           ))}
+          <div style={{ display: 'flex', alignItems: 'center', marginInlineStart: 12 }}>
+            <InstallAppButton compactBelow={0} />
+          </div>
         </div>
       )}
 
@@ -117,6 +121,9 @@ const SecretaryShell = ({
               {!!item.badge && <span className="bap-sec-badge-count">{item.badge}</span>}
             </button>
           ))}
+          <div style={{ padding: '8px 12px' }}>
+            <InstallAppButton compactBelow={0} />
+          </div>
         </nav>
       )}
 
