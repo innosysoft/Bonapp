@@ -184,6 +184,22 @@ const supabase = createClient(
 // PostgREST treats , . ( ) as syntax; wrapping in double quotes and escaping \ and " neutralizes them.
 const escapePostgrestValue = (val) => `"${String(val).replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`;
 
+// חיפוש משתמשים לפי מייל בהתאמה מלאה ובלי תלות באותיות גדולות/קטנות. מחזיר רשימה (מהוותיק
+// לחדש) ולא תוצאה בודדת: אם יש כמה חשבונות באותו מייל, maybeSingle() נכשל בשקט ומשבית
+// איפוס סיסמה/כניסה/הרשמה. תווי % ו-_ במייל (נפוצים בכתובות) מוגנים כדי שלא ישמשו כתו כללי.
+const findUsersByEmail = async (email, role, columns = 'id, email') => {
+  const normalized = String(email || '').trim();
+  if (!normalized) return [];
+  let query = supabase
+    .from('users')
+    .select(columns)
+    .ilike('email', normalized.replace(/[\\%_]/g, m => `\\${m}`))
+    .order('created_at', { ascending: true });
+  if (role) query = query.eq('role', role);
+  const { data } = await query;
+  return data || [];
+};
+
 // רב מסר (Responder) - סנכרון הורים שאושרו לרשימת תפוצה. אותו חשבון Innosys שכבר
 // משמש את In-Desk (ראו supabase/functions/ravmesser-sync בפרויקט In-Desk) - רק list_id שונה.
 // כשל כאן לא אמור לחסום אישור הרשמה בפועל - זה רק סנכרון לרשימת דיוור, לא חלק מהזרימה הקריטית.
@@ -424,20 +440,27 @@ app.post('/api/login', authLimiter, async (req, res) => {
 
     const escapedUsername = escapePostgrestValue(username);
 
-    const { data: user, error } = await supabase
+    // ייתכן יותר מחשבון אחד באותו מייל/טלפון (למשל כפילות שנוצרה בהרשמה באותיות שונות) -
+    // מחפשים את החשבון שהסיסמה שהוזנה שייכת לו, במקום להיכשל בשקט כשיש כמה התאמות.
+    const { data: candidates, error } = await supabase
       .from('users')
       .select('*')
       .or(`email.ilike.${escapedUsername},phone.eq.${escapedUsername}`)
-      .maybeSingle();
+      .order('created_at', { ascending: true });
 
-    if (error || !user) {
+    if (error || !candidates || candidates.length === 0) {
       return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
     }
 
+    let user = null;
+    for (const candidate of candidates) {
+      if (candidate.password_hash && await bcrypt.compare(password, candidate.password_hash)) {
+        user = candidate;
+        break;
+      }
+    }
 
-    const validPassword = await bcrypt.compare(password, user.password_hash);
-
-    if (!validPassword) {
+    if (!user) {
       return res.status(401).json({ success: false, message: 'שם משתמש או סיסמה שגויים' });
     }
 
@@ -472,14 +495,9 @@ app.post('/api/login', authLimiter, async (req, res) => {
 app.get('/api/check-parent-email/:email', async (req, res) => {
   try {
     const { email } = req.params;
-    const { data: existingParent } = await supabase
-      .from('users')
-      .select('id')
-      .ilike('email', email)
-      .eq('role', 'parent')
-      .maybeSingle();
+    const matches = await findUsersByEmail(email, 'parent', 'id');
 
-    res.json({ success: true, exists: !!existingParent });
+    res.json({ success: true, exists: matches.length > 0 });
   } catch (error) {
     console.error('Check parent email error:', error);
     res.status(500).json({ success: false, message: 'שגיאה בבדיקת כתובת מייל' });
@@ -499,11 +517,8 @@ app.post('/api/forgot-password', authLimiter, async (req, res) => {
       return res.status(400).json({ success: false, message: 'חסרה כתובת אימייל' });
     }
 
-    const { data: user } = await supabase
-      .from('users')
-      .select('id, email, first_name, last_name')
-      .ilike('email', email)
-      .maybeSingle();
+    // אם יש כמה חשבונות באותו מייל (כפילות), מאפסים את הוותיק ביותר - החשבון המקורי.
+    const [user] = await findUsersByEmail(email, null, 'id, email, first_name, last_name');
 
     if (!user) {
       return res.json(genericResponse);
@@ -2982,12 +2997,7 @@ app.get('/api/verify-registration/:token', async (req, res) => {
 
     const children = JSON.parse(registration.children_data);
 
-    const { data: existingParent } = await supabase
-      .from('users')
-      .select('id, email')
-      .eq('email', registration.parent_email)
-      .eq('role', 'parent')
-      .maybeSingle();
+    const [existingParent] = await findUsersByEmail(registration.parent_email, 'parent', 'id, email');
 
     let parentId;
 
@@ -3005,7 +3015,7 @@ app.get('/api/verify-registration/:token', async (req, res) => {
       const { data: newParent, error: userError } = await supabase
         .from('users')
         .insert({
-          email: registration.parent_email,
+          email: String(registration.parent_email).trim().toLowerCase(),
           phone: registration.parent_phone,
           first_name: firstName,
           last_name: lastName,
@@ -3161,12 +3171,7 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
     if (action === 'approve') {
       const children = JSON.parse(registration.children_data);
       
-      const { data: existingParent } = await supabase
-        .from('users')
-        .select('id, email')
-        .eq('email', registration.parent_email)
-        .eq('role', 'parent')
-        .maybeSingle();
+      const [existingParent] = await findUsersByEmail(registration.parent_email, 'parent', 'id, email');
 
       let parentId;
       let generatedPassword;
@@ -3185,7 +3190,7 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
         const { data: newParent, error: userError } = await supabase
           .from('users')
           .insert({
-            email: registration.parent_email,
+            email: String(registration.parent_email).trim().toLowerCase(),
             phone: registration.parent_phone,
             first_name: firstName,
             last_name: lastName,
