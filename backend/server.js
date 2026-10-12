@@ -2872,6 +2872,18 @@ app.post('/api/pending-registrations', async (req, res) => {
 
     let verificationToken = null;
     if (auto_verify) {
+      // הרשמה ציבורית עם מייל שכבר רשום כהורה - חסומה (גם אם האותיות שונות). מי שכבר
+      // רשום נכנס או מאפס סיסמה; ילדים נוספים מוסיפים מתוך פאנל ההורה.
+      if (parent_email) {
+        const existing = await findUsersByEmail(parent_email, 'parent', 'id');
+        if (existing.length > 0) {
+          return res.status(409).json({
+            success: false,
+            code: 'EMAIL_EXISTS',
+            message: 'כתובת המייל הזו כבר רשומה במערכת. אפשר להיכנס עם הסיסמה שלכם, או ללחוץ "שכחתי סיסמה" כדי לאפס אותה.'
+          });
+        }
+      }
       if (password && password.length < 6) {
         return res.status(400).json({ success: false, message: 'הסיסמה חייבת להכיל לפחות 6 תווים' });
       }

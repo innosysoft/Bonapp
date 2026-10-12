@@ -239,7 +239,7 @@ const loadSchoolGroups = async (schoolId) => {
   };
 
   const isPasswordValid = () => {
-    if (emailExists === true) return true; // חשבון קיים - לא נדרשת סיסמה חדשה
+    if (emailExists === true) return false; // מייל כבר רשום - חסום, מפנים לכניסה/איפוס סיסמה
     return formData.password &&
            formData.password.length >= 6 &&
            formData.password === formData.confirmPassword;
@@ -299,6 +299,9 @@ const loadSchoolGroups = async (schoolId) => {
 
       if (data.success) {
         setCurrentStep(4); // מסך הצלחה - רק אחרי אישור אמיתי מהשרת
+      } else if (data.code === 'EMAIL_EXISTS') {
+        setEmailExists(true);
+        setCurrentStep(1);
       } else {
         alert(data.message || 'שגיאה בשליחת ההרשמה. נסו שוב, ואם זה חוזר על עצמו פנו אלינו.');
       }
@@ -521,16 +524,17 @@ const loadSchoolGroups = async (schoolId) => {
         <div style={{
           marginTop: '10px',
           padding: '12px 14px',
-          backgroundColor: '#eaf3f7',
-          border: '1px solid #dce6e9',
+          backgroundColor: '#fdf1f1',
+          border: '1px solid #e8c3c3',
           borderRadius: '8px',
           fontSize: '14px',
-          color: '#356b8c',
-          lineHeight: '1.5'
+          color: '#8a3b3b',
+          lineHeight: '1.6'
         }}>
-          כבר יש חשבון הורה עם המייל הזה במערכת. אם ממשיכים, הילד/ה יתווספו לחשבון הקיים ולא ייווצר חשבון חדש
-          (אין צורך למלא סיסמה חדשה - היא לא תשנה את הסיסמה הקיימת). אם שכחתם את הסיסמה, אפשר לאפס אותה
-          {' '}<a href="/login" target="_blank" rel="noopener noreferrer" style={{ color: '#2c5a75', fontWeight: 600 }}>בדף הכניסה</a>.
+          <strong>כתובת המייל הזו כבר רשומה במערכת.</strong> אי אפשר להירשם שוב עם אותו מייל.
+          אם כבר נרשמתם, <a href="/login" style={{ color: '#2c5a75', fontWeight: 600 }}>היכנסו לחשבון</a>.
+          אם שכחתם את הסיסמה, <a href={`/login?forgot=1&email=${encodeURIComponent(formData.email.trim())}`} style={{ color: '#2c5a75', fontWeight: 600 }}>אפסו אותה כאן</a> - נשלח אליכם מייל עם קישור.
+          ילדים נוספים אפשר להוסיף מתוך פאנל ההורה אחרי הכניסה.
         </div>
       )}
     </div>

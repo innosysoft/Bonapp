@@ -19,8 +19,10 @@ const UniversalLogin = () => {
   const [success, setSuccess] = useState('');
 
   // מצב "שכחתי סיסמה" - מסך קטן נפרד, לא נוגע בלוגיקת ההתחברות הרגילה
-  const [mode, setMode] = useState('login'); // 'login' | 'forgot'
-  const [forgotEmail, setForgotEmail] = useState('');
+  // כניסה מקישור מהרשמה (?forgot=1&email=...) פותחת ישר את מסך האיפוס עם המייל מולא.
+  const urlParams = new URLSearchParams(window.location.search);
+  const [mode, setMode] = useState(urlParams.get('forgot') === '1' ? 'forgot' : 'login'); // 'login' | 'forgot'
+  const [forgotEmail, setForgotEmail] = useState(urlParams.get('forgot') === '1' ? (urlParams.get('email') || '') : '');
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMessage, setForgotMessage] = useState('');
   const [forgotError, setForgotError] = useState('');
