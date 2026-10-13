@@ -306,7 +306,53 @@ const getOrCreateWalkinStudent = async (schoolId) => {
 // מחשב סכום חיוב לעגלת פריטים (מוצרים+תוספות) לפי המחירים האמיתיים בתפריט - לא סומך
 // על סכום שנשלח מהלקוח. משותף בין מכירה ישירה (קופה מהירה) לתשלום אשראי/ביט של
 // "לקוח מזדמן" בקיוסק - שתיהן תמיד במצב "פריטים", לא תפריט יומי/מנוי.
+const MAX_CUSTOM_AMOUNT = 2000;
+const FREE_CHARGE_LABEL = 'חיוב חופשי';
+
+// "מסופון": שורת עגלה עם customAmount היא סכום חופשי שהצוות הקליד (בלי פריט תפריט).
+// הסכום מאומת בשרת (חיובי, עד MAX_CUSTOM_AMOUNT, שתי ספרות אחרי הנקודה), והשורות האלה
+// מופרדות מפריטי התפריט הרגילים שהחישוב שלהם לא משתנה.
+const splitCustomLines = (items) => {
+  const customLines = [];
+  const regularItems = [];
+  let invalid = false;
+  (items || []).forEach(i => {
+    if (i && i.customAmount !== undefined && i.customAmount !== null) {
+      const amount = Math.round(Number(i.customAmount) * 100) / 100;
+      if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_CUSTOM_AMOUNT) { invalid = true; return; }
+      customLines.push(amount);
+    } else {
+      regularItems.push(i);
+    }
+  });
+  const customTotal = Math.round(customLines.reduce((s, a) => s + a, 0) * 100) / 100;
+  return { customLines, customTotal, regularItems, invalid, customOnly: customLines.length > 0 && regularItems.length === 0 };
+};
+
 const computeItemsCharge = async (schoolId, items) => {
+  const { customLines, customTotal, regularItems, invalid, customOnly } = splitCustomLines(items);
+  if (invalid) return { chargeAmount: 0, kitchenOrderItems: [], customOnly: false };
+
+  if (customLines.length > 0) {
+    // חיוב חופשי מותר רק בבתי ספר עם תפריט פריטים (אחרת הסכום היה נקבע לפי מחיר ארוחה קבוע).
+    const { data: school } = await supabase.from('schools').select('menu_type').eq('id', schoolId).single();
+    if (!school || school.menu_type !== 'items') return { chargeAmount: 0, kitchenOrderItems: [], customOnly: false };
+  }
+
+  const base = regularItems.length > 0
+    ? await computeCatalogItemsCharge(schoolId, regularItems)
+    : { chargeAmount: 0, kitchenOrderItems: [] };
+
+  return {
+    chargeAmount: Math.round((base.chargeAmount + customTotal) * 100) / 100,
+    kitchenOrderItems: customLines.length > 0
+      ? [...base.kitchenOrderItems, { name: FREE_CHARGE_LABEL, quantity: customLines.length, addons: [] }]
+      : base.kitchenOrderItems,
+    customOnly
+  };
+};
+
+const computeCatalogItemsCharge = async (schoolId, items) => {
   // תפריט יומי (כמו process-meal-purchase): אין פריטי תפריט בעגלה אלא "ארוחת היום" עם
   // מחיר קבוע לבית הספר, ולכן המחיר נקבע בשרת לפי daily_meal_price ולא לפי מזהי פריטים.
   const { data: schoolRow } = await supabase
@@ -2448,15 +2494,24 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
     const today = new Date().toISOString().split('T')[0];
     const { data: todayMeals } = await supabase
       .from('transactions')
-      .select('id')
+      .select('id, description')
       .eq('student_id', studentId)
       .eq('type', 'meal')
       .gte('transaction_date', `${today}T00:00:00`)
       .lte('transaction_date', `${today}T23:59:59`);
-    
-    const mealsToday = todayMeals?.length || 0;
-    
-    if (student.max_daily_meals && mealsToday >= student.max_daily_meals) {
+
+    // חיוב חופשי (מסופון) הוא לא "ארוחה" - לא נספר במגבלת הארוחות היומית, ולא נחסם בגללה.
+    const mealsToday = (todayMeals || []).filter(t => !(t.description || '').startsWith(FREE_CHARGE_LABEL)).length;
+    const requestSplit = splitCustomLines(items);
+
+    if (requestSplit.invalid) {
+      return res.status(400).json({ success: false, message: `סכום חיוב לא תקין (עד ₪${MAX_CUSTOM_AMOUNT})` });
+    }
+    if (requestSplit.customLines.length > 0 && school.menu_type !== 'items') {
+      return res.status(400).json({ success: false, message: 'חיוב חופשי זמין רק בבתי ספר עם תפריט לפי פריטים' });
+    }
+
+    if (!requestSplit.customOnly && student.max_daily_meals && mealsToday >= student.max_daily_meals) {
       return res.status(400).json({
         success: false,
         message: `הגעת למגבלת הארוחות היומית (${student.max_daily_meals} ארוחות)`
@@ -2483,7 +2538,9 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
     if (school.menu_type === 'items' && Array.isArray(items) && items.length > 0) {
       // תפריט פריטים בודדים - החיוב מחושב מהעגלה בפועל, לא ממחיר קבוע. מחושב מחדש
       // בשרת לפי המחירים האמיתיים של הפריטים ותוספות (לא סומכים על total שנשלח מהלקוח).
-      const itemIds = [...new Set(items.map(i => i.id).filter(Boolean))];
+      // שורות "חיוב חופשי" (מסופון) מופרדות ומתווספות בנפרד - החישוב לפריטי התפריט לא משתנה.
+      const regularItems = requestSplit.regularItems;
+      const itemIds = [...new Set(regularItems.map(i => i.id).filter(Boolean))];
       const { data: realItems } = await supabase
         .from('menu_items')
         .select('id, name, price')
@@ -2491,7 +2548,7 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
         .eq('school_id', student.school_id);
       const itemById = new Map((realItems || []).map(mi => [mi.id, mi]));
 
-      const addonIds = [...new Set(items.flatMap(i => Array.isArray(i.addonIds) ? i.addonIds : []))];
+      const addonIds = [...new Set(regularItems.flatMap(i => Array.isArray(i.addonIds) ? i.addonIds : []))];
       let addonById = new Map();
       if (addonIds.length > 0) {
         const { data: realAddons } = await supabase
@@ -2501,7 +2558,7 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
         addonById = new Map((realAddons || []).map(a => [a.id, a]));
       }
 
-      chargeAmount = items.reduce((sum, cartItem) => {
+      chargeAmount = regularItems.reduce((sum, cartItem) => {
         const menuItem = itemById.get(cartItem.id);
         const qty = parseInt(cartItem.quantity, 10) || 1;
         if (!menuItem) return sum;
@@ -2519,6 +2576,11 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
 
         return sum + lineTotal;
       }, 0);
+
+      if (requestSplit.customLines.length > 0) {
+        chargeAmount = Math.round((chargeAmount + requestSplit.customTotal) * 100) / 100;
+        kitchenOrderItems.push({ name: FREE_CHARGE_LABEL, quantity: requestSplit.customLines.length, addons: [] });
+      }
     } else {
       // תפריט יומי / מנוי - נשאר בדיוק כמו היום: מחיר קבוע לפי בית הספר, לא לפי יום או פריט.
       if (paymentType === 'monthly') {
@@ -2630,7 +2692,7 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
         type: 'meal',
         transaction_type: 'purchase',
         status: 'completed',
-        description: 'רכישה בקופת המזנון',
+        description: requestSplit.customOnly ? `${FREE_CHARGE_LABEL} (מסופון)` : 'רכישה בקופת המזנון',
         transaction_date: new Date().toISOString()
       })
       .select()
@@ -2648,7 +2710,8 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
           school_id: student.school_id,
           student_name: `${student.first_name} ${student.last_name || ''}`.trim(),
           items: kitchenOrderItems,
-          status: 'pending'
+          status: requestSplit.customOnly ? 'completed' : 'pending',
+          ...(requestSplit.customOnly ? { completed_at: new Date().toISOString() } : {})
         })
         .select()
         .single();
@@ -2689,7 +2752,7 @@ app.post('/api/process-direct-sale', authenticateToken, requireRole('kitchen', '
     }
 
     // חישוב הסכום בשרת לפי מחירי התפריט האמיתיים - לא סומכים על סכום שנשלח מהלקוח.
-    const { chargeAmount, kitchenOrderItems } = await computeItemsCharge(schoolId, items);
+    const { chargeAmount, kitchenOrderItems, customOnly } = await computeItemsCharge(schoolId, items);
 
     if (chargeAmount <= 0) {
       return res.status(400).json({ success: false, message: 'לא נמצאו פריטים תקינים בעגלה' });
@@ -2711,7 +2774,7 @@ app.post('/api/process-direct-sale', authenticateToken, requireRole('kitchen', '
         payment_method: paymentMethod,
         guest_name: guestName || null,
         guest_phone: guestPhone || null,
-        description: `מכירה ישירה - תשלום ב${paymentMethodLabel}`,
+        description: customOnly ? `${FREE_CHARGE_LABEL} (מסופון) - תשלום ב${paymentMethodLabel}` : `מכירה ישירה - תשלום ב${paymentMethodLabel}`,
         transaction_date: new Date().toISOString()
       })
       .select()
@@ -2721,6 +2784,8 @@ app.post('/api/process-direct-sale', authenticateToken, requireRole('kitchen', '
 
     let kitchenOrder = null;
     try {
+      // חיוב חופשי בלבד אין מה להכין - ההזמנה נרשמת כבר כהושלמה (נותנת מספר הזמנה לבון)
+      // ולא מופיעה כהזמנה ממתינה במסך הייצור.
       const { data: koData, error: koError } = await supabase
         .from('kitchen_orders')
         .insert({
@@ -2728,7 +2793,8 @@ app.post('/api/process-direct-sale', authenticateToken, requireRole('kitchen', '
           school_id: schoolId,
           student_name: guestName ? guestName : 'לקוח מזדמן',
           items: kitchenOrderItems,
-          status: 'pending'
+          status: customOnly ? 'completed' : 'pending',
+          ...(customOnly ? { completed_at: new Date().toISOString() } : {})
         })
         .select()
         .single();
@@ -3941,7 +4007,7 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
 
       try {
         const walkinStudentId = await getOrCreateWalkinStudent(pendingSale.school_id);
-        const { chargeAmount, kitchenOrderItems } = await computeItemsCharge(pendingSale.school_id, pendingSale.items);
+        const { chargeAmount, kitchenOrderItems, customOnly } = await computeItemsCharge(pendingSale.school_id, pendingSale.items);
 
         const { data: newTransaction } = await supabase
           .from('transactions')
@@ -3956,7 +4022,7 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
             payment_method: 'grow',
             guest_name: pendingSale.guest_name,
             guest_phone: pendingSale.guest_phone,
-            description: 'מכירה ישירה - תשלום אונליין (Grow)',
+            description: customOnly ? `${FREE_CHARGE_LABEL} (מסופון) - תשלום אונליין (Grow)` : 'מכירה ישירה - תשלום אונליין (Grow)',
             transaction_date: new Date().toISOString()
           })
           .select()
@@ -3969,7 +4035,8 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
             school_id: pendingSale.school_id,
             student_name: pendingSale.guest_name || 'לקוח מזדמן',
             items: kitchenOrderItems,
-            status: 'pending'
+            status: customOnly ? 'completed' : 'pending',
+            ...(customOnly ? { completed_at: new Date().toISOString() } : {})
           });
 
         await supabase.from('pending_guest_sales')

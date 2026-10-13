@@ -66,6 +66,7 @@ function App() {
           <Route path="/parent-dashboard" element={<ParentDashboard />} />
           <Route path="/kitchen-scanner" element={<KitchenQRScanner />} />
           <Route path="/kitchen-pos" element={<KitchenPOS />} />
+          <Route path="/kitchen-terminal" element={<KitchenPOS terminal />} />
           <Route path="/production-display" element={<ProductionDisplay />} />
           <Route path="/kitchen-reports" element={<KitchenReports />} />
           <Route path="/parent-menu-preview" element={<ParentMenuPreview />} />

@@ -9,7 +9,7 @@ import { Html5QrcodeScanner } from 'html5-qrcode';
 // כל הלוגיקה העסקית (סריקה, חיפוש, עגלה, חיוב, אזהרת מינוס) נשמרה כפי שהייתה - רק שכבת התצוגה הוחלפה.
 const getBalanceColorVar = (balance) => (balance > 50 ? 'var(--green)' : balance > 20 ? 'var(--warn)' : 'var(--danger)');
 
-const KitchenPOS = () => {
+const KitchenPOS = ({ terminal = false }) => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
@@ -390,7 +390,7 @@ const stopScanning = () => {
       try { growWindowRef.current.close(); } catch (e) { /* כבר סגור */ }
       growWindowRef.current = null;
     }
-    if (searchMode === 'scan') {
+    if (searchMode === 'scan' && !terminal) {
       setIsScanning(true);
     }
   };
@@ -450,6 +450,13 @@ const stopScanning = () => {
     }
   };
 
+  // מסופון: הסכום שהוקלד הופך לשורה אחת בעגלה ("חיוב חופשי") ועוברים ישר למסך "איך לשלם".
+  const handleTerminalConfirm = (amount) => {
+    setCart([{ id: 'custom-free', name: 'חיוב חופשי', price: amount, quantity: 1, customAmount: amount }]);
+    setWalkinMode(true);
+    setShowPaymentChoice(true);
+  };
+
   const growCreditEnabled = !!schoolSettings.pos_credit_via_grow;
 
   // אשראי דרך Grow: חלון ריק נפתח מיד בלחיצה (אחרי הבקשה לשרת הדפדפן כבר היה חוסם אותו
@@ -459,7 +466,7 @@ const stopScanning = () => {
     setDirectSaleProcessing(true);
     try {
       const result = await createGuestGrowPayment(
-        cart.map(c => ({ id: c.id, quantity: c.quantity, addonIds: [] })),
+        cart.map(c => (c.customAmount != null ? { customAmount: c.customAmount, quantity: 1 } : { id: c.id, quantity: c.quantity, addonIds: [] })),
         guestName || null,
         guestPhone || null
       );
@@ -610,6 +617,22 @@ const stopScanning = () => {
         .bap-pos .payment-choice-row{display:flex;gap:10px;margin-bottom:6px}
         .bap-pos .payment-choice-btn.small{flex:1;flex-direction:column;padding:16px 8px;text-align:center;gap:8px;font-weight:700;font-size:14px;margin-bottom:0}
 
+        .bap-pos .tm-card{max-width:420px;padding:24px}
+        .bap-pos .tm-display{display:flex;align-items:baseline;justify-content:center;gap:8px;direction:ltr;background:var(--paper);border:2px solid var(--line);border-radius:16px;padding:14px 18px;min-height:84px}
+        .bap-pos .tm-currency{font-size:28px;color:var(--muted);font-weight:700}
+        .bap-pos .tm-amount{font-size:clamp(40px,12vw,56px);font-weight:800;color:var(--navy);line-height:1;word-break:break-all}
+        .bap-pos .tm-hint{text-align:center;font-size:14px;margin:8px 0 14px;min-height:20px}
+        .bap-pos .tm-pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;direction:ltr}
+        .bap-pos .tm-key{height:clamp(56px,10vh,72px);border-radius:14px;border:1px solid var(--line);background:#fff;color:var(--navy);font-size:26px;font-weight:700;cursor:pointer;box-shadow:0 2px 0 rgba(23,50,74,.06)}
+        .bap-pos .tm-key:active{background:var(--paper);transform:translateY(1px)}
+        .bap-pos .tm-key-alt{background:var(--paper);color:var(--muted)}
+        .bap-pos .tm-actions{display:grid;grid-template-columns:1fr 2fr;gap:10px;margin-top:12px}
+        .bap-pos .tm-clear{height:60px;border-radius:14px;border:2px solid var(--line);background:#fff;color:var(--navy);font-weight:700;font-size:16px;cursor:pointer}
+        .bap-pos .tm-ok{height:60px;border-radius:14px;border:0;background:var(--green);color:#fff;font-weight:800;font-size:20px;cursor:pointer}
+        .bap-pos .tm-ok:disabled,.bap-pos .tm-clear:disabled{opacity:.45;cursor:not-allowed}
+        .bap-pos .tm-items{width:100%;margin-top:14px;padding:12px;border:0;background:transparent;color:var(--blue);font-weight:700;font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px}
+        .bap-pos .tm-items:hover{text-decoration:underline}
+
         .bap-pos .print-ticket{display:none}
         @media print {
           .bap-pos > *:not(.print-ticket){display:none !important}
@@ -626,7 +649,7 @@ const stopScanning = () => {
         <div className="brand">
           <div className="brand-icon"><QrCode size={22} /></div>
           <div>
-            <h1>קופה מהירה</h1>
+            <h1>{terminal ? 'מסופון' : 'קופה מהירה'}</h1>
             <div className="sub">{schoolName || 'בית ספר'}</div>
           </div>
         </div>
@@ -644,7 +667,13 @@ const stopScanning = () => {
       </header>
 
       <div className="main">
-        {!selectedStudent && !walkinMode ? (
+        {!selectedStudent && !walkinMode && terminal ? (
+          menuType === 'items' ? (
+            <TerminalKeypadScreen onConfirm={handleTerminalConfirm} onPickItems={handleStartWalkin} />
+          ) : (
+            <div className="center-wrap"><div className="card narrow"><h2>המסופון זמין רק בתפריט לפי פריטים</h2><p style={{ color: 'var(--muted)' }}>בית הספר הזה מוגדר עם תפריט יומי. אפשר להשתמש בקופה המהירה.</p></div></div>
+          )
+        ) : !selectedStudent && !walkinMode ? (
           // מסך חיפוש
           <SearchScreen
   searchTerm={searchTerm}
@@ -704,7 +733,9 @@ const stopScanning = () => {
               total={calculateTotal()}
               onPayFromBalance={() => setIdentifyForBalance(true)}
               onDirectPayment={(method) => setDirectSaleMethod(method)}
-              onBack={() => setShowPaymentChoice(false)}
+              allowBit={terminal}
+              backLabel={terminal && cart.every(c => c.customAmount != null) ? 'חזרה להקלדת סכום' : 'חזרה לעגלה'}
+              onBack={() => (terminal && cart.every(c => c.customAmount != null)) ? resetToIdentify() : setShowPaymentChoice(false)}
             />
           )
         ) : (
@@ -750,7 +781,7 @@ const stopScanning = () => {
           <div className="pt-item">{printOrder.studentName}</div>
           <div className="pt-line" />
           {(printOrder.items || []).map((item, idx) => (
-            <div key={idx} className="pt-item">{item.quantity}x {item.name}</div>
+            <div key={idx} className="pt-item">{item.quantity}x {item.name}{item.price ? ` - ₪${(item.price * item.quantity).toFixed(2)}` : ''}</div>
           ))}
           <div className="pt-line" />
           <div className="pt-item">{new Date(printOrder.createdAt).toLocaleString('he-IL')}</div>
@@ -1051,8 +1082,72 @@ const SalesScreen = ({ student, walkinMode, menuType, menuItems, dailyMenuData, 
   );
 };
 
+// מסופון: מסך הקלדת סכום חופשי (כמו מסופון אשראי פשוט). "אישור" עובר למסך "איך לשלם?".
+const TERMINAL_MAX_AMOUNT = 2000;
+const TerminalKeypadScreen = ({ onConfirm, onPickItems }) => {
+  const [amount, setAmount] = useState('');
+
+  const press = (k) => setAmount(prev => {
+    if (k === 'back') return prev.slice(0, -1);
+    if (k === 'clear') return '';
+    if (k === '.') return prev.includes('.') ? prev : (prev === '' ? '0.' : prev + '.');
+    if (prev.includes('.') && prev.split('.')[1].length >= 2) return prev;
+    if (!prev.includes('.') && prev.length >= 4) return prev;
+    return prev === '0' ? k : prev + k;
+  });
+
+  const value = parseFloat(amount) || 0;
+  const tooBig = value > TERMINAL_MAX_AMOUNT;
+  const valid = value > 0 && !tooBig;
+
+  useEffect(() => {
+    const onKey = (e) => {
+      if (/^[0-9]$/.test(e.key) || e.key === '.') press(e.key);
+      else if (e.key === 'Backspace') press('back');
+      else if (e.key === 'Escape') press('clear');
+      else if (e.key === 'Enter' && valid) onConfirm(Math.round(value * 100) / 100);
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [valid, value]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const keys = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '.', '0', 'back'];
+
+  return (
+    <div className="center-wrap">
+      <div className="card narrow tm-card">
+        <div className="tm-display" aria-live="polite">
+          <span className="tm-currency">₪</span>
+          <span className="tm-amount">{amount || '0'}</span>
+        </div>
+        <div className="tm-hint" style={{ color: tooBig ? 'var(--danger)' : 'var(--muted)' }}>
+          {tooBig ? `הסכום המרבי הוא ₪${TERMINAL_MAX_AMOUNT.toLocaleString('he-IL')}` : 'הקלידו את הסכום לחיוב'}
+        </div>
+
+        <div className="tm-pad">
+          {keys.map(k => (
+            <button key={k} className={`tm-key ${k === 'back' ? 'tm-key-alt' : ''}`} onClick={() => press(k)} aria-label={k === 'back' ? 'מחק ספרה' : k}>
+              {k === 'back' ? '⌫' : k}
+            </button>
+          ))}
+        </div>
+
+        <div className="tm-actions">
+          <button className="tm-clear" onClick={() => press('clear')} disabled={!amount}>נקה</button>
+          <button className="tm-ok" onClick={() => onConfirm(Math.round(value * 100) / 100)} disabled={!valid}>אישור</button>
+        </div>
+
+        <button className="tm-items" onClick={onPickItems}>
+          <ShoppingCart size={18} />
+          בחירה מפריטים
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // מסך "איך לשלם?" - מוצג רק בנתיב "לקוח מזדמן", אחרי בחירת המנות.
-const PaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, onBack }) => (
+const PaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, onBack, allowBit, backLabel = 'חזרה לעגלה' }) => (
   <div className="center-wrap">
     <div className="card narrow">
       <div className="card-head">
@@ -1078,11 +1173,17 @@ const PaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, onBack 
           <CreditCard size={20} />
           אשראי
         </button>
+        {allowBit && (
+          <button className="payment-choice-btn small" onClick={() => onDirectPayment('bit')}>
+            <Smartphone size={20} />
+            ביט
+          </button>
+        )}
       </div>
 
       <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={onBack}>
         <ArrowRight size={18} />
-        חזרה לעגלה
+        {backLabel}
       </button>
     </div>
   </div>
