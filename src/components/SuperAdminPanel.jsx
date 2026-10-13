@@ -350,7 +350,9 @@ const saveSchoolSettings = async () => {
   enable_free_payment: editingSchool.enable_free_payment,
   payment_gateway: editingSchool.payment_gateway,
   gateway_webhook_url: editingSchool.gateway_webhook_url,
-  tranzila_terminal: editingSchool.tranzila_terminal
+  tranzila_terminal: editingSchool.tranzila_terminal,
+  tranzila_app_key: editingSchool.tranzila_app_key_input || '',
+  tranzila_secret: editingSchool.tranzila_secret_input || ''
       })
     });
 
@@ -1438,7 +1440,35 @@ onClick={() => {
         }}
       />
       <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: '#607482' }}>
-        אותיות קטנות באנגלית ומספרים בלבד (3-16 תווים). זה כל מה שנדרש - בלי סיסמה.
+        אותיות קטנות באנגלית ומספרים בלבד (3-16 תווים).
+      </p>
+
+      <label style={{ display: 'block', margin: '1rem 0 0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+        App Key (אופציונלי)
+      </label>
+      <input
+        type="password"
+        dir="ltr"
+        autoComplete="off"
+        value={editingSchool.tranzila_app_key_input || ''}
+        onChange={(e) => setEditingSchool({...editingSchool, tranzila_app_key_input: e.target.value})}
+        placeholder="נשמר מוצפן, לא מוצג שוב"
+        style={{ width: '100%', padding: '0.75rem', border: '2px solid #dce6e9', borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+      />
+      <label style={{ display: 'block', margin: '1rem 0 0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+        Secret (אופציונלי)
+      </label>
+      <input
+        type="password"
+        dir="ltr"
+        autoComplete="off"
+        value={editingSchool.tranzila_secret_input || ''}
+        onChange={(e) => setEditingSchool({...editingSchool, tranzila_secret_input: e.target.value})}
+        placeholder="נשמר מוצפן, לא מוצג שוב"
+        style={{ width: '100%', padding: '0.75rem', border: '2px solid #dce6e9', borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box' }}
+      />
+      <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: '#607482' }}>
+        ריק = שימוש במפתחות ברירת המחדל של החשבון (מוגדרים בשרת). יש למלא את שני השדות יחד.
       </p>
     </div>
   )}
