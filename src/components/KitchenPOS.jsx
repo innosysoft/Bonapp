@@ -62,6 +62,8 @@ const [directSaleResult, setDirectSaleResult] = useState(null);
 // אשראי דרך Grow: דף התשלום נפתח בלשונית נפרדת והקופה בודקת לבד שהתשלום אושר.
 const [growPending, setGrowPending] = useState(null); // { id, url, total, startedAt }
 const growWindowRef = useRef(null);
+// חיוב מיתרה בנתיב "לקוח מזדמן"/מסופון: מסך חיוב קצר (תלמיד + סכום) במקום מסך הפריטים המלא.
+const [balanceCharging, setBalanceCharging] = useState(null); // { student, total }
 
 useEffect(() => {
   if (!growPending) return;
@@ -362,9 +364,11 @@ const stopScanning = () => {
 
     } else {
       alert(result.message || 'שגיאה בעיבוד התשלום');
+      if (studentOverride != null || balanceCharging != null) backToPaymentChoice();
     }
   } catch (error) {
     alert('שגיאה בעיבוד התשלום');
+    if (studentOverride != null || balanceCharging != null) backToPaymentChoice();
   }
 };
 
@@ -386,6 +390,7 @@ const stopScanning = () => {
     setGuestPhone('');
     setDirectSaleResult(null);
     setGrowPending(null);
+    setBalanceCharging(null);
     if (growWindowRef.current) {
       try { growWindowRef.current.close(); } catch (e) { /* כבר סגור */ }
       growWindowRef.current = null;
@@ -415,11 +420,23 @@ const stopScanning = () => {
   };
 
   const handleIdentifyForBalance = async (student) => {
+    setBalanceCharging({ student, total: calculateTotal() });
     setSelectedStudent(student);
     setWalkinMode(false);
     setShowPaymentChoice(false);
     setIdentifyForBalance(false);
     await processPayment(false, student);
+  };
+
+  // חיוב מיתרה לא הצליח / בוטל - חוזרים לבחירת אמצעי תשלום עם אותה עגלה.
+  const backToPaymentChoice = () => {
+    setBalanceCharging(null);
+    setSelectedStudent(null);
+    setShowWarning(false);
+    setWarningData(null);
+    setWalkinMode(true);
+    setShowPaymentChoice(true);
+    setIdentifyForBalance(false);
   };
 
   const handleDirectSale = async (method) => {
@@ -738,6 +755,8 @@ const stopScanning = () => {
               onBack={() => (terminal && cart.every(c => c.customAmount != null)) ? resetToIdentify() : setShowPaymentChoice(false)}
             />
           )
+        ) : balanceCharging ? (
+          <BalanceChargingScreen student={balanceCharging.student} total={balanceCharging.total} onCancel={backToPaymentChoice} />
         ) : (
           // מסך מכירה
           <SalesScreen
@@ -769,6 +788,7 @@ const stopScanning = () => {
           onCancel={() => {
             setShowWarning(false);
             setWarningData(null);
+            if (balanceCharging) backToPaymentChoice();
           }}
         />
       )}
@@ -1191,55 +1211,146 @@ const PaymentChoiceScreen = ({ total, onPayFromBalance, onDirectPayment, onBack,
 
 // זיהוי תלמיד בשלב התשלום (רק כשבוחרים "שלם מיתרה" בנתיב לקוח מזדמן) - חיפוש קצר
 // לפי שם/טלפון, בלי המנגנון המלא של סריקת מצלמה (מהיר יותר לצורך הזיהוי הנקודתי הזה).
-const BalanceIdentifyScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, onBack }) => (
-  <div className="center-wrap">
-    <div className="card">
-      <div className="card-head">
-        <div className="card-icon"><Search size={34} /></div>
-        <h2>הזדהות לתשלום מיתרה</h2>
-        <p>חפש לפי שם או טלפון</p>
-      </div>
+// סורק QR לזיהוי תלמיד בשלב התשלום מיתרה. מופע עצמאי (לא נוגע בסורק של מסך הזיהוי הראשי),
+// ממתין לסיום ניקוי הסורק הקודם לפני שמפעיל חדש כדי שהמצלמה תשתחרר ותעלה מחדש תקין.
+let balanceScannerClearing = Promise.resolve();
+const BalanceQrScanner = ({ onStudent, onError }) => {
+  useEffect(() => {
+    let cancelled = false;
+    let scanner = null;
+    let handled = false;
 
-      <div className="search-input-wrap">
-        <Search size={20} />
-        <input
-          type="text"
-          value={searchTerm}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="הקלד לפחות 2 תווים..."
-          autoFocus
-        />
-      </div>
+    balanceScannerClearing.then(() => {
+      if (cancelled) return;
+      scanner = new Html5QrcodeScanner(
+        'balance-qr-reader',
+        {
+          fps: 10,
+          qrbox: (w, h) => { const edge = Math.floor(Math.min(w, h) * 0.9); return { width: edge, height: edge }; },
+          aspectRatio: 1.0
+        },
+        false
+      );
+      scanner.render(async (text) => {
+        if (handled) return;
+        handled = true;
+        try {
+          const result = await scanStudent(text);
+          if (result.success) onStudent(result.student);
+          else { handled = false; onError('QR לא תקין או תלמיד לא נמצא'); }
+        } catch (e) {
+          handled = false;
+          onError('שגיאה בזיהוי תלמיד');
+        }
+      }, () => {});
+    });
 
-      {searchResults.length > 0 && (
-        <div className="results">
-          {searchResults.map(student => (
-            <button key={student.id} className="result-row" onClick={() => onSelectStudent(student)}>
-              <img
-                className="avatar"
-                src={student.photo_url || `https://via.placeholder.com/60/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
-                alt={student.first_name}
-              />
-              <div style={{ flex: 1 }}>
-                <strong>{student.first_name} {student.last_name}</strong>
-                <div className="meta">כיתה {student.grade} • {student.student_phone}</div>
-                <div className="bal" style={{ color: getBalanceColorVar(student.balance) }}>
-                  יתרה: ₪{student.balance.toFixed(2)}
-                </div>
-              </div>
-            </button>
-          ))}
+    return () => {
+      cancelled = true;
+      if (scanner) balanceScannerClearing = scanner.clear().catch(() => {});
+    };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  return <div id="balance-qr-reader" style={{ width: '100%' }} />;
+};
+
+// זיהוי תלמיד בשלב התשלום (רק כשבוחרים "שלם מיתרה" בנתיב לקוח מזדמן / מסופון):
+// סריקת QR או חיפוש לפי שם/טלפון.
+const BalanceIdentifyScreen = ({ searchTerm, onSearchChange, searchResults, onSelectStudent, onBack }) => {
+  const [mode, setMode] = useState('scan'); // 'scan' | 'search'
+  const [scanError, setScanError] = useState('');
+
+  return (
+    <div className="center-wrap">
+      <div className="card">
+        <div className="card-head">
+          <div className="card-icon"><QrCode size={34} /></div>
+          <h2>הזדהות לתשלום מיתרה</h2>
+          <p>סרקו QR של התלמיד או חפשו לפי שם / טלפון</p>
         </div>
-      )}
 
-      {searchTerm.length >= 2 && searchResults.length === 0 && (
-        <div className="no-results">לא נמצאו תוצאות</div>
-      )}
+        <div className="mode-tabs">
+          <button className={`mode-tab ${mode === 'scan' ? 'active' : ''}`} onClick={() => { setMode('scan'); setScanError(''); }}>
+            📷 סריקת QR
+          </button>
+          <button className={`mode-tab ${mode === 'search' ? 'active' : ''}`} onClick={() => setMode('search')}>
+            🔍 חיפוש
+          </button>
+        </div>
 
-      <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={onBack}>
-        <ArrowRight size={18} />
-        חזרה
-      </button>
+        {mode === 'scan' ? (
+          <div className="scan-box">
+            <h3>📷 מכוונים את המצלמה אל ה-QR Code</h3>
+            <BalanceQrScanner onStudent={onSelectStudent} onError={setScanError} />
+            {scanError && <div style={{ color: 'var(--danger)', marginTop: 10, fontWeight: 600 }}>{scanError}</div>}
+          </div>
+        ) : (
+          <>
+            <div className="search-input-wrap">
+              <Search size={20} />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => onSearchChange(e.target.value)}
+                placeholder="הקלד לפחות 2 תווים..."
+                autoFocus
+              />
+            </div>
+
+            {searchResults.length > 0 && (
+              <div className="results">
+                {searchResults.map(student => (
+                  <button key={student.id} className="result-row" onClick={() => onSelectStudent(student)}>
+                    <img
+                      className="avatar"
+                      src={student.photo_url || `https://via.placeholder.com/60/75A843/FFFFFF?text=${student.first_name?.[0] || 'X'}`}
+                      alt={student.first_name}
+                    />
+                    <div style={{ flex: 1 }}>
+                      <strong>{student.first_name} {student.last_name}</strong>
+                      <div className="meta">כיתה {student.grade} • {student.student_phone}</div>
+                      <div className="bal" style={{ color: getBalanceColorVar(student.balance) }}>
+                        יתרה: ₪{student.balance.toFixed(2)}
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {searchTerm.length >= 2 && searchResults.length === 0 && (
+              <div className="no-results">לא נמצאו תוצאות</div>
+            )}
+          </>
+        )}
+
+        <button className="btn-secondary" style={{ marginTop: 16, width: '100%' }} onClick={onBack}>
+          <ArrowRight size={18} />
+          חזרה
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// מסך חיוב מיתרה קצר: מי מחויב וכמה, בזמן שהחיוב מתבצע (או מחכה לאישור יתרה שלילית).
+// מחליף את מסך הפריטים המלא שהוצג כאן קודם בלי צורך.
+const BalanceChargingScreen = ({ student, total, onCancel }) => (
+  <div className="center-wrap">
+    <div className="card narrow">
+      <div className="card-head">
+        <div className="card-icon"><Wallet size={34} /></div>
+        <h2>חיוב מיתרה</h2>
+        <p>{student.first_name} {student.last_name}</p>
+      </div>
+      <div className="confirm-info">
+        <div className="meta">יתרה נוכחית</div>
+        <div className="confirm-balance" style={{ color: getBalanceColorVar(student.balance) }}>₪{(student.balance || 0).toFixed(2)}</div>
+        <div className="meta" style={{ marginTop: 14 }}>סכום לחיוב</div>
+        <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--navy)' }}>₪{total.toFixed(2)}</div>
+      </div>
+      <p style={{ color: 'var(--muted)', margin: '0 0 14px' }}>מבצע חיוב...</p>
+      <button className="btn-secondary" style={{ width: '100%' }} onClick={onCancel}>ביטול - חזרה לבחירת אמצעי תשלום</button>
     </div>
   </div>
 );
