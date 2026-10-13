@@ -363,12 +363,19 @@ const stopScanning = () => {
   resetToIdentify();
 
     } else {
-      alert(result.message || 'שגיאה בעיבוד התשלום');
-      if (studentOverride != null || balanceCharging != null) backToPaymentChoice();
+      if (studentOverride != null || balanceCharging != null) {
+        const message = result.message || 'שגיאה בעיבוד התשלום';
+        setBalanceCharging(prev => ({ ...(prev || { student, total }), error: message }));
+      } else {
+        alert(result.message || 'שגיאה בעיבוד התשלום');
+      }
     }
   } catch (error) {
-    alert('שגיאה בעיבוד התשלום');
-    if (studentOverride != null || balanceCharging != null) backToPaymentChoice();
+    if (studentOverride != null || balanceCharging != null) {
+      setBalanceCharging(prev => ({ ...(prev || { student, total }), error: 'שגיאה בעיבוד התשלום' }));
+    } else {
+      alert('שגיאה בעיבוד התשלום');
+    }
   }
 };
 
@@ -426,6 +433,17 @@ const stopScanning = () => {
     setShowPaymentChoice(false);
     setIdentifyForBalance(false);
     await processPayment(false, student);
+  };
+
+  // אין יתרה מספיקה - ממשיכים ישר לאמצעי תשלום אחר (מזומן/אשראי/ביט) עם אותה עגלה.
+  const chooseOtherMethod = (method) => {
+    backToPaymentChoice();
+    setDirectSaleMethod(method);
+  };
+
+  const identifyAnotherStudent = () => {
+    backToPaymentChoice();
+    setIdentifyForBalance(true);
   };
 
   // חיוב מיתרה לא הצליח / בוטל - חוזרים לבחירת אמצעי תשלום עם אותה עגלה.
@@ -756,7 +774,15 @@ const stopScanning = () => {
             />
           )
         ) : balanceCharging ? (
-          <BalanceChargingScreen student={balanceCharging.student} total={balanceCharging.total} onCancel={backToPaymentChoice} />
+          <BalanceChargingScreen
+            student={balanceCharging.student}
+            total={balanceCharging.total}
+            error={balanceCharging.error}
+            allowBit={terminal}
+            onPickMethod={chooseOtherMethod}
+            onOtherStudent={identifyAnotherStudent}
+            onCancel={backToPaymentChoice}
+          />
         ) : (
           // מסך מכירה
           <SalesScreen
@@ -1335,7 +1361,7 @@ const BalanceIdentifyScreen = ({ searchTerm, onSearchChange, searchResults, onSe
 
 // מסך חיוב מיתרה קצר: מי מחויב וכמה, בזמן שהחיוב מתבצע (או מחכה לאישור יתרה שלילית).
 // מחליף את מסך הפריטים המלא שהוצג כאן קודם בלי צורך.
-const BalanceChargingScreen = ({ student, total, onCancel }) => (
+const BalanceChargingScreen = ({ student, total, error, allowBit, onPickMethod, onOtherStudent, onCancel }) => (
   <div className="center-wrap">
     <div className="card narrow">
       <div className="card-head">
@@ -1349,8 +1375,38 @@ const BalanceChargingScreen = ({ student, total, onCancel }) => (
         <div className="meta" style={{ marginTop: 14 }}>סכום לחיוב</div>
         <div style={{ fontSize: 26, fontWeight: 800, color: 'var(--navy)' }}>₪{total.toFixed(2)}</div>
       </div>
-      <p style={{ color: 'var(--muted)', margin: '0 0 14px' }}>מבצע חיוב...</p>
-      <button className="btn-secondary" style={{ width: '100%' }} onClick={onCancel}>ביטול - חזרה לבחירת אמצעי תשלום</button>
+
+      {error ? (
+        <>
+          <div style={{ background: '#fdf1f1', border: '1px solid #e8c3c3', color: '#8a3b3b', borderRadius: 12, padding: '12px 14px', marginBottom: 14, fontWeight: 600, lineHeight: 1.5 }}>
+            {error}
+          </div>
+          <p style={{ margin: '0 0 10px', fontWeight: 700 }}>אפשר לשלם בדרך אחרת:</p>
+          <div className="payment-choice-row">
+            <button className="payment-choice-btn small" onClick={() => onPickMethod('cash')}>
+              <Banknote size={20} />
+              מזומן
+            </button>
+            <button className="payment-choice-btn small" onClick={() => onPickMethod('credit')}>
+              <CreditCard size={20} />
+              אשראי
+            </button>
+            {allowBit && (
+              <button className="payment-choice-btn small" onClick={() => onPickMethod('bit')}>
+                <Smartphone size={20} />
+                ביט
+              </button>
+            )}
+          </div>
+          <button className="btn-secondary" style={{ width: '100%', marginTop: 12 }} onClick={onOtherStudent}>זיהוי תלמיד אחר</button>
+          <button className="btn-secondary" style={{ width: '100%', marginTop: 10 }} onClick={onCancel}>חזרה לבחירת אמצעי תשלום</button>
+        </>
+      ) : (
+        <>
+          <p style={{ color: 'var(--muted)', margin: '0 0 14px' }}>מבצע חיוב...</p>
+          <button className="btn-secondary" style={{ width: '100%' }} onClick={onCancel}>ביטול - חזרה לבחירת אמצעי תשלום</button>
+        </>
+      )}
     </div>
   </div>
 );
