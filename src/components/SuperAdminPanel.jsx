@@ -349,7 +349,8 @@ const saveSchoolSettings = async () => {
   charge_absent_students: editingSchool.charge_absent_students,
   enable_free_payment: editingSchool.enable_free_payment,
   payment_gateway: editingSchool.payment_gateway,
-  gateway_webhook_url: editingSchool.gateway_webhook_url
+  gateway_webhook_url: editingSchool.gateway_webhook_url,
+  tranzila_terminal: editingSchool.tranzila_terminal
       })
     });
 
@@ -1419,6 +1420,28 @@ onClick={() => {
       <option value="tranzila">Tranzila</option>
     </select>
   </div>
+
+  {editingSchool.payment_gateway === 'tranzila' && (
+    <div style={{ marginBottom: '1rem' }}>
+      <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: '0.9rem', fontWeight: '600' }}>
+        שם מסוף Tranzila
+      </label>
+      <input
+        type="text"
+        dir="ltr"
+        value={editingSchool.tranzila_terminal || ''}
+        onChange={(e) => setEditingSchool({...editingSchool, tranzila_terminal: e.target.value.trim().toLowerCase()})}
+        placeholder="לדוגמה: myschool"
+        style={{
+          width: '100%', padding: '0.75rem', border: '2px solid #dce6e9',
+          borderRadius: '8px', fontSize: '0.9rem', boxSizing: 'border-box'
+        }}
+      />
+      <p style={{ margin: '0.4rem 0 0', fontSize: '0.8rem', color: '#607482' }}>
+        אותיות קטנות באנגלית ומספרים בלבד (3-16 תווים). זה כל מה שנדרש - בלי סיסמה.
+      </p>
+    </div>
+  )}
 
   {editingSchool.payment_gateway === 'grow' && (
     <div style={{ marginBottom: '1rem' }}>

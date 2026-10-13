@@ -43,7 +43,8 @@ const [schoolSettings, setSchoolSettings] = useState({
   monthly_meal_price: 0,
   daily_meal_price: 0,
   auto_print_receipt: false,
-  pos_credit_via_grow: false
+  pos_credit_via_grow: false,
+  payment_gateway: 'none'
 });
 const [printOrder, setPrintOrder] = useState(null);
 
@@ -210,7 +211,8 @@ useEffect(() => {
   monthly_meal_price: school.monthly_meal_price || 0,
   daily_meal_price: school.daily_meal_price || 0,
   auto_print_receipt: school.auto_print_receipt || false,
-  pos_credit_via_grow: school.pos_credit_via_grow || false
+  pos_credit_via_grow: school.pos_credit_via_grow || false,
+  payment_gateway: school.payment_gateway || 'none'
 });
 
             if (school.menu_type === 'daily') {
@@ -759,6 +761,7 @@ const stopScanning = () => {
               onGuestNameChange={setGuestName}
               onGuestPhoneChange={setGuestPhone}
               viaGrow={directSaleMethod === 'credit' && growCreditEnabled}
+              phoneRequired={schoolSettings.payment_gateway !== 'tranzila'}
               onConfirm={() => (directSaleMethod === 'credit' && growCreditEnabled) ? handleGrowCredit() : handleDirectSale(directSaleMethod)}
               onBack={() => setDirectSaleMethod(null)}
               processing={directSaleProcessing}
@@ -1412,10 +1415,10 @@ const BalanceChargingScreen = ({ student, total, error, allowBit, onPickMethod, 
 );
 
 // פרטים אחרונים לפני מכירה ישירה - שם/טלפון אופציונליים (יוצגו בבון), ואישור סופי.
-const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuestNameChange, onGuestPhoneChange, onConfirm, onBack, processing, viaGrow }) => {
+const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuestNameChange, onGuestPhoneChange, onConfirm, onBack, processing, viaGrow, phoneRequired = true }) => {
   const methodLabel = { cash: 'מזומן', credit: 'אשראי', bit: 'ביט' }[method];
   // Grow לא מפיק קישור תשלום בלי טלפון, לכן בנתיב הזה הטלפון חובה.
-  const phoneOk = !viaGrow || guestPhone.trim().length >= 9;
+  const phoneOk = !viaGrow || !phoneRequired || guestPhone.trim().length >= 9;
   const methodIcon = { cash: <Banknote size={34} />, credit: <CreditCard size={34} />, bit: <Smartphone size={34} /> }[method];
   return (
     <div className="center-wrap">
@@ -1435,7 +1438,7 @@ const DirectSaleDetailsScreen = ({ method, total, guestName, guestPhone, onGuest
             placeholder="לדוגמה: דני כהן"
             style={{ width: '100%', padding: 12, border: '2px solid var(--line)', borderRadius: 10, fontSize: 15, boxSizing: 'border-box', marginBottom: 12 }}
           />
-          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 14 }}>{viaGrow ? 'טלפון (חובה, לצורך התשלום)' : 'טלפון (אופציונלי)'}</label>
+          <label style={{ display: 'block', marginBottom: 6, fontWeight: 600, fontSize: 14 }}>{viaGrow && phoneRequired ? 'טלפון (חובה, לצורך התשלום)' : 'טלפון (אופציונלי)'}</label>
           <input
             type="tel"
             value={guestPhone}

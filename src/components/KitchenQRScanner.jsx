@@ -1117,10 +1117,10 @@ const KitchenQRScanner = () => {
                     onChange={(e) => setSchoolSettings({ ...schoolSettings, pos_credit_via_grow: e.target.checked })}
                     style={{ width: 22, height: 22, cursor: 'pointer' }}
                   />
-                  <span style={{ fontWeight: 600 }}>תשלום באשראי ל"לקוח מזדמן" דרך דף תשלום של Grow</span>
+                  <span style={{ fontWeight: 600 }}>תשלום באשראי ל"לקוח מזדמן" דרך דף תשלום של חברת הסליקה (Grow / Tranzila)</span>
                 </label>
                 <p style={{ margin: '0.5rem 0 0', fontSize: '0.85rem', color: 'var(--muted)' }}>
-                  כשמופעל, הקופה המהירה פותחת דף תשלום ב-Grow ומחכה לאישור התשלום. כשכבוי, הצוות מאשר ידנית שהתשלום התקבל.
+                  כשמופעל, הקופה המהירה פותחת דף תשלום אצל חברת הסליקה של בית הספר ומחכה לאישור התשלום. כשכבוי, הצוות מאשר ידנית שהתשלום התקבל.
                 </p>
               </div>
 

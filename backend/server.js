@@ -200,6 +200,40 @@ const findUsersByEmail = async (email, role, columns = 'id, email') => {
   return data || [];
 };
 
+
+// ===== סליקה: Grow (דרך Make) או Tranzila, לפי schools.payment_gateway =====
+// Tranzila: דף תשלום מאוחסן (DirectNG) לפי שם המסוף של בית הספר. אישור התשלום מגיע מ-Tranzila
+// ל-notify_url_address שאנחנו בונים כאן וחותמים (HMAC) על הרפרנס והסכום - כך שאי אפשר לזייף
+// אישור תשלום בלי הכתובת החתומה, ואי אפשר לשלם פחות על ידי שינוי הסכום בכתובת הדף.
+const API_PUBLIC_URL = process.env.API_PUBLIC_URL || 'https://api.bonapp.dev';
+const TRANZILA_PAY_HOST = 'https://directng.tranzila.com';
+
+const gatewaySign = (reference, amount) =>
+  crypto.createHmac('sha256', `${process.env.JWT_SECRET}:gateway-notify`)
+    .update(`${reference}|${Number(amount).toFixed(2)}`)
+    .digest('hex')
+    .slice(0, 40);
+
+const buildTranzilaPaymentUrl = ({ terminal, amount, reference, contact, phone, description }) => {
+  const sum = Number(amount).toFixed(2);
+  const sig = gatewaySign(reference, sum);
+  const notifyUrl = `${API_PUBLIC_URL}/api/tranzila-notify?ref=${encodeURIComponent(reference)}&amt=${sum}&sig=${sig}`;
+  const params = new URLSearchParams({
+    sum,
+    currency: '1',
+    tranmode: 'A',
+    cred_type: '1',
+    notify_url_address: notifyUrl,
+    success_url_address: `${APP_URL}/payment-success`,
+    fail_url_address: `${APP_URL}/payment-success?failed=1`,
+    pdesc: description || 'BonApp'
+  });
+  if (contact) params.set('contact', contact);
+  if (phone) params.set('phone', phone);
+  return `${TRANZILA_PAY_HOST}/${encodeURIComponent(terminal)}/iframenew.php?${params.toString()}`;
+};
+const TRANZILA_TERMINAL_PATTERN = /^[a-z][a-z0-9]{2,15}$/;
+
 // רב מסר (Responder) - סנכרון הורים שאושרו לרשימת תפוצה. אותו חשבון Innosys שכבר
 // משמש את In-Desk (ראו supabase/functions/ravmesser-sync בפרויקט In-Desk) - רק list_id שונה.
 // כשל כאן לא אמור לחסום אישור הרשמה בפועל - זה רק סנכרון לרשימת דיוור, לא חלק מהזרימה הקריטית.
@@ -652,7 +686,7 @@ app.get('/api/schools', async (req, res) => {
   try {
     const { data: schools, error } = await supabase
       .from('schools')
-      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt, enable_kiosk_lock, pos_credit_via_grow')
+      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt, enable_kiosk_lock, pos_credit_via_grow, payment_gateway')
       .order('name');
 
     if (error) throw error;
@@ -838,6 +872,14 @@ if (auto_print_receipt !== undefined) updateData.auto_print_receipt = auto_print
 if (enable_kiosk_lock !== undefined) updateData.enable_kiosk_lock = enable_kiosk_lock;
 if (pos_credit_via_grow !== undefined) updateData.pos_credit_via_grow = pos_credit_via_grow;
 if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.body.payment_gateway;
+// שם מסוף Tranzila קובע לאן הכסף נכנס - רק מנהל-על רשאי לשנות אותו (לא מזכירה/מנהל בית ספר).
+if (req.body.tranzila_terminal !== undefined && req.user.role === 'super_admin') {
+  const terminal = String(req.body.tranzila_terminal || '').trim().toLowerCase();
+  if (terminal && !TRANZILA_TERMINAL_PATTERN.test(terminal)) {
+    return res.status(400).json({ success: false, message: 'שם מסוף Tranzila לא תקין (אותיות קטנות באנגלית ומספרים, 3-16 תווים)' });
+  }
+  updateData.tranzila_terminal = terminal || null;
+}
 if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
 
 
@@ -3985,7 +4027,9 @@ app.get('/api/students/:studentId/last-payment-type', authenticateToken, require
 const growPaymentLinks = {}; // זיכרון זמני
 
 // Webhook חדש מ-Grow דרך Make
-app.post('/api/grow-webhook-v2', async (req, res) => {
+const growWebhookV2Handler = async (req, res) => {
+  const gatewayName = req.gatewayName || 'grow';
+  const gatewayLabel = gatewayName === 'tranzila' ? 'Tranzila' : 'Grow';
   try {
 
     const { payment_sum, payment_desc } = req.body;
@@ -4019,10 +4063,10 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
             type: 'meal',
             transaction_type: 'purchase',
             status: 'completed',
-            payment_method: 'grow',
+            payment_method: gatewayName,
             guest_name: pendingSale.guest_name,
             guest_phone: pendingSale.guest_phone,
-            description: customOnly ? `${FREE_CHARGE_LABEL} (מסופון) - תשלום אונליין (Grow)` : 'מכירה ישירה - תשלום אונליין (Grow)',
+            description: customOnly ? `${FREE_CHARGE_LABEL} (מסופון) - תשלום אונליין (${gatewayLabel})` : `מכירה ישירה - תשלום אונליין (${gatewayLabel})`,
             transaction_date: new Date().toISOString()
           })
           .select()
@@ -4117,9 +4161,9 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
         school_id: student.school_id,
         amount: amount,
         type: 'payment',
-        payment_method: 'grow',
+        payment_method: gatewayName,
         payment_type: paymentType,
-        description: `תשלום Grow - ₪${amount}`,
+        description: `תשלום ${gatewayLabel} - ₪${amount}`,
         transaction_date: new Date().toISOString()
       });
 
@@ -4141,6 +4185,50 @@ app.post('/api/grow-webhook-v2', async (req, res) => {
     
   } catch (error) {
     console.error('Grow webhook v2 error:', error);
+    res.status(500).json({ success: false });
+  }
+};
+
+app.post('/api/grow-webhook-v2', growWebhookV2Handler);
+
+// קבלת אישור תשלום מ-Tranzila (notify). הכתובת נבנתה על ידינו בעת יצירת הקישור וחתומה על
+// הרפרנס והסכום - רק קריאה לכתובת שלנו המקורית עוברת. מעבירים אותה לאותו מסלול סגירת תשלום של Grow.
+app.all('/api/tranzila-notify', async (req, res) => {
+  try {
+    const data = { ...(req.body || {}), ...req.query };
+    const { ref, amt, sig } = req.query;
+    if (!ref || !amt || !sig || sig !== gatewaySign(ref, amt)) {
+      console.error('Tranzila notify rejected: bad signature');
+      return res.status(403).json({ success: false });
+    }
+
+    // רק עסקה שאושרה (Response=000). כל תוצאה אחרת - לא עושים כלום.
+    if (String(data.Response || data.response || '') !== '000') {
+      return res.json({ success: true, ignored: true });
+    }
+
+    const paidSum = parseFloat(data.sum);
+    if (!Number.isFinite(paidSum) || Math.abs(paidSum - parseFloat(amt)) > 0.009) {
+      console.error('Tranzila notify rejected: amount mismatch', data.sum, amt);
+      return res.status(400).json({ success: false });
+    }
+
+    // מניעת עיבוד כפול כש-Tranzila שולחת את אותו notify יותר מפעם אחת.
+    const txnId = String(data.index || data.transaction_id || data.ConfirmationCode || `${ref}-${amt}`);
+    const { error: dupError } = await supabase
+      .from('gateway_notifications')
+      .insert({ id: `tranzila:${txnId}`, reference: ref });
+    if (dupError) {
+      if (dupError.code === '23505') return res.json({ success: true, duplicate: true });
+      console.error('Tranzila notify dedupe error:', dupError.message);
+      return res.status(500).json({ success: false });
+    }
+
+    req.body = { payment_sum: paidSum.toFixed(2), payment_desc: ref };
+    req.gatewayName = 'tranzila';
+    return growWebhookV2Handler(req, res);
+  } catch (error) {
+    console.error('Tranzila notify error:', error);
     res.status(500).json({ success: false });
   }
 });
@@ -4244,7 +4332,7 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
     // קבל את ה-webhook URL של בית הספר של התלמיד
     const { data: student } = await supabase
       .from('students')
-      .select('school_id, parent_id, schools(gateway_webhook_url, payment_gateway)')
+      .select('school_id, parent_id, schools(gateway_webhook_url, payment_gateway, tranzila_terminal)')
       .eq('id', student_id)
       .single();
 
@@ -4257,6 +4345,27 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
       String(req.user.school_id) === String(student.school_id);
     if (req.user.role !== 'super_admin' && !isOwnParent && !isStaffOfSchool) {
       return res.status(403).json({ success: false, message: 'אין הרשאה ליצור תשלום עבור תלמיד זה' });
+    }
+
+    // בית ספר שסולק ב-Tranzila: דף תשלום מאוחסן של המסוף שלו (אותו description, אותו מסלול אישור)
+    if (student?.schools?.payment_gateway === 'tranzila') {
+      const terminal = student.schools.tranzila_terminal;
+      const sum = parseFloat(amount);
+      if (!terminal || !TRANZILA_TERMINAL_PATTERN.test(terminal)) {
+        return res.status(400).json({ success: false, message: 'לא הוגדר מסוף Tranzila לבית הספר' });
+      }
+      if (!Number.isFinite(sum) || sum <= 0 || !description) {
+        return res.status(400).json({ success: false, message: 'פרטי תשלום לא תקינים' });
+      }
+      const paymentUrl = buildTranzilaPaymentUrl({
+        terminal,
+        amount: sum,
+        reference: String(description),
+        contact: parent_name,
+        phone: String(parent_phone || '').replace(/\D/g, '').replace(/^972/, '0'),
+        description: student_name
+      });
+      return res.json({ success: true, paymentUrl });
     }
 
     const makeWebhookUrl = student?.schools?.gateway_webhook_url
@@ -4310,10 +4419,21 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
     if (!Array.isArray(items) || items.length === 0) {
       return res.status(400).json({ success: false, message: 'העגלה ריקה' });
     }
+    const { data: school } = await supabase
+      .from('schools')
+      .select('gateway_webhook_url, payment_gateway, tranzila_terminal')
+      .eq('id', schoolId)
+      .single();
+    const useTranzila = school?.payment_gateway === 'tranzila';
+
     // Grow/Make דורשים מספר טלפון תקין כדי להנפיק קישור תשלום - בלעדיו הבקשה
     // ל-Make נכשלת ("Scenario failed to complete."), בדיוק כמו שנבדק ידנית מול ה-webhook.
-    if (!guestPhone || !guestPhone.trim()) {
+    // ב-Tranzila הטלפון אופציונלי.
+    if (!useTranzila && (!guestPhone || !guestPhone.trim())) {
       return res.status(400).json({ success: false, message: 'נדרש מספר טלפון לתשלום באשראי/ביט' });
+    }
+    if (useTranzila && !TRANZILA_TERMINAL_PATTERN.test(school.tranzila_terminal || '')) {
+      return res.status(400).json({ success: false, message: 'לא הוגדר מסוף Tranzila לבית הספר' });
     }
 
     const { chargeAmount } = await computeItemsCharge(schoolId, items);
@@ -4321,18 +4441,24 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
       return res.status(400).json({ success: false, message: 'לא נמצאו פריטים תקינים בעגלה' });
     }
 
-    const { data: school } = await supabase
-      .from('schools')
-      .select('gateway_webhook_url')
-      .eq('id', schoolId)
-      .single();
-
     const { data: pendingSale, error: pendingError } = await supabase
       .from('pending_guest_sales')
       .insert({ school_id: schoolId, items, amount: chargeAmount, guest_name: guestName || null, guest_phone: guestPhone || null })
       .select('id')
       .single();
     if (pendingError) throw pendingError;
+
+    if (useTranzila) {
+      const paymentUrl = buildTranzilaPaymentUrl({
+        terminal: school.tranzila_terminal,
+        amount: chargeAmount,
+        reference: `BonAppGuest-${pendingSale.id}`,
+        contact: (guestName || '').trim() || 'לקוח מזדמן',
+        phone: String(guestPhone || '').replace(/\D/g, '').replace(/^972/, '0'),
+        description: 'BonApp'
+      });
+      return res.json({ success: true, paymentUrl, pendingSaleId: pendingSale.id });
+    }
 
     // Grow/Make מצפים ל-student_id אמיתי הקיים ב-students (בדיוק כמו create-grow-payment
     // הרגיל) - לא ניתן לשלוח את מזהה ה-pending_guest_sales עצמו, אחרת התרחיש נכשל אצל

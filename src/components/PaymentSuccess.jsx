@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 
 const PaymentSuccess = () => {
   const navigate = useNavigate();
+  const paymentFailed = new URLSearchParams(window.location.search).get('failed') === '1';
 
   // צוות (מטבח/מזכירה/מנהל) שמגיע לכאן הגיע מתשלום אשראי של "לקוח מזדמן" בקופה המהירה,
   // בלשונית נפרדת שהקופה פתחה - אין לו פאנל הורה. מציגים אישור וסוגרים את הלשונית.
@@ -12,6 +13,7 @@ const PaymentSuccess = () => {
   const isStaff = staffRoles.includes(storedUser?.role) || staffRoles.includes(storedUser?.type);
 
   useEffect(() => {
+    if (paymentFailed) return undefined;
     if (isStaff) {
       const closeTimer = setTimeout(() => { window.close(); }, 1500);
       return () => clearTimeout(closeTimer);
@@ -21,7 +23,34 @@ const PaymentSuccess = () => {
       window.location.href = '/parent-dashboard';
     }, 5000);
     return () => clearTimeout(timer);
-  }, [navigate, isStaff]);
+  }, [navigate, isStaff, paymentFailed]);
+
+  if (paymentFailed) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #3370b9 0%, #0f2547 100%)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontFamily: "'Heebo', 'Segoe UI', Tahoma, sans-serif", direction: 'rtl'
+      }}>
+        <div style={{ background: 'white', borderRadius: '20px', padding: '3rem', textAlign: 'center', maxWidth: '460px', width: '90%', boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+          <div style={{ fontSize: '4.5rem', marginBottom: '1rem' }}>❌</div>
+          <h1 style={{ color: '#b64e4e', fontSize: '1.9rem', margin: '0 0 1rem' }}>התשלום לא הושלם</h1>
+          <p style={{ color: '#607482', fontSize: '1.1rem', margin: '0 0 1.5rem', lineHeight: 1.6 }}>
+            לא בוצע חיוב. {isStaff ? 'אפשר לסגור את הלשונית ולנסות שוב בקופה.' : 'אפשר לחזור לפאנל ההורה ולנסות שוב.'}
+          </p>
+          {!isStaff && (
+            <button
+              onClick={() => navigate('/parent-dashboard')}
+              style={{ background: '#3370b9', color: 'white', border: 'none', padding: '0.9rem 2rem', borderRadius: '12px', fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}
+            >
+              חזור לפאנל ההורה
+            </button>
+          )}
+        </div>
+      </div>
+    );
+  }
 
   if (isStaff) {
     return (
