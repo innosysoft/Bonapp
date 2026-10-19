@@ -314,8 +314,17 @@ const MobileParentApp = () => {
       <div style={styles.content}>
         {/* כרטיס יתרה */}
         <div style={styles.balanceCard}>
-          <div style={{ fontSize: '1rem', opacity: 0.9 }}>יתרה נוכחית</div>
-          <div style={styles.balance}>₪{(child?.balance || 0).toFixed(2)}</div>
+          {child?.payment_type === 'monthly' ? (
+            <>
+              <div style={{ fontSize: '1rem', opacity: 0.9 }}>מנוי חודשי - {['ינואר','פברואר','מרץ','אפריל','מאי','יוני','יולי','אוגוסט','ספטמבר','אוקטובר','נובמבר','דצמבר'][new Date().getMonth()]}</div>
+              <div style={styles.balance}>{child?.monthlyPaid ? '✅ שולם' : '❌ לא שולם'}</div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '1rem', opacity: 0.9 }}>יתרה נוכחית</div>
+              <div style={styles.balance}>₪{(child?.balance || 0).toFixed(2)}</div>
+            </>
+          )}
           <div style={{ fontSize: '0.9rem', opacity: 0.9 }}>
             {child?.first_name} {child?.last_name}
           </div>

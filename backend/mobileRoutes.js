@@ -260,13 +260,40 @@ router.get('/parent/:token', async (req, res) => {
       }
     }
     
+    // סוג התשלום האחרון וסטטוס "שולם החודש" - כדי שהורה של מנוי חודשי יראה סטטוס ולא יתרה.
+    const now = new Date();
+    const enrichedChildren = await Promise.all(children.map(async child => {
+      const { data: lastPayment } = await supabase
+        .from('transactions')
+        .select('payment_type')
+        .eq('student_id', child.id)
+        .eq('type', 'payment')
+        .not('transaction_date', 'is', null)
+        .order('transaction_date', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      const paymentType = lastPayment?.payment_type || null;
+      let monthlyPaid = null;
+      if (paymentType === 'monthly') {
+        const { data: paidMonth } = await supabase
+          .from('monthly_payments')
+          .select('id')
+          .eq('student_id', child.id)
+          .eq('year', now.getFullYear())
+          .eq('month', now.getMonth() + 1)
+          .maybeSingle();
+        monthlyPaid = !!paidMonth;
+      }
+      return { ...child, payment_type: paymentType, monthlyPaid };
+    }));
+
     res.json({
       success: true,
       parent: {
         name: `${parent.first_name} ${parent.last_name}`,
         email: parent.email
       },
-      children,
+      children: enrichedChildren,
       schoolName,
       weeklyMenu
     });

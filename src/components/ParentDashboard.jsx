@@ -1090,8 +1090,20 @@ const handleSendEmail = async () => {
         
         <div style={styles.summaryCards}>
           <div style={styles.summaryCard}>
-            <p style={styles.summaryValue}>₪{(children || []).reduce((sum, child) => sum + (children[selectedChild]?.balance || 0), 0).toFixed(2)}</p>
-            <p style={styles.summaryLabel}>סה״כ יתרות</p>
+            {/* הורה של מנוי חודשי לא רואה יתרה, רק סטטוס תשלום. יתרות מחושבות רק לילדים שאינם בחודשי. */}
+            {(children || []).length > 0 && (children || []).every(c => c.payment_type === 'monthly') ? (
+              <>
+                <p style={{ ...styles.summaryValue, color: (children || []).every(c => c.monthlyPaid) ? '#5f8a36' : '#b94b4b' }}>
+                  {(children || []).every(c => c.monthlyPaid) ? '✅ שולם' : '❌ חסר תשלום'}
+                </p>
+                <p style={styles.summaryLabel}>מנוי חודשי - {monthNamesHeb[new Date().getMonth()]}</p>
+              </>
+            ) : (
+              <>
+                <p style={styles.summaryValue}>₪{(children || []).filter(c => c.payment_type !== 'monthly').reduce((sum, child) => sum + (child.balance || 0), 0).toFixed(2)}</p>
+                <p style={styles.summaryLabel}>סה״כ יתרות</p>
+              </>
+            )}
           </div>
           <div style={styles.summaryCard}>
             <p style={styles.summaryValue}>
@@ -1419,7 +1431,7 @@ const handleSendEmail = async () => {
             </h2>
             
             <div style={{maxHeight: '400px', overflowY: 'auto'}}>
-              {transactions.map(transaction => (
+              {transactions.filter(t => t.type !== 'adjustment').map(transaction => (
                 <div key={transaction.id} style={{
                   display: 'flex',
                   justifyContent: 'space-between',
@@ -1618,7 +1630,7 @@ const handleSendEmail = async () => {
                 }}>
                   {children[selectedChild]?.payment_type === 'monthly'
                     ? (children[selectedChild]?.monthlyPaid ? '✅ שולם' : '❌ טרם שולם')
-                    : `₪${children.reduce((sum, child) => sum + (child.balance || 0), 0).toFixed(2)}`
+                    : `₪${children.filter(c => c.payment_type !== 'monthly').reduce((sum, child) => sum + (child.balance || 0), 0).toFixed(2)}`
                   }
                 </span>
               
@@ -1759,7 +1771,9 @@ const handleSendEmail = async () => {
     color: '#607482',
     margin: 0
   }}>
-                  יתרה נוכחית: ₪{(children[selectedChild]?.balance || 0).toFixed(2)}
+                  {children[selectedChild]?.payment_type === 'monthly'
+                    ? `מנוי חודשי - ${monthNamesHeb[new Date().getMonth()]}: ${children[selectedChild]?.monthlyPaid ? '✅ שולם' : '❌ לא שולם'}`
+                    : `יתרה נוכחית: ₪${(children[selectedChild]?.balance || 0).toFixed(2)}`}
                 </p>
               </div>
             </div>
