@@ -314,7 +314,10 @@ const KitchenReports = () => {
             <div className="card monthly">
               <div className="card-head"><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> מנוי חודשי - יגיעו בוודאות</div>
               <div className="card-value">{summaryLoading ? '...' : prepData.monthlyCount}</div>
-              <div className="card-sub">אוכלים בלי קשר ליתרה</div>
+              <div className="card-sub">
+                שילמו חודשי לחודש הנוכחי
+                {!summaryLoading && prepData.monthlyNotRenewedCount > 0 && ` · ${prepData.monthlyNotRenewedCount} עוד לא חידשו`}
+              </div>
             </div>
             <div className="card daily">
               <div className="card-head"><span className="legend-dot" style={{ background: COLOR_DAILY }} /> תשלום בודד עם יתרה - עשויים להגיע</div>

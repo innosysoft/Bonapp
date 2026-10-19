@@ -489,7 +489,7 @@ const handleRegeneratePin = async () => {
 };
 
 
-const generateReport = (type) => {
+const generateReport = async (type) => {
   const reports = {
     daily: 'דוח יומי',
     weekly: 'דוח שבועי',
@@ -503,34 +503,17 @@ const generateReport = (type) => {
 
   switch(type) {
     case 'paymentStatus': {
-      // סוג התשלום האחרון של כל תלמיד - transactions כבר ממוינות מהחדש לישן,
-      // אז הערך הראשון שנתקלים בו לכל student_id הוא גם האחרון כרונולוגית.
-      const lastPaymentTypeByStudent = {};
-      transactions.forEach(t => {
-        if (t.type === 'payment' && t.student_id && !(t.student_id in lastPaymentTypeByStudent)) {
-          lastPaymentTypeByStudent[t.student_id] = t.payment_type;
-        }
-      });
-
-      let monthlyCount = 0, dailyUsedCount = 0, dailyRemainingCount = 0, noPaymentCount = 0;
-      students.forEach(student => {
-        const paymentType = lastPaymentTypeByStudent[student.id];
-        if (paymentType === 'monthly') {
-          monthlyCount++;
-        } else if (paymentType === 'daily' || paymentType === 'balance') {
-          if ((student.balance || 0) > 0) dailyRemainingCount++;
-          else dailyUsedCount++;
-        } else {
-          noPaymentCount++;
-        }
-      });
-
+      // אותו חישוב בדיוק כמו במסך המטבח, מהשרת (כל ההיסטוריה, לא רק 1000 העסקאות האחרונות).
+      const statusResult = await (await authFetch(`https://api.bonapp.dev/api/schools/${schoolData?.id || currentUser?.school_id}/reports/payment-status`)).json();
+      if (!statusResult.success) { alert('שגיאה בטעינת הדוח'); return; }
+      const st = statusResult.status;
       reportData = [
-        { 'קטגוריה': 'שילמו חודשי', 'כמות תלמידים': monthlyCount },
-        { 'קטגוריה': 'שילמו בודדת וניצלו את היתרה', 'כמות תלמידים': dailyUsedCount },
-        { 'קטגוריה': 'שילמו בודדת ועוד לא ניצלו', 'כמות תלמידים': dailyRemainingCount },
-        { 'קטגוריה': 'לא שילמו כלל', 'כמות תלמידים': noPaymentCount },
-        { 'קטגוריה': 'סה"כ תלמידים', 'כמות תלמידים': students.length }
+        { 'קטגוריה': 'שילמו חודשי לחודש הנוכחי', 'כמות תלמידים': st.monthlyPaid },
+        { 'קטגוריה': 'חודשי שעוד לא חידש לחודש הנוכחי', 'כמות תלמידים': st.monthlyNotRenewed },
+        { 'קטגוריה': 'שילמו בודדת וניצלו את היתרה', 'כמות תלמידים': st.dailyUsed },
+        { 'קטגוריה': 'שילמו בודדת ועוד לא ניצלו', 'כמות תלמידים': st.dailyRemaining },
+        { 'קטגוריה': 'לא שילמו כלל', 'כמות תלמידים': st.none },
+        { 'קטגוריה': 'סה"כ תלמידים', 'כמות תלמידים': st.total }
       ];
       break;
     }

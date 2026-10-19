@@ -2195,17 +2195,21 @@ app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 
 
     // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
     // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
-    const { data: creditResult, error } = await supabase
-      .rpc('credit_student_balance', { p_student_id: studentId, p_amount: parseFloat(amount) })
-      .single();
-
-    if (error) {
-      throw error;
+    // תשלום חודשי מראש לחודש הבא (בבית ספר עם איפוס חודשי) לא נכנס ליתרה עד תחילת אותו חודש.
+    const deferCredit = await shouldDeferMonthlyCredit(student.school_id, paymentType, targetYear, targetMonth);
+    let newBalance = parseFloat(student.balance) || 0;
+    if (!deferCredit) {
+      const { data: creditResult, error } = await supabase
+        .rpc('credit_student_balance', { p_student_id: studentId, p_amount: parseFloat(amount) })
+        .single();
+      if (error) {
+        throw error;
+      }
+      if (creditResult.result_status !== 'ok') {
+        return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
+      }
+      newBalance = creditResult.new_balance;
     }
-    if (creditResult.result_status !== 'ok') {
-      return res.status(404).json({ success: false, message: 'תלמיד לא נמצא' });
-    }
-    const newBalance = creditResult.new_balance;
 
     const { error: transactionError } = await supabase
       .from('transactions')
@@ -2214,7 +2218,9 @@ app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 
         school_id: student.school_id,
         type: 'payment',
         amount: parseFloat(amount),
-        description: `הוספת כסף - ${paymentMethod}`,
+        description: deferCredit
+          ? `הוספת כסף - ${paymentMethod} - מראש לחודש ${targetMonth}/${targetYear} (יזוכה ביתרה ב-1 לחודש)`
+          : `הוספת כסף - ${paymentMethod}`,
         payment_method: paymentMethod,
         payment_type: paymentType || 'balance',
         transaction_date: new Date().toISOString()
@@ -2233,14 +2239,14 @@ app.post('/api/add-money', authenticateToken, requireRole('secretary', 'admin', 
       await supabase
         .from('monthly_payments')
         .upsert(
-          { student_id: studentId, school_id: student.school_id, year, month },
+          { student_id: studentId, school_id: student.school_id, year, month, amount: parseFloat(amount) || null, credited: !deferCredit },
           { onConflict: 'student_id,year,month', ignoreDuplicates: true }
         );
     }
 
     res.json({
       success: true,
-      message: 'כסף נוסף בהצלחה',
+      message: deferCredit ? 'התשלום נקלט ויזוכה ביתרה בתחילת החודש הבא' : 'כסף נוסף בהצלחה',
       newBalance: newBalance
     });
 
@@ -2296,13 +2302,14 @@ app.get('/api/school-transactions/:schoolId', authenticateToken, requireRole('se
   try {
     const { schoolId } = req.params;
 
-    const { data: transactions, error: transError } = await supabase
+    // כל ההיסטוריה בעמודים (PostgREST מחזיר לכל היותר 1000 שורות בבקשה) - אחרת דוחות
+    // וחישובים בפאנל המזכירה נחתכים ברגע שיש יותר מ-1000 עסקאות.
+    const transactions = await fetchAllRows(() => supabase
       .from('transactions')
       .select('*')
       .eq('school_id', schoolId)
-      .order('transaction_date', { ascending: false });
-
-    if (transError) throw transError;
+      .order('transaction_date', { ascending: false })
+      .order('id'));
 
     const { data: students, error: studError } = await supabase
       .from('students')
@@ -2385,47 +2392,17 @@ app.get('/api/schools/:schoolId/kitchen-summary', authenticateToken, requireRole
     const todayTransactionCount = (todayMeals || []).length;
     const todayAverageTransaction = todayTransactionCount > 0 ? todaySales / todayTransactionCount : 0;
 
-    const { data: students, error: studentsError } = await supabase
-      .from('students')
-      .select('id, balance')
-      .eq('school_id', schoolId)
-      .eq('is_walkin_placeholder', false);
-    if (studentsError) throw studentsError;
-
-    const { data: payments, error: paymentsError } = await supabase
-      .from('transactions')
-      .select('student_id, payment_type')
-      .eq('school_id', schoolId)
-      .eq('type', 'payment')
-      .not('transaction_date', 'is', null)
-      .order('transaction_date', { ascending: false });
-    if (paymentsError) throw paymentsError;
-
-    // סוג התשלום האחרון לכל תלמיד - payments כבר ממוינות מהחדש לישן, אז הערך הראשון
-    // שנתקלים בו לכל student_id הוא גם האחרון כרונולוגית.
-    const lastPaymentTypeByStudent = {};
-    (payments || []).forEach(p => {
-      if (p.student_id && !(p.student_id in lastPaymentTypeByStudent)) {
-        lastPaymentTypeByStudent[p.student_id] = p.payment_type;
-      }
-    });
-
-    let monthlyCount = 0;
-    let dailyWithBalanceCount = 0;
-    (students || []).forEach(s => {
-      const paymentType = lastPaymentTypeByStudent[s.id];
-      if (paymentType === 'monthly') monthlyCount++;
-      else if ((paymentType === 'daily' || paymentType === 'balance') && (s.balance || 0) > 0) dailyWithBalanceCount++;
-    });
+    const status = await computePaymentStatus(schoolId);
 
     res.json({
       success: true,
       todaySales,
       todayTransactionCount,
       todayAverageTransaction,
-      monthlyCount,
-      dailyWithBalanceCount,
-      totalStudents: (students || []).length
+      monthlyCount: status.monthlyPaid,
+      monthlyNotRenewedCount: status.monthlyNotRenewed,
+      dailyWithBalanceCount: status.dailyRemaining,
+      totalStudents: status.total
     });
 
   } catch (error) {
@@ -4265,12 +4242,17 @@ const growWebhookV2Handler = async (req, res) => {
 
     // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
     // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
-    const { error: creditError } = await supabase
-      .rpc('credit_student_balance', { p_student_id: studentId, p_amount: amount })
-      .single();
-    if (creditError) {
-      console.error('Credit balance error:', creditError.message);
-      return res.json({ success: true });
+    // תשלום מראש לחודש הבא (בבית ספר עם איפוס חודשי) לא נכנס ליתרה עד תחילת אותו חודש -
+    // אי אפשר להשתמש בו בחודש הנוכחי. ראו shouldDeferMonthlyCredit ו-releaseDeferredMonthlyCredits.
+    const deferCredit = await shouldDeferMonthlyCredit(student.school_id, paymentType, targetYear, targetMonth);
+    if (!deferCredit) {
+      const { error: creditError } = await supabase
+        .rpc('credit_student_balance', { p_student_id: studentId, p_amount: amount })
+        .single();
+      if (creditError) {
+        console.error('Credit balance error:', creditError.message);
+        return res.json({ success: true });
+      }
     }
     
     // שמור עסקה
@@ -4283,7 +4265,9 @@ const growWebhookV2Handler = async (req, res) => {
         type: 'payment',
         payment_method: gatewayName,
         payment_type: paymentType,
-        description: `תשלום ${gatewayLabel} - ₪${amount}`,
+        description: deferCredit
+          ? `תשלום ${gatewayLabel} מראש לחודש ${targetMonth}/${targetYear} - ₪${amount} (יזוכה ביתרה ב-1 לחודש)`
+          : `תשלום ${gatewayLabel} - ₪${amount}`,
         transaction_date: new Date().toISOString()
       });
 
@@ -4296,7 +4280,7 @@ const growWebhookV2Handler = async (req, res) => {
       await supabase
         .from('monthly_payments')
         .upsert(
-          { student_id: studentId, school_id: student.school_id, year, month },
+          { student_id: studentId, school_id: student.school_id, year, month, amount: parseFloat(amount) || null, credited: !deferCredit },
           { onConflict: 'student_id,year,month', ignoreDuplicates: true }
         );
     }
@@ -5182,15 +5166,64 @@ const fetchAllRows = async (build) => {
   return all;
 };
 
+// תשלום חודשי מראש לחודש עתידי, בבית ספר עם איפוס חודשי: לא נכנס ליתרה עד תחילת אותו חודש (הכסף
+// של החודש הבא לא שמיש בחודש הנוכחי). בבתי ספר אחרים - ללא שינוי (נכנס ליתרה מיד, כמו תמיד).
+const shouldDeferMonthlyCredit = async (schoolId, paymentType, year, month) => {
+  if (paymentType !== 'monthly' || !year || !month) return false;
+  const now = israelDateParts();
+  if (year * 12 + month <= now.year * 12 + now.month) return false;
+  const { data } = await supabase.from('schools').select('monthly_balance_reset').eq('id', schoolId).single();
+  return !!data?.monthly_balance_reset;
+};
+
+// משחרר ליתרה תשלומים חודשיים שנקלטו מראש וחודשם הגיע. אידמפוטנטי: כל שורה נתפסת פעם אחת
+// (credited false -> true) ורק אז מזכים. רץ בכל בדיקה, גם מחוץ לחלון האיפוס, כדי שלא יישאר כסף תקוע.
+const releaseDeferredMonthlyCredits = async () => {
+  const now = israelDateParts();
+  const pending = await fetchAllRows(() => supabase.from('monthly_payments').select('id, student_id, amount, year, month').eq('credited', false).order('id'));
+  let released = 0;
+  for (const row of pending) {
+    if (row.year * 12 + row.month > now.year * 12 + now.month) continue;
+    if (!row.amount || parseFloat(row.amount) <= 0) { console.error('Deferred monthly payment without an amount:', row.id); continue; }
+    const { data: claimed } = await supabase.from('monthly_payments').update({ credited: true }).eq('id', row.id).eq('credited', false).select('id').maybeSingle();
+    if (!claimed) continue;
+    const { error } = await supabase.rpc('credit_student_balance', { p_student_id: row.student_id, p_amount: parseFloat(row.amount) }).single();
+    if (error) {
+      await supabase.from('monthly_payments').update({ credited: false }).eq('id', row.id);
+      console.error('Deferred credit failed:', row.id, error.message);
+      continue;
+    }
+    released += 1;
+  }
+  return released;
+};
+
+// רגע המעבר בין החודשים (חצות ראשון לחודש, שעון ישראל) כרגע UTC. משמש לשחזור היתרה "כפי שהייתה בסוף החודש".
+const israelMonthStartUtc = (year, month) => {
+  const guess = new Date(Date.UTC(year, month - 1, 1));
+  const label = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', timeZoneName: 'longOffset' })
+    .formatToParts(guess).find(p => p.type === 'timeZoneName').value; // למשל GMT+02:00
+  const m = /GMT([+-])(\d{2}):(\d{2})/.exec(label);
+  const offsetMinutes = m ? (m[1] === '+' ? 1 : -1) * (parseInt(m[2], 10) * 60 + parseInt(m[3], 10)) : 120;
+  return new Date(guess.getTime() - offsetMinutes * 60000);
+};
+
 // מחשב (בלי לשנות כלום) מי ובכמה יאופס בגלל החודש (year, month) שנגמר.
+// איפוס = מה שנשאר מהחודש שנגמר בלבד: היתרה ברגע המעבר בין החודשים פחות תשלום מראש שנעשה לחודש הבא
+// לפני המעבר. היתרה ברגע המעבר משוחזרת מהיתרה הנוכחית (מוסיפים ארוחות שנצרכו מאז, מחסירים תשלומים
+// שנכנסו מאז), כך שהתוצאה נכונה גם אם הריצה התעכבה אחרי חצות. לא מוחקים יותר מהיתרה הנוכחית.
 const computeMonthlyReset = async (schoolId, year, month) => {
   const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+  const boundary = israelMonthStartUtc(next.year, next.month);
+  const boundaryIso = boundary.toISOString();
 
-  const { data: school } = await supabase.from('schools').select('monthly_meal_price').eq('id', schoolId).single();
+  const { data: school } = await supabase.from('schools').select('monthly_meal_price, menu_type').eq('id', schoolId).single();
+  // האיפוס החודשי מיועד לתפריט קבוע (יומי) בלבד - לא למכירה לפי פריטים.
+  if (!school || school.menu_type === 'items') return { next, boundary: boundaryIso, rows: [], skipped: [], total: 0, notApplicable: 'items_menu' };
 
-  const paidRows = await fetchAllRows(() => supabase.from('monthly_payments').select('student_id').eq('school_id', schoolId).eq('year', year).eq('month', month));
+  const paidRows = await fetchAllRows(() => supabase.from('monthly_payments').select('student_id').eq('school_id', schoolId).eq('year', year).eq('month', month).order('student_id'));
   const paidIds = [...new Set(paidRows.map(r => r.student_id))];
-  if (paidIds.length === 0) return { next, rows: [], skipped: [], total: 0 };
+  if (paidIds.length === 0) return { next, boundary: boundaryIso, rows: [], skipped: [], total: 0 };
 
   const students = [];
   for (let i = 0; i < paidIds.length; i += 200) {
@@ -5200,42 +5233,71 @@ const computeMonthlyReset = async (schoolId, year, month) => {
     students.push(...(data || []));
   }
 
-  const alreadyDone = new Set((await fetchAllRows(() => supabase.from('monthly_balance_resets').select('student_id').eq('school_id', schoolId).eq('year', year).eq('month', month))).map(r => r.student_id));
-  const prepaidIds = new Set((await fetchAllRows(() => supabase.from('monthly_payments').select('student_id').eq('school_id', schoolId).eq('year', next.year).eq('month', next.month))).map(r => r.student_id));
-  const nextSchedules = await fetchAllRows(() => supabase.from('meal_schedules').select('group_id, days_count, meal_price').eq('school_id', schoolId).eq('year', next.year).eq('month', next.month));
-  const scheduleByGroup = new Map(nextSchedules.map(s => [s.group_id, s]));
+  const alreadyDone = new Set((await fetchAllRows(() => supabase.from('monthly_balance_resets').select('student_id').eq('school_id', schoolId).eq('year', year).eq('month', month).order('student_id'))).map(r => r.student_id));
 
+  // תשלומים לחודש הבא שנעשו לפני המעבר = תשלום מראש שצריך להישמר.
+  const nextRows = await fetchAllRows(() => supabase.from('monthly_payments').select('student_id, amount, created_at, credited').eq('school_id', schoolId).eq('year', next.year).eq('month', next.month).order('student_id'));
+  const prepaidRowByStudent = new Map(nextRows.filter(r => new Date(r.created_at) < boundary && r.credited !== false).map(r => [r.student_id, r]));
+
+  const nextSchedules = await fetchAllRows(() => supabase.from('meal_schedules').select('group_id, days_count, meal_price').eq('school_id', schoolId).eq('year', next.year).eq('month', next.month).order('group_id'));
+  const scheduleByGroup = new Map(nextSchedules.map(sc => [sc.group_id, sc]));
+
+  // ארוחות ותשלומים שקרו מאז המעבר (בדרך כלל כלום או כמעט כלום, כי הריצה היא מיד אחרי חצות).
+  const sinceByStudent = new Map();
+  for (let i = 0; i < students.length; i += 100) {
+    const chunk = students.slice(i, i + 100).map(st => st.id);
+    const rows = await fetchAllRows(() => supabase.from('transactions').select('id, student_id, type, amount')
+      .eq('school_id', schoolId).in('student_id', chunk).in('type', ['meal', 'payment']).gte('transaction_date', boundaryIso).order('id'));
+    rows.forEach(t => {
+      const acc = sinceByStudent.get(t.student_id) || { meals: 0, payments: 0 };
+      if (t.type === 'meal') acc.meals += parseFloat(t.amount) || 0; else acc.payments += parseFloat(t.amount) || 0;
+      sinceByStudent.set(t.student_id, acc);
+    });
+  }
+
+  const round2 = (n) => Math.round(n * 100) / 100;
   const rows = [];
   const skipped = [];
   students.forEach(st => {
     if (st.is_walkin_placeholder) return;
-    const balance = Math.round((parseFloat(st.balance) || 0) * 100) / 100;
     const name = `${st.first_name} ${st.last_name || ''}`.trim();
+    const balanceNow = round2(parseFloat(st.balance) || 0);
     if (alreadyDone.has(st.id)) { skipped.push({ studentId: st.id, name, reason: 'already_done' }); return; }
-    if (balance <= 0) { skipped.push({ studentId: st.id, name, reason: 'no_positive_balance', balance }); return; }
+    if (balanceNow <= 0) { skipped.push({ studentId: st.id, name, reason: 'no_positive_balance', balance: balanceNow }); return; }
 
-    // תשלום מראש לחודש החדש: שווי החבילה = ימי לימוד x מחיר ארוחה (כמו שההורה שילם בפועל).
+    const since = sinceByStudent.get(st.id) || { meals: 0, payments: 0 };
+    const balanceAtBoundary = round2(balanceNow + since.meals - since.payments);
+
     let prepaid = 0;
-    if (prepaidIds.has(st.id)) {
-      const schedule = scheduleByGroup.get(st.group_id);
-      if (!schedule) { skipped.push({ studentId: st.id, name, reason: 'prepaid_value_unknown', balance }); return; }
-      const price = parseFloat(school?.monthly_meal_price) || parseFloat(schedule.meal_price) || 0;
-      prepaid = Math.round((schedule.days_count * price) * 100) / 100;
+    const prepaidRow = prepaidRowByStudent.get(st.id);
+    if (prepaidRow) {
+      if (prepaidRow.amount !== null && prepaidRow.amount !== undefined) {
+        prepaid = round2(parseFloat(prepaidRow.amount));
+      } else {
+        // תשלום ישן בלי סכום שמור: הערכה לפי ימי הלימוד x מחיר הארוחה. אם אין מהיכן - לא מאפסים ומסמנים לבדיקה ידנית.
+        const schedule = scheduleByGroup.get(st.group_id);
+        if (!schedule) { skipped.push({ studentId: st.id, name, reason: 'prepaid_value_unknown', balance: balanceNow }); return; }
+        const price = parseFloat(school.monthly_meal_price) || parseFloat(schedule.meal_price) || 0;
+        prepaid = round2(schedule.days_count * price);
+      }
     }
-    const amount = Math.round(Math.max(0, balance - prepaid) * 100) / 100;
-    rows.push({ studentId: st.id, name, grade: st.grade, balance, prepaid, amount });
+
+    const leftover = Math.max(0, round2(balanceAtBoundary - prepaid));
+    const amount = round2(Math.min(leftover, balanceNow));
+    rows.push({ studentId: st.id, name, grade: st.grade, balance: balanceNow, balanceAtMonthEnd: balanceAtBoundary, prepaid, amount });
   });
 
-  const total = Math.round(rows.reduce((s, r) => s + r.amount, 0) * 100) / 100;
-  return { next, rows, skipped, total };
+  const total = round2(rows.reduce((s2, r) => s2 + r.amount, 0));
+  return { next, boundary: boundaryIso, rows, skipped, total };
 };
 
 const applyMonthlyReset = async (schoolId, year, month) => {
   const plan = await computeMonthlyReset(schoolId, year, month);
+  if (plan.notApplicable) return { year, month, students: 0, totalWiped: 0, alreadyDone: 0, failed: 0, skipped: 0, notApplicable: plan.notApplicable };
   let applied = 0, wiped = 0, alreadyDone = 0, failed = 0;
   for (const row of plan.rows) {
     const { data, error } = await supabase.rpc('apply_monthly_balance_reset', {
-      p_student_id: row.studentId, p_school_id: schoolId, p_year: year, p_month: month, p_prepaid: row.prepaid
+      p_student_id: row.studentId, p_school_id: schoolId, p_year: year, p_month: month, p_amount: row.amount, p_prepaid: row.prepaid
     }).single();
     if (error) { failed += 1; console.error('Monthly reset error:', row.studentId, error.message); continue; }
     if (data.result_status === 'ok') { applied += 1; wiped += parseFloat(data.reset_amount) || 0; }
@@ -5252,7 +5314,7 @@ app.get('/api/schools/:schoolId/monthly-reset/preview', authenticateToken, requi
     const year = parseInt(req.query.year, 10) || (now.day <= RESET_WINDOW_LAST_DAY ? prev.year : now.year);
     const month = parseInt(req.query.month, 10) || (now.day <= RESET_WINDOW_LAST_DAY ? prev.month : now.month);
     const plan = await computeMonthlyReset(req.params.schoolId, year, month);
-    res.json({ success: true, forMonth: { year, month }, nextMonth: plan.next, count: plan.rows.length, total: plan.total, rows: plan.rows, skipped: plan.skipped });
+    res.json({ success: true, forMonth: { year, month }, nextMonth: plan.next, notApplicable: plan.notApplicable || null, count: plan.rows.length, total: plan.total, rows: plan.rows, skipped: plan.skipped });
   } catch (error) {
     console.error('Monthly reset preview error:', error.message);
     res.status(500).json({ success: false, message: 'שגיאה בחישוב התצוגה המקדימה' });
@@ -5268,6 +5330,8 @@ app.post('/api/schools/:schoolId/monthly-reset/run', authenticateToken, requireR
       return res.status(400).json({ success: false, message: 'נדרשים year, month ו-confirm: true' });
     }
     const result = await applyMonthlyReset(req.params.schoolId, year, month);
+    // כמו בתזמון האוטומטי: אחרי האיפוס משחררים ליתרה תשלומים שנקלטו מראש וחודשם הגיע.
+    result.releasedPrepaid = await releaseDeferredMonthlyCredits();
     res.json({ success: true, result });
   } catch (error) {
     console.error('Monthly reset run error:', error.message);
@@ -5275,25 +5339,83 @@ app.post('/api/schools/:schoolId/monthly-reset/run', authenticateToken, requireR
   }
 });
 
-// בדיקה שעתית: בימים 1-3 בחודש (שעון ישראל) מריצים את האיפוס לחודש שנגמר בכל בית ספר שהפעיל אותו.
-// בטוח להרצה חוזרת (כל תלמיד מאופס פעם אחת לחודש), וגם אם השרת הופעל מחדש באמצע.
+// בדיקה כל דקה: בימים 1-3 בחודש (שעון ישראל) מריצים את האיפוס לחודש שנגמר בכל בית ספר שהפעיל אותו,
+// ובכל בדיקה (אחרי האיפוס) משחררים ליתרה תשלומים שנקלטו מראש וחודשם הגיע. הבדיקה התכופה מבטיחה
+// שהאיפוס והשחרור קורים מיד אחרי חצות, לפני שמישהו מגיע לקנות ארוחה ב-1 בחודש.
+// בטוח להרצה חוזרת: כל תלמיד מאופס פעם אחת לחודש, וכל תשלום מראש משוחרר פעם אחת. הזיכרון
+// resetDoneThisProcess רק חוסך חישוב חוזר אחרי שהאיפוס הושלם.
+const resetDoneThisProcess = new Set();
+let monthlyTickRunning = false;
 const monthlyResetTick = async () => {
+  if (monthlyTickRunning) return;
+  monthlyTickRunning = true;
   try {
     const now = israelDateParts();
-    if (now.day > RESET_WINDOW_LAST_DAY) return;
-    const prev = now.month === 1 ? { year: now.year - 1, month: 12 } : { year: now.year, month: now.month - 1 };
-    const { data: schools, error } = await supabase.from('schools').select('id, name').eq('monthly_balance_reset', true);
-    if (error) throw error;
-    for (const school of schools || []) {
-      const result = await applyMonthlyReset(school.id, prev.year, prev.month);
-      if (result.students > 0 || result.failed > 0) {
-        console.log(`Monthly reset for ${school.name} (${prev.month}/${prev.year}): ${result.students} students, total ${result.totalWiped}, failed ${result.failed}`);
+    if (now.day <= RESET_WINDOW_LAST_DAY) {
+      const prev = now.month === 1 ? { year: now.year - 1, month: 12 } : { year: now.year, month: now.month - 1 };
+      const { data: schools, error } = await supabase.from('schools').select('id, name').eq('monthly_balance_reset', true);
+      if (error) throw error;
+      for (const school of schools || []) {
+        const key = `${school.id}:${prev.year}-${prev.month}`;
+        if (resetDoneThisProcess.has(key)) continue;
+        const result = await applyMonthlyReset(school.id, prev.year, prev.month);
+        if (result.students > 0 || result.failed > 0) {
+          console.log(`Monthly reset for ${school.name} (${prev.month}/${prev.year}): ${result.students} students, total ${result.totalWiped}, failed ${result.failed}`);
+        }
+        if (result.failed === 0 && result.students === 0) resetDoneThisProcess.add(key);
       }
     }
+    const released = await releaseDeferredMonthlyCredits();
+    if (released > 0) console.log(`Released ${released} prepaid monthly payments to balances`);
   } catch (error) {
-    console.error('Monthly reset tick error:', error.message);
+    console.error('Monthly tick error:', error.message);
+  } finally {
+    monthlyTickRunning = false;
   }
 };
+
+// ===== סטטוס תשלומים של תלמידי בית הספר - מקור אמת אחד למסך המטבח ולדוח המזכירות =====
+// הגדרות (מוציאות זו את זו):
+//  - שילמו חודשי: יש שורה בטבלת התשלומים החודשיים (monthly_payments) לחודש הנוכחי (שעון ישראל).
+//  - חודשי שלא חידש: סוג התשלום האחרון חודשי, אבל אין תשלום לחודש הנוכחי.
+//  - שילמו בודדת ועוד יש יתרה / ניצלו את היתרה: סוג התשלום האחרון בודד/יתרה, לפי היתרה.
+//  - לא שילמו כלל: אין אף תשלום.
+// הכל נשלף בעמודים, כדי שהמספרים לא ייחתכו ב-1000 שורות.
+const computePaymentStatus = async (schoolId) => {
+  const now = israelDateParts();
+
+  const students = await fetchAllRows(() => supabase
+    .from('students').select('id, balance').eq('school_id', schoolId).eq('is_walkin_placeholder', false).order('id'));
+  const payments = await fetchAllRows(() => supabase
+    .from('transactions').select('student_id, payment_type')
+    .eq('school_id', schoolId).eq('type', 'payment').not('transaction_date', 'is', null)
+    .order('transaction_date', { ascending: false }).order('id'));
+  const paidRows = await fetchAllRows(() => supabase
+    .from('monthly_payments').select('student_id').eq('school_id', schoolId).eq('year', now.year).eq('month', now.month).order('student_id'));
+
+  const lastTypeByStudent = {};
+  payments.forEach(p => { if (p.student_id && !(p.student_id in lastTypeByStudent)) lastTypeByStudent[p.student_id] = p.payment_type; });
+  const paidThisMonth = new Set(paidRows.map(r => r.student_id));
+
+  const status = { monthlyPaid: 0, monthlyNotRenewed: 0, dailyRemaining: 0, dailyUsed: 0, none: 0, total: students.length, year: now.year, month: now.month };
+  students.forEach(st => {
+    const type = lastTypeByStudent[st.id];
+    if (paidThisMonth.has(st.id)) status.monthlyPaid += 1;
+    else if (type === 'monthly') status.monthlyNotRenewed += 1;
+    else if (type === 'daily' || type === 'balance') { if ((parseFloat(st.balance) || 0) > 0) status.dailyRemaining += 1; else status.dailyUsed += 1; }
+    else status.none += 1;
+  });
+  return status;
+};
+
+app.get('/api/schools/:schoolId/reports/payment-status', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    res.json({ success: true, status: await computePaymentStatus(req.params.schoolId) });
+  } catch (error) {
+    console.error('Payment status error:', error.message);
+    res.status(500).json({ success: false, message: 'שגיאה בחישוב סטטוס תשלומים' });
+  }
+});
 
 // ===== START SERVER =====
 
@@ -5302,8 +5424,8 @@ app.listen(PORT, () => {
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
   // תזמון האיפוס החודשי. DISABLE_SCHEDULERS=1 לעותקי בדיקה, כדי שלא ירוצו במקביל לשרת האמיתי.
   if (process.env.DISABLE_SCHEDULERS !== '1') {
-    setTimeout(monthlyResetTick, 2 * 60 * 1000);
-    setInterval(monthlyResetTick, 60 * 60 * 1000);
+    setTimeout(monthlyResetTick, 60 * 1000);
+    setInterval(monthlyResetTick, 60 * 1000);
   }
 });
 

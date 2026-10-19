@@ -3,17 +3,31 @@
 -- schools.monthly_balance_reset   - כשפעיל, בתחילת כל חודש (ימים 1-3, שעון ישראל) היתרה החיובית
 --                                   של כל תלמיד ששילם חודשי לחודש שנגמר מתאפסת. תשלום מראש לחודש
 --                                   החדש נשמר (לא נמחק). יתרה שלילית (חוב) לא נוגעים בה.
+-- monthly_payments.amount         - הסכום ששולם בפועל על חודש מסוים (נשמר מעכשיו בכל תשלום חודשי). משמש
+--                                   לשמור במדויק תשלום מראש לחודש הבא (שנעשה לפני סוף החודש).
+-- monthly_payments.credited       - false = תשלום מראש לחודש הבא שעוד לא נכנס ליתרה (נכנס ב-1 לחודש).
 -- monthly_balance_resets          - ספר פעולות: כל איפוס נרשם פעם אחת בלבד לכל (תלמיד, שנה, חודש),
 --                                   עם יתרה לפני/אחרי. מונע איפוס כפול ומאפשר ביקורת ושחזור.
 -- apply_monthly_balance_reset()   - פעולה אטומית ברמת בסיס הנתונים: נועלת את שורת התלמיד, מחסירה
---                                   בדיוק את הסכום המחושב (לא "מאפסת למספר"), כך שרכישה שמתבצעת
---                                   באותו רגע לא נדרסת, ורושמת עסקה גלויה מסוג adjustment.
+--                                   את הסכום שחושב בשרת (עד גובה היתרה, לא "מאפסת למספר"), כך שרכישה
+--                                   שמתבצעת באותו רגע לא נדרסת, ורושמת עסקה גלויה מסוג adjustment.
 --
 -- HOW TO APPLY: הרץ ב-Supabase SQL Editor לפני פריסת הקוד. הקובץ רק מוסיף. ההגדרה כבויה כברירת
 -- מחדל בכל בית ספר - שום איפוס לא קורה עד שמפעילים אותה במפורש.
 
 ALTER TABLE public.schools
   ADD COLUMN IF NOT EXISTS monthly_balance_reset BOOLEAN NOT NULL DEFAULT false;
+
+ALTER TABLE public.monthly_payments
+  ADD COLUMN IF NOT EXISTS amount NUMERIC(10,2);
+
+-- credited = false: תשלום חודשי שנקלט מראש לחודש הבא (בבית ספר עם איפוס חודשי). הכסף עדיין לא ביתרה
+-- ולא ניתן להשתמש בו בחודש הנוכחי; השרת מזכה אותו ביתרה בתחילת אותו חודש (אחרי האיפוס).
+ALTER TABLE public.monthly_payments
+  ADD COLUMN IF NOT EXISTS credited BOOLEAN NOT NULL DEFAULT true;
+
+CREATE INDEX IF NOT EXISTS monthly_payments_uncredited_idx
+  ON public.monthly_payments (year, month) WHERE credited = false;
 
 CREATE TABLE IF NOT EXISTS public.monthly_balance_resets (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -39,6 +53,7 @@ CREATE OR REPLACE FUNCTION public.apply_monthly_balance_reset(
   p_school_id UUID,
   p_year INTEGER,
   p_month INTEGER,
+  p_amount NUMERIC,
   p_prepaid NUMERIC
 )
 RETURNS TABLE (result_status TEXT, reset_amount NUMERIC, balance_before NUMERIC, balance_after NUMERIC)
@@ -67,7 +82,8 @@ BEGIN
   END IF;
 
   v_balance := COALESCE(v_balance, 0);
-  v_amount := ROUND(GREATEST(0, v_balance - COALESCE(p_prepaid, 0)), 2);
+  -- לעולם לא מחסירים יותר מהיתרה החיובית הנוכחית (ולא מכניסים לחוב)
+  v_amount := ROUND(LEAST(GREATEST(0, COALESCE(p_amount, 0)), GREATEST(0, v_balance)), 2);
 
   INSERT INTO public.monthly_balance_resets
     (school_id, student_id, year, month, amount, balance_before, balance_after, prepaid_kept)
