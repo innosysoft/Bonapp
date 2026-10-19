@@ -787,7 +787,7 @@ app.get('/api/schools', async (req, res) => {
   try {
     const { data: schools, error } = await supabase
       .from('schools')
-      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt, enable_kiosk_lock, pos_credit_via_grow, payment_gateway')
+      .select('id, name, menu_type, enable_monthly_package, enable_daily_payment, daily_meal_price, monthly_meal_price, charge_absent_students, enable_free_payment, enable_paybox, enable_bit, enable_cash, auto_print_receipt, enable_kiosk_lock, pos_credit_via_grow, payment_gateway, monthly_balance_reset')
       .order('name');
 
     if (error) throw error;
@@ -976,6 +976,7 @@ if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.bod
 // פרטי סליקה של Tranzila קובעים לאן הכסף נכנס - רק מנהל-על רשאי לשנות אותם (לא מזכירה/מנהל בית ספר).
 // המפתחות נשמרים מוצפנים בטבלה נפרדת ולעולם לא מוחזרים לדפדפן.
 if (req.user.role === 'super_admin') {
+  if (req.body.monthly_balance_reset !== undefined) updateData.monthly_balance_reset = !!req.body.monthly_balance_reset;
   if (req.body.tranzila_terminal !== undefined) {
     const terminal = String(req.body.tranzila_terminal || '').trim().toLowerCase();
     if (terminal && !tz.TERMINAL_PATTERN.test(terminal)) {
@@ -5157,11 +5158,153 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'שגיאת שרת' });
 });
 
+// ===== איפוס יתרה חודשי למנויים חודשיים =====
+// מדיניות: מי ששילם חודשי לחודש שנגמר - היתרה החיובית שלו מתאפסת בתחילת החודש הבא. תשלום מראש
+// לחודש החדש נשמר. יתרה שלילית לא נוגעים. פועל רק בבתי ספר ש-schools.monthly_balance_reset = true.
+// כל איפוס נרשם פעם אחת לכל (תלמיד, שנה, חודש) בטבלת monthly_balance_resets, ומופיע כעסקה גלויה
+// (adjustment). ראו backend/sql/add_monthly_balance_reset.sql.
+const RESET_WINDOW_LAST_DAY = 3; // מריצים אוטומטית רק בימים 1-3 בחודש (שעון ישראל)
+
+const israelDateParts = (date = new Date()) => {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' })
+    .formatToParts(date).reduce((acc, p) => ({ ...acc, [p.type]: p.value }), {});
+  return { year: parseInt(parts.year, 10), month: parseInt(parts.month, 10), day: parseInt(parts.day, 10) };
+};
+
+const fetchAllRows = async (build) => {
+  let all = [];
+  for (let from = 0; ; from += 1000) {
+    const { data, error } = await build().range(from, from + 999);
+    if (error) throw error;
+    all = all.concat(data || []);
+    if (!data || data.length < 1000) break;
+  }
+  return all;
+};
+
+// מחשב (בלי לשנות כלום) מי ובכמה יאופס בגלל החודש (year, month) שנגמר.
+const computeMonthlyReset = async (schoolId, year, month) => {
+  const next = month === 12 ? { year: year + 1, month: 1 } : { year, month: month + 1 };
+
+  const { data: school } = await supabase.from('schools').select('monthly_meal_price').eq('id', schoolId).single();
+
+  const paidRows = await fetchAllRows(() => supabase.from('monthly_payments').select('student_id').eq('school_id', schoolId).eq('year', year).eq('month', month));
+  const paidIds = [...new Set(paidRows.map(r => r.student_id))];
+  if (paidIds.length === 0) return { next, rows: [], skipped: [], total: 0 };
+
+  const students = [];
+  for (let i = 0; i < paidIds.length; i += 200) {
+    const { data } = await supabase.from('students')
+      .select('id, first_name, last_name, grade, group_id, balance, is_walkin_placeholder')
+      .eq('school_id', schoolId).in('id', paidIds.slice(i, i + 200));
+    students.push(...(data || []));
+  }
+
+  const alreadyDone = new Set((await fetchAllRows(() => supabase.from('monthly_balance_resets').select('student_id').eq('school_id', schoolId).eq('year', year).eq('month', month))).map(r => r.student_id));
+  const prepaidIds = new Set((await fetchAllRows(() => supabase.from('monthly_payments').select('student_id').eq('school_id', schoolId).eq('year', next.year).eq('month', next.month))).map(r => r.student_id));
+  const nextSchedules = await fetchAllRows(() => supabase.from('meal_schedules').select('group_id, days_count, meal_price').eq('school_id', schoolId).eq('year', next.year).eq('month', next.month));
+  const scheduleByGroup = new Map(nextSchedules.map(s => [s.group_id, s]));
+
+  const rows = [];
+  const skipped = [];
+  students.forEach(st => {
+    if (st.is_walkin_placeholder) return;
+    const balance = Math.round((parseFloat(st.balance) || 0) * 100) / 100;
+    const name = `${st.first_name} ${st.last_name || ''}`.trim();
+    if (alreadyDone.has(st.id)) { skipped.push({ studentId: st.id, name, reason: 'already_done' }); return; }
+    if (balance <= 0) { skipped.push({ studentId: st.id, name, reason: 'no_positive_balance', balance }); return; }
+
+    // תשלום מראש לחודש החדש: שווי החבילה = ימי לימוד x מחיר ארוחה (כמו שההורה שילם בפועל).
+    let prepaid = 0;
+    if (prepaidIds.has(st.id)) {
+      const schedule = scheduleByGroup.get(st.group_id);
+      if (!schedule) { skipped.push({ studentId: st.id, name, reason: 'prepaid_value_unknown', balance }); return; }
+      const price = parseFloat(school?.monthly_meal_price) || parseFloat(schedule.meal_price) || 0;
+      prepaid = Math.round((schedule.days_count * price) * 100) / 100;
+    }
+    const amount = Math.round(Math.max(0, balance - prepaid) * 100) / 100;
+    rows.push({ studentId: st.id, name, grade: st.grade, balance, prepaid, amount });
+  });
+
+  const total = Math.round(rows.reduce((s, r) => s + r.amount, 0) * 100) / 100;
+  return { next, rows, skipped, total };
+};
+
+const applyMonthlyReset = async (schoolId, year, month) => {
+  const plan = await computeMonthlyReset(schoolId, year, month);
+  let applied = 0, wiped = 0, alreadyDone = 0, failed = 0;
+  for (const row of plan.rows) {
+    const { data, error } = await supabase.rpc('apply_monthly_balance_reset', {
+      p_student_id: row.studentId, p_school_id: schoolId, p_year: year, p_month: month, p_prepaid: row.prepaid
+    }).single();
+    if (error) { failed += 1; console.error('Monthly reset error:', row.studentId, error.message); continue; }
+    if (data.result_status === 'ok') { applied += 1; wiped += parseFloat(data.reset_amount) || 0; }
+    else if (data.result_status === 'already_done') alreadyDone += 1;
+  }
+  return { year, month, students: applied, totalWiped: Math.round(wiped * 100) / 100, alreadyDone, failed, skipped: plan.skipped.length };
+};
+
+// תצוגה מקדימה: מי ובכמה יאופס, בלי לבצע (מזכירה/מנהל בית ספר/מנהל-על).
+app.get('/api/schools/:schoolId/monthly-reset/preview', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const now = israelDateParts();
+    const prev = now.month === 1 ? { year: now.year - 1, month: 12 } : { year: now.year, month: now.month - 1 };
+    const year = parseInt(req.query.year, 10) || (now.day <= RESET_WINDOW_LAST_DAY ? prev.year : now.year);
+    const month = parseInt(req.query.month, 10) || (now.day <= RESET_WINDOW_LAST_DAY ? prev.month : now.month);
+    const plan = await computeMonthlyReset(req.params.schoolId, year, month);
+    res.json({ success: true, forMonth: { year, month }, nextMonth: plan.next, count: plan.rows.length, total: plan.total, rows: plan.rows, skipped: plan.skipped });
+  } catch (error) {
+    console.error('Monthly reset preview error:', error.message);
+    res.status(500).json({ success: false, message: 'שגיאה בחישוב התצוגה המקדימה' });
+  }
+});
+
+// הרצה ידנית (מנהל-על בלבד, עם אישור מפורש). אידמפוטנטי - אפשר להריץ שוב בלי נזק.
+app.post('/api/schools/:schoolId/monthly-reset/run', authenticateToken, requireRole('super_admin'), async (req, res) => {
+  try {
+    const year = parseInt(req.body.year, 10);
+    const month = parseInt(req.body.month, 10);
+    if (!year || !month || month < 1 || month > 12 || req.body.confirm !== true) {
+      return res.status(400).json({ success: false, message: 'נדרשים year, month ו-confirm: true' });
+    }
+    const result = await applyMonthlyReset(req.params.schoolId, year, month);
+    res.json({ success: true, result });
+  } catch (error) {
+    console.error('Monthly reset run error:', error.message);
+    res.status(500).json({ success: false, message: 'האיפוס נכשל' });
+  }
+});
+
+// בדיקה שעתית: בימים 1-3 בחודש (שעון ישראל) מריצים את האיפוס לחודש שנגמר בכל בית ספר שהפעיל אותו.
+// בטוח להרצה חוזרת (כל תלמיד מאופס פעם אחת לחודש), וגם אם השרת הופעל מחדש באמצע.
+const monthlyResetTick = async () => {
+  try {
+    const now = israelDateParts();
+    if (now.day > RESET_WINDOW_LAST_DAY) return;
+    const prev = now.month === 1 ? { year: now.year - 1, month: 12 } : { year: now.year, month: now.month - 1 };
+    const { data: schools, error } = await supabase.from('schools').select('id, name').eq('monthly_balance_reset', true);
+    if (error) throw error;
+    for (const school of schools || []) {
+      const result = await applyMonthlyReset(school.id, prev.year, prev.month);
+      if (result.students > 0 || result.failed > 0) {
+        console.log(`Monthly reset for ${school.name} (${prev.month}/${prev.year}): ${result.students} students, total ${result.totalWiped}, failed ${result.failed}`);
+      }
+    }
+  } catch (error) {
+    console.error('Monthly reset tick error:', error.message);
+  }
+};
+
 // ===== START SERVER =====
 
 app.listen(PORT, () => {
   console.log(`🚀 Server running on http://localhost:${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+  // תזמון האיפוס החודשי. DISABLE_SCHEDULERS=1 לעותקי בדיקה, כדי שלא ירוצו במקביל לשרת האמיתי.
+  if (process.env.DISABLE_SCHEDULERS !== '1') {
+    setTimeout(monthlyResetTick, 2 * 60 * 1000);
+    setInterval(monthlyResetTick, 60 * 60 * 1000);
+  }
 });
 
 

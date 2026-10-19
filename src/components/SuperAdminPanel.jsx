@@ -344,6 +344,7 @@ const saveSchoolSettings = async () => {
   enable_cardcom: editingSchool.enable_cardcom,
   enable_cash: editingSchool.enable_cash,
   enable_monthly_package: editingSchool.enable_monthly_package,
+  monthly_balance_reset: !!editingSchool.monthly_balance_reset,
   enable_daily_payment: editingSchool.enable_daily_payment,
   daily_meal_price: editingSchool.daily_meal_price,
   charge_absent_students: editingSchool.charge_absent_students,
@@ -1399,6 +1400,23 @@ onClick={() => {
       ההורה משלם לפי מספר ימי ארוחה בחודש × מחיר שכבה
     </p>
   </div>
+
+  {isSuperAdmin && (
+  <div style={{ marginBottom: '1rem' }}>
+    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+      <input
+        type="checkbox"
+        checked={editingSchool.monthly_balance_reset || false}
+        onChange={(e) => setEditingSchool({...editingSchool, monthly_balance_reset: e.target.checked})}
+      />
+      <strong>🔄 איפוס יתרה חודשי למנויים חודשיים</strong>
+    </label>
+    <p style={{ fontSize: '0.85rem', color: '#607482', marginRight: '1.5rem' }}>
+      בתחילת כל חודש היתרה החיובית של מי ששילם חודשי לחודש שנגמר מתאפסת (תשלום מראש לחודש החדש נשמר, חוב לא נמחק).
+      כל איפוס נרשם כעסקה גלויה. כדאי לבדוק קודם בתצוגה המקדימה.
+    </p>
+  </div>
+  )}
 
 {isSuperAdmin && (
 <div style={{ marginBottom: '1.5rem' }}>
