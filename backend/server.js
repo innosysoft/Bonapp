@@ -468,12 +468,6 @@ const computeItemsCharge = async (schoolId, items) => {
   const { customLines, customTotal, regularItems, invalid, customOnly } = splitCustomLines(items);
   if (invalid) return { chargeAmount: 0, kitchenOrderItems: [], customOnly: false };
 
-  if (customLines.length > 0) {
-    // חיוב חופשי מותר רק בבתי ספר עם תפריט פריטים (אחרת הסכום היה נקבע לפי מחיר ארוחה קבוע).
-    const { data: school } = await supabase.from('schools').select('menu_type').eq('id', schoolId).single();
-    if (!school || school.menu_type !== 'items') return { chargeAmount: 0, kitchenOrderItems: [], customOnly: false };
-  }
-
   const base = regularItems.length > 0
     ? await computeCatalogItemsCharge(schoolId, regularItems)
     : { chargeAmount: 0, kitchenOrderItems: [] };
@@ -2511,6 +2505,103 @@ app.get('/api/schools/:schoolId/reports/transactions', authenticateToken, requir
   } catch (error) {
     console.error('Transactions report error:', error);
     res.status(500).json({ success: false, message: 'שגיאה בטעינת דוח עסקאות' });
+  }
+});
+
+// תחילת יום (00:00 שעון ישראל) כרגע UTC, לתאריך בפורמט YYYY-MM-DD. מחשב את ההיסט פעמיים כדי
+// שגם יום מעבר שעון קיץ/חורף ייצא מדויק.
+const israelDayStartUtc = (dateStr) => {
+  const [y, m, d] = dateStr.split('-').map(n => parseInt(n, 10));
+  const offsetMinutesAt = (instant) => {
+    const label = new Intl.DateTimeFormat('en-US', { timeZone: 'Asia/Jerusalem', timeZoneName: 'longOffset' })
+      .formatToParts(instant).find(p => p.type === 'timeZoneName').value;
+    const mm = /GMT([+-])(\d{2}):(\d{2})/.exec(label);
+    return mm ? (mm[1] === '+' ? 1 : -1) * (parseInt(mm[2], 10) * 60 + parseInt(mm[3], 10)) : 120;
+  };
+  const utcMidnight = Date.UTC(y, m - 1, d);
+  const first = new Date(utcMidnight - offsetMinutesAt(new Date(utcMidnight)) * 60000);
+  return new Date(utcMidnight - offsetMinutesAt(first) * 60000);
+};
+
+// פירוט תשלומים (שורה לכל תשלום, עם תאריך ושעה) בטווח תאריכים לפי שעון ישראל. משמש את דוח
+// התשלומים במסך המטבח ואת הדוחות היומי/שבועי/חודשי בפאנל המזכירה. קריאה בלבד.
+app.get('/api/schools/:schoolId/reports/payments-detail', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v);
+    const today = israelDateParts();
+    const todayStr = `${today.year}-${String(today.month).padStart(2, '0')}-${String(today.day).padStart(2, '0')}`;
+    const from = isDate(req.query.from) ? req.query.from : todayStr;
+    const to = isDate(req.query.to) ? req.query.to : todayStr;
+    if (from > to) return res.status(400).json({ success: false, message: 'טווח תאריכים לא תקין' });
+
+    const [ty, tm, td] = to.split('-').map(n => parseInt(n, 10));
+    const nextDayStr = new Date(Date.UTC(ty, tm - 1, td) + 24 * 3600 * 1000).toISOString().slice(0, 10);
+    const start = israelDayStartUtc(from);
+    const end = israelDayStartUtc(nextDayStr);
+
+    const payments = await fetchAllRows(() => supabase
+      .from('transactions')
+      .select('id, student_id, amount, payment_type, payment_method, description, transaction_date')
+      .eq('school_id', schoolId)
+      .eq('type', 'payment')
+      .not('transaction_date', 'is', null)
+      .gte('transaction_date', start.toISOString())
+      .lt('transaction_date', end.toISOString())
+      .order('transaction_date', { ascending: false })
+      .order('id'));
+
+    const studentIds = [...new Set(payments.map(p => p.student_id).filter(Boolean))];
+    const studentById = new Map();
+    for (let i = 0; i < studentIds.length; i += 200) {
+      const { data: studs, error: studError } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, grade')
+        .in('id', studentIds.slice(i, i + 200));
+      if (studError) throw studError;
+      (studs || []).forEach(st => studentById.set(st.id, st));
+    }
+
+    const rows = payments.map(p => {
+      const st = studentById.get(p.student_id);
+      return {
+        id: p.id,
+        transaction_date: p.transaction_date,
+        student_name: st ? `${st.first_name || ''} ${st.last_name || ''}`.trim() : 'תלמיד שנמחק',
+        grade: st?.grade || '',
+        amount: Math.round((parseFloat(p.amount) || 0) * 100) / 100,
+        payment_type: p.payment_type === 'monthly' ? 'monthly' : 'daily',
+        payment_method: p.payment_method || '',
+        description: p.description || ''
+      };
+    });
+
+    const sumOf = (list) => Math.round(list.reduce((a, r) => a + r.amount, 0) * 100) / 100;
+    const monthly = rows.filter(r => r.payment_type === 'monthly');
+    const daily = rows.filter(r => r.payment_type !== 'monthly');
+    const byMethod = {};
+    rows.forEach(r => {
+      const k = r.payment_method || 'unknown';
+      byMethod[k] = byMethod[k] || { count: 0, amount: 0 };
+      byMethod[k].count += 1;
+      byMethod[k].amount = Math.round((byMethod[k].amount + r.amount) * 100) / 100;
+    });
+
+    res.json({
+      success: true,
+      from,
+      to,
+      rows,
+      totals: {
+        count: rows.length, amount: sumOf(rows),
+        monthlyCount: monthly.length, monthlyAmount: sumOf(monthly),
+        dailyCount: daily.length, dailyAmount: sumOf(daily),
+        byMethod
+      }
+    });
+  } catch (error) {
+    console.error('Payments detail report error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת פירוט תשלומים' });
   }
 });
 

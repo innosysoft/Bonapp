@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTransactionsReport, getMealsReport, getKitchenSummary, getSchools } from '../api';
-import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet, Users, UtensilsCrossed, CreditCard, ClipboardList, Sun } from 'lucide-react';
+import { getTransactionsReport, getMealsReport, getKitchenSummary, getSchools, getPaymentsDetailReport } from '../api';
+import * as XLSX from 'xlsx';
+import { buildPaymentReportRows, rangeFor, rangeTitle, formatDate, formatTime, methodLabel } from '../paymentsReportUtils';
+import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet, Users, UtensilsCrossed, CreditCard, ClipboardList, Sun, ListChecks, Download, Search } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell
 } from 'recharts';
@@ -37,7 +39,11 @@ const KitchenReports = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
-  const [reportType, setReportType] = useState('payments'); // 'payments' | 'meals' | 'prep'
+  const [reportType, setReportType] = useState('payments'); // 'payments' | 'meals' | 'prep' | 'detail'
+  const [detailPreset, setDetailPreset] = useState('today'); // 'today' | 'week' | 'month'
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailSearch, setDetailSearch] = useState('');
   const [groupBy, setGroupBy] = useState('day');
   const [metric, setMetric] = useState('amount'); // 'amount' | 'count' | 'students'
   const [report, setReport] = useState(null);
@@ -98,9 +104,36 @@ const KitchenReports = () => {
   }, [navigate]);
 
   useEffect(() => {
-    if (currentUser && reportType !== 'prep') loadReport(currentUser.school_id, reportType, groupBy);
+    if (currentUser && reportType !== 'prep' && reportType !== 'detail') loadReport(currentUser.school_id, reportType, groupBy);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [groupBy, reportType]);
+
+  // פירוט תשלומים: שורה לכל תשלום, עם תאריך ושעה, לפי טווח מוכן (שעון ישראל)
+  useEffect(() => {
+    if (!currentUser || reportType !== 'detail') return undefined;
+    let cancelled = false;
+    (async () => {
+      setDetailLoading(true);
+      try {
+        const range = rangeFor(detailPreset);
+        const result = await getPaymentsDetailReport(currentUser.school_id, range.from, range.to);
+        if (!cancelled && result.success) setDetail(result);
+      } catch (error) {
+        console.error('Error loading payments detail:', error);
+      } finally {
+        if (!cancelled) setDetailLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser, reportType, detailPreset]);
+
+  const downloadDetail = () => {
+    const data = buildPaymentReportRows(detail);
+    if (data.length === 0) return;
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'פירוט תשלומים');
+    XLSX.writeFile(wb, `פירוט_תשלומים_${detail.from}_${detail.to}.xlsx`);
+  };
 
   const handleSelectReportType = (type) => {
     setReportType(type);
@@ -186,6 +219,10 @@ const KitchenReports = () => {
         .bap-reports .panel-title h2{font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
         .bap-reports .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%}
 
+        .bap-reports .detail-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:0 12px;min-height:40px}
+        .bap-reports .detail-search input{border:0;outline:0;font:inherit;min-width:180px;background:transparent}
+        .bap-reports .method-chips{display:flex;gap:8px;flex-wrap:wrap}
+        .bap-reports .method-chip{background:#fff;border:1px solid var(--line);border-radius:999px;padding:6px 14px;font-size:13px;font-weight:700}
         .bap-reports table{width:100%;border-collapse:collapse;font-size:14px}
         .bap-reports th{text-align:right;color:var(--muted);font-weight:600;padding:10px 8px;border-bottom:1px solid var(--line)}
         .bap-reports td{padding:10px 8px;border-bottom:1px solid var(--line)}
@@ -232,9 +269,13 @@ const KitchenReports = () => {
             <span className="rt-title"><CreditCard size={17} color="var(--blue)" /> תשלומים שהתקבלו</span>
             <span className="rt-sub">כסף שהופקד לחשבונות - כמה אנשים שילמו ובאיזה אופן</span>
           </button>
+          <button className={`report-tab ${reportType === 'detail' ? 'active' : ''}`} onClick={() => handleSelectReportType('detail')}>
+            <span className="rt-title"><ListChecks size={17} color="var(--blue)" /> פירוט תשלומים</span>
+            <span className="rt-sub">מי שילם, מתי (תאריך ושעה), כמה ובאיזה אמצעי - מופרד לחודשי / בודד</span>
+          </button>
         </div>
 
-        {reportType !== 'prep' && (
+        {reportType !== 'prep' && reportType !== 'detail' && (
           <div className="controls">
             <div className="seg">
               <button className={groupBy === 'day' ? 'active' : ''} onClick={() => { setGroupBy('day'); if (metric === 'students') setMetric('amount'); }}>
@@ -332,7 +373,91 @@ const KitchenReports = () => {
           </div>
         )}
 
-        {reportType === 'prep' ? (
+        {reportType === 'detail' ? (
+          <>
+            <div className="controls">
+              <div className="seg">
+                {['today', 'week', 'month'].map(k => (
+                  <button key={k} className={detailPreset === k ? 'active' : ''} onClick={() => setDetailPreset(k)}>
+                    <CalendarDays size={16} /> {rangeTitle(k)}
+                  </button>
+                ))}
+              </div>
+              <div className="seg">
+                <button onClick={downloadDetail} disabled={!detail || detail.rows.length === 0}>
+                  <Download size={16} /> הורד לאקסל
+                </button>
+              </div>
+              <div className="detail-search">
+                <Search size={16} />
+                <input type="text" placeholder="חיפוש לפי שם תלמיד..." value={detailSearch} onChange={(e) => setDetailSearch(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="cards">
+              <div className="card">
+                <div className="card-head"><TrendingUp size={15} /> סה"כ תשלומים</div>
+                <div className="card-value">{detail?.totals.count ?? 0}</div>
+                <div className="card-sub">₪{(detail?.totals.amount ?? 0).toFixed(0)} סה"כ</div>
+              </div>
+              <div className="card daily">
+                <div className="card-head"><span className="legend-dot" style={{ background: COLOR_DAILY }} /> ארוחה בודדת / הפקדה</div>
+                <div className="card-value">{detail?.totals.dailyCount ?? 0}</div>
+                <div className="card-sub">₪{(detail?.totals.dailyAmount ?? 0).toFixed(0)}</div>
+              </div>
+              <div className="card monthly">
+                <div className="card-head"><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> תשלום חודשי</div>
+                <div className="card-value">{detail?.totals.monthlyCount ?? 0}</div>
+                <div className="card-sub">₪{(detail?.totals.monthlyAmount ?? 0).toFixed(0)}</div>
+              </div>
+            </div>
+
+            {detail && Object.keys(detail.totals.byMethod || {}).length > 0 && (
+              <div className="method-chips">
+                {Object.entries(detail.totals.byMethod).map(([m, v]) => (
+                  <span key={m} className="method-chip">{methodLabel(m)}: {v.count} · ₪{v.amount.toFixed(0)}</span>
+                ))}
+              </div>
+            )}
+
+            {[['monthly', 'תשלומים חודשיים', COLOR_MONTHLY], ['daily', 'תשלומי ארוחה בודדת / הפקדות', COLOR_DAILY]].map(([kind, title, color]) => {
+              const q = detailSearch.trim();
+              const list = (detail?.rows || []).filter(r => (kind === 'monthly' ? r.payment_type === 'monthly' : r.payment_type !== 'monthly') && (!q || r.student_name.includes(q)));
+              return (
+                <div className="panel" key={kind}>
+                  <div className="panel-title">
+                    <h2><span className="legend-dot" style={{ background: color }} /> {title} ({list.length})</h2>
+                  </div>
+                  <div className="table-wrap">
+                    {detailLoading ? (
+                      <div className="empty">טוען נתונים...</div>
+                    ) : list.length === 0 ? (
+                      <div className="empty">אין תשלומים בטווח הזה</div>
+                    ) : (
+                      <table>
+                        <thead>
+                          <tr><th>תאריך</th><th>שעה</th><th>שם תלמיד</th><th>כיתה</th><th>אמצעי תשלום</th><th>סכום</th></tr>
+                        </thead>
+                        <tbody>
+                          {list.map(r => (
+                            <tr key={r.id}>
+                              <td>{formatDate(r.transaction_date)}</td>
+                              <td>{formatTime(r.transaction_date)}</td>
+                              <td>{r.student_name}</td>
+                              <td>{r.grade}</td>
+                              <td>{methodLabel(r.payment_method)}</td>
+                              <td>₪{r.amount.toFixed(2)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    )}
+                  </div>
+                </div>
+              );
+            })}
+          </>
+        ) : reportType === 'prep' ? (
           <div className="panel">
             <div className="panel-title">
               <h2><BarChart3 size={18} /> פילוח תלמידים להיום</h2>
@@ -413,7 +538,7 @@ const KitchenReports = () => {
           </div>
         )}
 
-        {reportType !== 'prep' && (
+        {reportType !== 'prep' && reportType !== 'detail' && (
           <div className="panel">
             <div className="panel-title">
               <h2>טבלת פירוט</h2>

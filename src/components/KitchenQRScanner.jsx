@@ -666,12 +666,10 @@ const KitchenQRScanner = () => {
             <QrCode size={18} />
             <span className="label">קופה מהירה</span>
           </button>
-          {menuType === 'items' && (
-            <button className="action" onClick={() => navigate('/kitchen-terminal')} title="מסופון">
-              <Calculator size={18} />
-              <span className="label">מסופון</span>
-            </button>
-          )}
+          <button className="action" onClick={() => navigate('/kitchen-terminal')} title="מסופון">
+            <Calculator size={18} />
+            <span className="label">מסופון</span>
+          </button>
           <button className="action primary kiosk" onClick={() => navigate('/self-service-kiosk')}>
             <span className="label">פתח קיוסק עצמאי</span>
           </button>
@@ -720,12 +718,10 @@ const KitchenQRScanner = () => {
           <QrCode size={18} />
           קופה מהירה
         </button>
-        {menuType === 'items' && (
-          <button className="mobile-action-btn" onClick={() => navigate('/kitchen-terminal')}>
-            <Calculator size={18} />
-            מסופון
-          </button>
-        )}
+        <button className="mobile-action-btn" onClick={() => navigate('/kitchen-terminal')}>
+          <Calculator size={18} />
+          מסופון
+        </button>
         <button className="mobile-action-btn kiosk" onClick={() => navigate('/self-service-kiosk')}>
           קיוסק עצמאי
         </button>

@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getParentData, getTransactions, generateQRCode, deleteStudent } from '../api';
+import { getPaymentsDetailReport } from '../api';
+import { buildPaymentReportRows, rangeFor, rangeTitle } from '../paymentsReportUtils';
 import { getSchoolStudents, addMoney, getSchoolTransactions, getPendingRegistrations, handleRegistrationAction, getParentDetails, getSchools, resetUserPassword, regenerateStudentPin, getAllRegistrations, blockParentFamily, unblockParentFamily } from '../api';
 import { setToken, authFetch } from '../auth';
 import * as XLSX from 'xlsx';
@@ -489,7 +491,7 @@ const handleRegeneratePin = async () => {
 };
 
 
-const generateReport = async (type) => {
+const generateReport = async (type, customRange) => {
   const reports = {
     daily: 'דוח יומי',
     weekly: 'דוח שבועי',
@@ -500,6 +502,7 @@ const generateReport = async (type) => {
   };
 
   let reportData = [];
+  let reportLabel = null;
 
   switch(type) {
     case 'paymentStatus': {
@@ -538,19 +541,22 @@ const generateReport = async (type) => {
         'הערות': student.notes || 'אין הערות'
       }));
       break;
-    default:
-      reportData = transactions.map(payment => ({
-        'שם תלמיד': payment.students ? `${payment.students.first_name || ''} ${payment.students.last_name || ''}` : `תלמיד ${payment.student_id}`,
-        'סכום': `₪${(payment.amount || 0).toFixed(2)}`,
-        'אמצעי תשלום': payment.payment_method || 'לא ידוע',
-        'זמן': payment.transaction_date ? new Date(payment.transaction_date).toLocaleString('he-IL') : 'לא ידוע',
-        'מספר קבלה': payment.id || 'לא ידוע'
-      }));
+    default: {
+      // דוחות תשלומים (יומי/שבועי/חודשי/מותאם): רק תשלומים שנכנסו בטווח התאריכים, בשעון ישראל,
+      // עם תאריך ושעה, מופרדים לפי סוג תשלום, ובסוף סיכום לפי סוג ולפי אמצעי תשלום.
+      const preset = type === 'weekly' ? 'week' : type === 'monthly' ? 'month' : 'today';
+      const range = customRange || rangeFor(preset);
+      const detail = await getPaymentsDetailReport(schoolData?.id || currentUser?.school_id, range.from, range.to);
+      if (!detail.success) { alert(detail.message || 'שגיאה בטעינת הדוח'); return; }
+      reportData = buildPaymentReportRows(detail);
+      if (reportData.length === 0) { alert(`אין תשלומים בטווח ${range.from} עד ${range.to}`); return; }
+      reportLabel = customRange ? `דוח תשלומים ${range.from} עד ${range.to}` : `${reports[type] || 'דוח תשלומים'} (${rangeTitle(preset)})`;
+    }
   }
 
   // הצג את הדוח על המסך במקום להוריד
   setCurrentReport(reportData);
-  setReportType(reports[type]);
+  setReportType(reportLabel || reports[type]);
   setShowReportModal(true);
 };
 
@@ -560,7 +566,7 @@ const downloadReport = () => {
   // יצירת worksheet
   const ws = XLSX.utils.json_to_sheet(currentReport);
   const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, ws, reportType);
+  XLSX.utils.book_append_sheet(wb, ws, reportType.replace(/[\\/?*[\]:]/g, '-').slice(0, 31));
 
   // הורדת הקובץ
   const filename = `${reportType}_${new Date().toISOString().split('T')[0]}.xlsx`;
@@ -1071,7 +1077,13 @@ const downloadReport = () => {
                     } else if (reportType === '2') {
                       generateReport('debts');
                     } else if (reportType === '3') {
-                      generateReport('daily');
+                      const def = rangeFor('month');
+                      const from = prompt('מתאריך (YYYY-MM-DD):', def.from);
+                      if (!from) return;
+                      const to = prompt('עד תאריך (YYYY-MM-DD):', def.to);
+                      if (!to) return;
+                      if (!/^\d{4}-\d{2}-\d{2}$/.test(from) || !/^\d{4}-\d{2}-\d{2}$/.test(to) || from > to) { alert('טווח תאריכים לא תקין'); return; }
+                      generateReport('custom', { from, to });
                     } else {
                       alert('בחירה לא תקינה');
                     }

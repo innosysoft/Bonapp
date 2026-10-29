@@ -662,3 +662,17 @@ export const resetPasswordWithToken = async (token, password) => {
     throw error;
   }
 };
+
+// פירוט תשלומים (שורה לכל תשלום, עם תאריך ושעה) בטווח YYYY-MM-DD לפי שעון ישראל.
+export const getPaymentsDetailReport = async (schoolId, from, to) => {
+  try {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const response = await authFetch(`${API_URL}/schools/${schoolId}/reports/payments-detail?${params.toString()}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Get payments detail report error:', error);
+    throw error;
+  }
+};

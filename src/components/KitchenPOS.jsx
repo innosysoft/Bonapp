@@ -705,11 +705,7 @@ const stopScanning = () => {
 
       <div className="main">
         {!selectedStudent && !walkinMode && terminal ? (
-          menuType === 'items' ? (
-            <TerminalKeypadScreen onConfirm={handleTerminalConfirm} onPickItems={handleStartWalkin} />
-          ) : (
-            <div className="center-wrap"><div className="card narrow"><h2>המסופון זמין רק בתפריט לפי פריטים</h2><p style={{ color: 'var(--muted)' }}>בית הספר הזה מוגדר עם תפריט יומי. אפשר להשתמש בקופה המהירה.</p></div></div>
-          )
+          <TerminalKeypadScreen onConfirm={handleTerminalConfirm} onPickItems={handleStartWalkin} />
         ) : !selectedStudent && !walkinMode ? (
           // מסך חיפוש
           <SearchScreen

@@ -366,7 +366,7 @@ const SelfServiceKiosk = () => {
       });
       const result = await response.json();
       if (result.success) {
-        navigate('/menu-management');
+        navigate('/kitchen-scanner');
       } else {
         setExitError('סיסמה שגויה');
       }
