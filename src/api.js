@@ -676,3 +676,17 @@ export const getPaymentsDetailReport = async (schoolId, from, to) => {
     throw error;
   }
 };
+
+// רשימת התלמידים שאכלו בטווח YYYY-MM-DD (שורה לכל תלמיד: מספר ארוחות, סכום, ארוחה אחרונה).
+export const getMealsDetailReport = async (schoolId, from, to) => {
+  try {
+    const params = new URLSearchParams();
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const response = await authFetch(`${API_URL}/schools/${schoolId}/reports/meals-detail?${params.toString()}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Get meals detail report error:', error);
+    throw error;
+  }
+};

@@ -68,3 +68,47 @@ export const buildPaymentReportRows = (report) => {
   out.push(summaryLine('סה"כ', `${t.count} תשלומים`, t.amount));
   return out;
 };
+
+// ===== בחירת טווח בדוחות המטבח =====
+export const RANGE_PRESETS = [
+  { key: 'today', label: 'היום' },
+  { key: '7d', label: '7 ימים אחרונים' },
+  { key: '30d', label: '30 ימים אחרונים' },
+  { key: 'month', label: 'החודש' },
+  { key: 'prevMonth', label: 'חודש שעבר' },
+  { key: '12m', label: '12 חודשים' },
+  { key: 'custom', label: 'טווח מותאם' }
+];
+
+const addDays = (dateStr, days) => {
+  const [y, m, d] = dateStr.split('-').map(n => parseInt(n, 10));
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+};
+
+// { from, to } בפורמט YYYY-MM-DD לפי שעון ישראל
+export const reportRange = (preset, customFrom, customTo) => {
+  const today = israelDateString();
+  const [y, m] = today.split('-').map(n => parseInt(n, 10));
+  const pad = (n) => String(n).padStart(2, '0');
+  switch (preset) {
+    case 'today': return { from: today, to: today };
+    case '7d': return { from: addDays(today, -6), to: today };
+    case 'month': return { from: `${y}-${pad(m)}-01`, to: today };
+    case 'prevMonth': {
+      const first = new Date(Date.UTC(y, m - 2, 1)).toISOString().slice(0, 10);
+      return { from: first, to: addDays(`${y}-${pad(m)}-01`, -1) };
+    }
+    case '12m': return { from: new Date(Date.UTC(y, m - 1 - 11, 1)).toISOString().slice(0, 10), to: today };
+    case 'custom': return { from: customFrom || today, to: customTo || today };
+    case '30d':
+    default: return { from: addDays(today, -29), to: today };
+  }
+};
+
+const fmtDay = (dateStr) => { const [y, m, d] = dateStr.split('-'); return `${d}/${m}/${y}`; };
+
+export const rangeLabel = (range) =>
+  range.from === range.to ? fmtDay(range.from) : `${fmtDay(range.from)} – ${fmtDay(range.to)}`;
+
+export const rangeDays = (range) =>
+  Math.round((Date.parse(range.to) - Date.parse(range.from)) / 86400000) + 1;

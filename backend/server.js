@@ -2405,67 +2405,79 @@ app.get('/api/schools/:schoolId/kitchen-summary', authenticateToken, requireRole
   }
 });
 
+// ===== טווחי תאריכים לדוחות מטבח (שעון ישראל) =====
+// כל הדוחות המסכמים מקבלים from/to בפורמט YYYY-MM-DD ומחשבים גבולות יום ומפתחות תקופה לפי
+// שעון ישראל (ולא לפי שעון השרת), כך שתשלום ב-01:00 בלילה נספר ביום הנכון.
+const israelDateStr = (date) =>
+  new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Jerusalem', year: 'numeric', month: '2-digit', day: '2-digit' }).format(date);
+
+const addDaysToDateStr = (dateStr, days) => {
+  const [y, m, d] = dateStr.split('-').map(n => parseInt(n, 10));
+  return new Date(Date.UTC(y, m - 1, d + days)).toISOString().slice(0, 10);
+};
+
+const MAX_REPORT_DAYS = 800;
+
+// מחזיר { from, to, start, end } (start/end = גבולות UTC, end לא כולל) או { error }
+const resolveReportRange = (query, groupBy) => {
+  const isDate = (v) => typeof v === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(v) && !Number.isNaN(Date.parse(v));
+  const to = isDate(query.to) ? query.to : israelDateStr(new Date());
+  let from;
+  if (isDate(query.from)) {
+    from = query.from;
+  } else if (groupBy === 'month') {
+    const [y, m] = to.split('-').map(n => parseInt(n, 10));
+    from = new Date(Date.UTC(y, m - 1 - 11, 1)).toISOString().slice(0, 10);
+  } else {
+    from = addDaysToDateStr(to, -29);
+  }
+  if (from > to) return { error: 'טווח תאריכים לא תקין' };
+  const days = Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1;
+  if (days > MAX_REPORT_DAYS) return { error: 'הטווח ארוך מדי' };
+  return { from, to, start: israelDayStartUtc(from), end: israelDayStartUtc(addDaysToDateStr(to, 1)) };
+};
+
+// כל מפתחות התקופות בטווח (גם ריקות), כדי שהגרף יציג ציר רציף בלי חורים
+const periodKeysInRange = (from, to, groupBy) => {
+  const keys = [];
+  for (let d = from; d <= to; d = addDaysToDateStr(d, 1)) {
+    const key = groupBy === 'month' ? d.slice(0, 7) : d;
+    if (keys[keys.length - 1] !== key) keys.push(key);
+  }
+  return keys;
+};
+
+const periodKeyOf = (isoDate, groupBy) => {
+  const day = israelDateStr(new Date(isoDate));
+  return groupBy === 'month' ? day.slice(0, 7) : day;
+};
+
 // דוח עסקאות (תשלומים) למנהל מטבח - קיבוץ לפי יום/חודש, מספר עסקאות וסכום, עם פילוח
 // לפי סוג תשלום (בודד/יומי מול חודשי). קריאה בלבד, לא נוגע בשום טבלה קיימת.
 app.get('/api/schools/:schoolId/reports/transactions', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
   try {
     const { schoolId } = req.params;
     const groupBy = req.query.groupBy === 'month' ? 'month' : 'day';
-    const now = new Date();
+    const range = resolveReportRange(req.query, groupBy);
+    if (range.error) return res.status(400).json({ success: false, message: range.error });
 
-    let fromDate;
-    if (req.query.from) {
-      fromDate = new Date(`${req.query.from}T00:00:00`);
-    } else {
-      fromDate = new Date(now);
-      if (groupBy === 'month') {
-        fromDate.setMonth(fromDate.getMonth() - 11);
-        fromDate.setDate(1);
-      } else {
-        fromDate.setDate(fromDate.getDate() - 29);
-      }
-      fromDate.setHours(0, 0, 0, 0);
-    }
-
-    let toDate;
-    if (req.query.to) {
-      toDate = new Date(`${req.query.to}T23:59:59`);
-    } else {
-      toDate = new Date(now);
-      toDate.setHours(23, 59, 59, 999);
-    }
-
-    const { data: transactions, error } = await supabase
+    // בעמודים - PostgREST מחזיר לכל היותר 1000 שורות בבקשה
+    const transactions = await fetchAllRows(() => supabase
       .from('transactions')
       .select('amount, payment_type, transaction_date')
       .eq('school_id', schoolId)
       .eq('type', 'payment')
       .not('transaction_date', 'is', null)
-      .gte('transaction_date', fromDate.toISOString())
-      .lte('transaction_date', toDate.toISOString());
-    if (error) throw error;
+      .gte('transaction_date', range.start.toISOString())
+      .lt('transaction_date', range.end.toISOString())
+      .order('id'));
 
-    const keyOf = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return groupBy === 'month' ? `${y}-${m}` : `${y}-${m}-${day}`;
-    };
     const emptyRow = (period) => ({ period, count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0 });
-
-    // ממלאים מראש את כל התקופות בטווח (כולל ריקות) כדי שהגרף יציג ציר רציף בלי חורים
     const rowsMap = {};
-    const cursor = new Date(fromDate);
-    if (groupBy === 'month') cursor.setDate(1);
-    while (cursor <= toDate) {
-      const key = keyOf(cursor);
-      rowsMap[key] = emptyRow(key);
-      if (groupBy === 'month') cursor.setMonth(cursor.getMonth() + 1);
-      else cursor.setDate(cursor.getDate() + 1);
-    }
+    periodKeysInRange(range.from, range.to, groupBy).forEach(key => { rowsMap[key] = emptyRow(key); });
 
-    (transactions || []).forEach(t => {
-      const key = keyOf(new Date(t.transaction_date));
+    transactions.forEach(t => {
+      const key = periodKeyOf(t.transaction_date, groupBy);
       if (!rowsMap[key]) rowsMap[key] = emptyRow(key);
       const amount = parseFloat(t.amount) || 0;
       rowsMap[key].count += 1;
@@ -2500,7 +2512,7 @@ app.get('/api/schools/:schoolId/reports/transactions', authenticateToken, requir
     totals.dailyAmount = Math.round(totals.dailyAmount * 100) / 100;
     totals.monthlyAmount = Math.round(totals.monthlyAmount * 100) / 100;
 
-    res.json({ success: true, groupBy, from: fromDate.toISOString(), to: toDate.toISOString(), rows, totals });
+    res.json({ success: true, groupBy, from: range.from, to: range.to, rows, totals });
 
   } catch (error) {
     console.error('Transactions report error:', error);
@@ -2611,64 +2623,29 @@ app.get('/api/schools/:schoolId/reports/meals', authenticateToken, requireRole('
   try {
     const { schoolId } = req.params;
     const groupBy = req.query.groupBy === 'month' ? 'month' : 'day';
-    const now = new Date();
+    const range = resolveReportRange(req.query, groupBy);
+    if (range.error) return res.status(400).json({ success: false, message: range.error });
 
-    let fromDate;
-    if (req.query.from) {
-      fromDate = new Date(`${req.query.from}T00:00:00`);
-    } else {
-      fromDate = new Date(now);
-      if (groupBy === 'month') {
-        fromDate.setMonth(fromDate.getMonth() - 11);
-        fromDate.setDate(1);
-      } else {
-        fromDate.setDate(fromDate.getDate() - 29);
-      }
-      fromDate.setHours(0, 0, 0, 0);
-    }
-
-    let toDate;
-    if (req.query.to) {
-      toDate = new Date(`${req.query.to}T23:59:59`);
-    } else {
-      toDate = new Date(now);
-      toDate.setHours(23, 59, 59, 999);
-    }
-
-    const { data: meals, error } = await supabase
+    // בעמודים - ארוחות הן הרבה יותר מ-1000 בחודש, וקריאה חד-פעמית הייתה חותכת את הדוח
+    const meals = await fetchAllRows(() => supabase
       .from('transactions')
       .select('amount, student_id, transaction_date')
       .eq('school_id', schoolId)
       .eq('type', 'meal')
       .not('transaction_date', 'is', null)
-      .gte('transaction_date', fromDate.toISOString())
-      .lte('transaction_date', toDate.toISOString());
-    if (error) throw error;
+      .gte('transaction_date', range.start.toISOString())
+      .lt('transaction_date', range.end.toISOString())
+      .order('id'));
 
-    const keyOf = (d) => {
-      const y = d.getFullYear();
-      const m = String(d.getMonth() + 1).padStart(2, '0');
-      const day = String(d.getDate()).padStart(2, '0');
-      return groupBy === 'month' ? `${y}-${m}` : `${y}-${m}-${day}`;
-    };
-
-    // ממלאים מראש את כל התקופות בטווח (כולל ריקות) כדי שהגרף יציג ציר רציף בלי חורים
     const rowsMap = {};
     const rowStudents = {};
-    const cursor = new Date(fromDate);
-    if (groupBy === 'month') cursor.setDate(1);
-    while (cursor <= toDate) {
-      const key = keyOf(cursor);
-      rowsMap[key] = { period: key, count: 0, amount: 0, uniqueStudents: 0 };
-      rowStudents[key] = new Set();
-      if (groupBy === 'month') cursor.setMonth(cursor.getMonth() + 1);
-      else cursor.setDate(cursor.getDate() + 1);
-    }
+    const newRow = (key) => { rowsMap[key] = { period: key, count: 0, amount: 0, uniqueStudents: 0 }; rowStudents[key] = new Set(); };
+    periodKeysInRange(range.from, range.to, groupBy).forEach(newRow);
 
     const allStudents = new Set();
-    (meals || []).forEach(t => {
-      const key = keyOf(new Date(t.transaction_date));
-      if (!rowsMap[key]) { rowsMap[key] = { period: key, count: 0, amount: 0, uniqueStudents: 0 }; rowStudents[key] = new Set(); }
+    meals.forEach(t => {
+      const key = periodKeyOf(t.transaction_date, groupBy);
+      if (!rowsMap[key]) newRow(key);
       rowsMap[key].count += 1;
       rowsMap[key].amount += parseFloat(t.amount) || 0;
       if (t.student_id) {
@@ -2692,11 +2669,68 @@ app.get('/api/schools/:schoolId/reports/meals', authenticateToken, requireRole('
     totals.amount = Math.round(totals.amount * 100) / 100;
     totals.uniqueStudents = allStudents.size;
 
-    res.json({ success: true, groupBy, from: fromDate.toISOString(), to: toDate.toISOString(), rows, totals });
+    res.json({ success: true, groupBy, from: range.from, to: range.to, rows, totals });
 
   } catch (error) {
     console.error('Meals report error:', error);
     res.status(500).json({ success: false, message: 'שגיאה בטעינת דוח ארוחות' });
+  }
+});
+
+// רשימת התלמידים שאכלו בטווח: שורה לכל תלמיד, עם כמה ארוחות, כמה שולם עליהן ומתי אכל לאחרונה.
+// נפתח בלחיצה על כרטיס בדוח "ארוחות שסופקו". קריאה בלבד.
+app.get('/api/schools/:schoolId/reports/meals-detail', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const range = resolveReportRange(req.query, 'day');
+    if (range.error) return res.status(400).json({ success: false, message: range.error });
+
+    const meals = await fetchAllRows(() => supabase
+      .from('transactions')
+      .select('amount, student_id, transaction_date')
+      .eq('school_id', schoolId)
+      .eq('type', 'meal')
+      .not('transaction_date', 'is', null)
+      .gte('transaction_date', range.start.toISOString())
+      .lt('transaction_date', range.end.toISOString())
+      .order('id'));
+
+    const perStudent = new Map();
+    meals.forEach(t => {
+      const entry = perStudent.get(t.student_id) || { student_id: t.student_id, count: 0, amount: 0, last: null };
+      entry.count += 1;
+      entry.amount += parseFloat(t.amount) || 0;
+      if (!entry.last || t.transaction_date > entry.last) entry.last = t.transaction_date;
+      perStudent.set(t.student_id, entry);
+    });
+
+    const ids = [...perStudent.keys()].filter(Boolean);
+    const studentById = new Map();
+    for (let i = 0; i < ids.length; i += 200) {
+      const { data: studs, error: studError } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, grade')
+        .in('id', ids.slice(i, i + 200));
+      if (studError) throw studError;
+      (studs || []).forEach(st => studentById.set(st.id, st));
+    }
+
+    const students = [...perStudent.values()].map(e => {
+      const st = studentById.get(e.student_id);
+      return {
+        student_id: e.student_id,
+        student_name: st ? `${st.first_name || ''} ${st.last_name || ''}`.trim() : 'תלמיד שנמחק / אורח',
+        grade: st?.grade || '',
+        count: e.count,
+        amount: Math.round(e.amount * 100) / 100,
+        last_meal: e.last
+      };
+    }).sort((a, b) => b.count - a.count || a.student_name.localeCompare(b.student_name, 'he'));
+
+    res.json({ success: true, from: range.from, to: range.to, students, totals: { students: students.length, meals: meals.length } });
+  } catch (error) {
+    console.error('Meals detail report error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת פירוט ארוחות' });
   }
 });
 

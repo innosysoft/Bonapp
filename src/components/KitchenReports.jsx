@@ -1,8 +1,8 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTransactionsReport, getMealsReport, getKitchenSummary, getSchools, getPaymentsDetailReport } from '../api';
+import { getTransactionsReport, getMealsReport, getMealsDetailReport, getKitchenSummary, getSchools, getPaymentsDetailReport } from '../api';
 import * as XLSX from 'xlsx';
-import { buildPaymentReportRows, rangeFor, rangeTitle, formatDate, formatTime, methodLabel } from '../paymentsReportUtils';
+import { buildPaymentReportRows, RANGE_PRESETS, reportRange, rangeLabel, rangeDays, formatDate, formatTime, methodLabel } from '../paymentsReportUtils';
 import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet, Users, UtensilsCrossed, CreditCard, ClipboardList, Sun, ListChecks, Download, Search } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell
@@ -40,7 +40,13 @@ const KitchenReports = () => {
   const [currentUser, setCurrentUser] = useState(null);
   const [schoolName, setSchoolName] = useState('');
   const [reportType, setReportType] = useState('payments'); // 'payments' | 'meals' | 'prep' | 'detail'
-  const [detailPreset, setDetailPreset] = useState('today'); // 'today' | 'week' | 'month'
+  const [rangePreset, setRangePreset] = useState('30d');
+  const [customFrom, setCustomFrom] = useState('');
+  const [customTo, setCustomTo] = useState('');
+  const [drill, setDrill] = useState(null); // payments: 'all' | 'daily' | 'monthly' · meals: 'students'
+  const [mealsDetail, setMealsDetail] = useState(null);
+  const [mealsDetailLoading, setMealsDetailLoading] = useState(false);
+  const reportReqRef = useRef(0);
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailSearch, setDetailSearch] = useState('');
@@ -51,17 +57,22 @@ const KitchenReports = () => {
   const [summary, setSummary] = useState(null); // kitchen-summary: מצב "היום" בזמן אמת
   const [summaryLoading, setSummaryLoading] = useState(true);
 
-  const loadReport = useCallback(async (schoolId, type, mode) => {
+  const range = useMemo(() => reportRange(rangePreset, customFrom, customTo), [rangePreset, customFrom, customTo]);
+  const rangeValid = range.from <= range.to && rangeDays(range) <= 800;
+  const rangeText = rangeLabel(range);
+
+  const loadReport = useCallback(async (schoolId, type, mode, from, to) => {
+    const reqId = ++reportReqRef.current;
     setLoading(true);
     try {
       const result = type === 'meals'
-        ? await getMealsReport(schoolId, mode)
-        : await getTransactionsReport(schoolId, mode);
-      if (result.success) setReport(result);
+        ? await getMealsReport(schoolId, mode, from, to)
+        : await getTransactionsReport(schoolId, mode, from, to);
+      if (reqId === reportReqRef.current && result.success) setReport({ ...result, kind: type });
     } catch (error) {
       console.error('Error loading report:', error);
     } finally {
-      setLoading(false);
+      if (reqId === reportReqRef.current) setLoading(false);
     }
   }, []);
 
@@ -95,27 +106,29 @@ const KitchenReports = () => {
       } catch (error) {
         console.error('Error loading school:', error);
       }
-      await Promise.all([
-        loadReport(user.school_id, reportType, groupBy),
-        loadSummary(user.school_id)
-      ]);
+      await loadSummary(user.school_id);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate]);
 
+  // דוחות מסכמים (תשלומים / ארוחות) לפי הטווח שנבחר
   useEffect(() => {
-    if (currentUser && reportType !== 'prep' && reportType !== 'detail') loadReport(currentUser.school_id, reportType, groupBy);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groupBy, reportType]);
+    if (!currentUser || !rangeValid || (reportType !== 'payments' && reportType !== 'meals')) return;
+    loadReport(currentUser.school_id, reportType, groupBy, range.from, range.to);
+  }, [currentUser, reportType, groupBy, range.from, range.to, rangeValid, loadReport]);
 
-  // פירוט תשלומים: שורה לכל תשלום, עם תאריך ושעה, לפי טווח מוכן (שעון ישראל)
+  // שינוי טווח/דוח סוגר את רשימת הפירוט הפתוחה
+  useEffect(() => { setDrill(null); }, [reportType, range.from, range.to]);
+
+  // פירוט תשלומים: שורה לכל תשלום, עם תאריך ושעה (טאב "פירוט תשלומים" וגם פתיחה מכרטיס בדוח התשלומים)
+  const needPaymentsDetail = reportType === 'detail' || (reportType === 'payments' && drill);
   useEffect(() => {
-    if (!currentUser || reportType !== 'detail') return undefined;
+    if (!currentUser || !rangeValid || !needPaymentsDetail) return undefined;
     let cancelled = false;
     (async () => {
       setDetailLoading(true);
+      setDetail(null);
       try {
-        const range = rangeFor(detailPreset);
         const result = await getPaymentsDetailReport(currentUser.school_id, range.from, range.to);
         if (!cancelled && result.success) setDetail(result);
       } catch (error) {
@@ -125,7 +138,26 @@ const KitchenReports = () => {
       }
     })();
     return () => { cancelled = true; };
-  }, [currentUser, reportType, detailPreset]);
+  }, [currentUser, needPaymentsDetail, range.from, range.to, rangeValid]);
+
+  // פירוט ארוחות: שורה לכל תלמיד שאכל בטווח (נפתח מכרטיס בדוח "ארוחות שסופקו")
+  useEffect(() => {
+    if (!currentUser || !rangeValid || reportType !== 'meals' || !drill) return undefined;
+    let cancelled = false;
+    (async () => {
+      setMealsDetailLoading(true);
+      setMealsDetail(null);
+      try {
+        const result = await getMealsDetailReport(currentUser.school_id, range.from, range.to);
+        if (!cancelled && result.success) setMealsDetail(result);
+      } catch (error) {
+        console.error('Error loading meals detail:', error);
+      } finally {
+        if (!cancelled) setMealsDetailLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser, reportType, drill, range.from, range.to, rangeValid]);
 
   const downloadDetail = () => {
     const data = buildPaymentReportRows(detail);
@@ -133,6 +165,17 @@ const KitchenReports = () => {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'פירוט תשלומים');
     XLSX.writeFile(wb, `פירוט_תשלומים_${detail.from}_${detail.to}.xlsx`);
+  };
+
+  const handleSelectPreset = (key) => {
+    setRangePreset(key);
+    if (key === '12m') setGroupBy('month');
+    else if (groupBy === 'month') { setGroupBy('day'); if (metric === 'students') setMetric('amount'); }
+    if (key === 'custom' && !customFrom) {
+      const r = reportRange('30d');
+      setCustomFrom(r.from);
+      setCustomTo(r.to);
+    }
   };
 
   const handleSelectReportType = (type) => {
@@ -146,9 +189,11 @@ const KitchenReports = () => {
     navigate('/login');
   };
 
-  const rows = report?.rows || [];
-  const paymentsTotals = { count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0, ...(reportType === 'payments' ? report?.totals : {}) };
-  const mealsTotals = { count: 0, amount: 0, uniqueStudents: 0, ...(reportType === 'meals' ? report?.totals : {}) };
+  // הדוח שנטען מוצג רק בלשונית שלו - אחרת בהחלפת לשונית נראה לרגע נתונים של דוח אחר
+  const activeReport = report?.kind === reportType ? report : null;
+  const rows = activeReport?.rows || [];
+  const paymentsTotals = { count: 0, amount: 0, dailyCount: 0, dailyAmount: 0, monthlyCount: 0, monthlyAmount: 0, ...(reportType === 'payments' ? activeReport?.totals : {}) };
+  const mealsTotals = { count: 0, amount: 0, uniqueStudents: 0, ...(reportType === 'meals' ? activeReport?.totals : {}) };
   const chartData = rows.map(r => ({
     ...r,
     label: formatPeriodLabel(r.period, groupBy)
@@ -219,6 +264,20 @@ const KitchenReports = () => {
         .bap-reports .panel-title h2{font-size:17px;margin:0;display:flex;align-items:center;gap:8px}
         .bap-reports .legend-dot{display:inline-block;width:10px;height:10px;border-radius:50%}
 
+        .bap-reports .range-bar{display:flex;align-items:center;flex-wrap:wrap;gap:12px;background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px 16px}
+        .bap-reports .range-presets{flex-wrap:wrap}
+        .bap-reports .range-custom{display:flex;gap:12px;flex-wrap:wrap;font-size:13px;font-weight:600;color:var(--muted)}
+        .bap-reports .range-custom input{border:1px solid var(--line);border-radius:8px;padding:7px 10px;font:inherit;color:var(--navy);margin-inline-start:6px}
+        .bap-reports .range-label{display:flex;align-items:center;gap:8px;color:var(--navy);font-size:14px;margin-inline-start:auto}
+        .bap-reports .range-label strong{font-weight:800}
+        .bap-reports .range-bad{color:#c0392b;font-weight:700}
+        .bap-reports .card.clickable{text-align:right;font:inherit;color:inherit;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+        .bap-reports .card.clickable:hover{border-color:var(--blue);box-shadow:0 8px 24px rgba(23,50,74,.12)}
+        .bap-reports .card.clickable.selected{border-color:var(--blue);box-shadow:0 0 0 3px rgba(53,107,140,.15)}
+        .bap-reports .card .card-range{font-size:12.5px;font-weight:700;color:var(--navy)}
+        .bap-reports .card .card-hint{font-size:12px;color:var(--blue);font-weight:600}
+        .bap-reports .drill-close{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 14px;font-weight:700;color:var(--navy)}
+        .bap-reports .drill-panel .panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
         .bap-reports .detail-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:0 12px;min-height:40px}
         .bap-reports .detail-search input{border:0;outline:0;font:inherit;min-width:180px;background:transparent}
         .bap-reports .method-chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -275,6 +334,30 @@ const KitchenReports = () => {
           </button>
         </div>
 
+        {reportType !== 'prep' && (
+          <div className="range-bar">
+            <div className="seg range-presets">
+              {RANGE_PRESETS.map(pr => (
+                <button key={pr.key} className={rangePreset === pr.key ? 'active' : ''} onClick={() => handleSelectPreset(pr.key)}>
+                  {pr.label}
+                </button>
+              ))}
+            </div>
+            {rangePreset === 'custom' && (
+              <div className="range-custom">
+                <label>מתאריך <input type="date" value={customFrom} max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} /></label>
+                <label>עד תאריך <input type="date" value={customTo} min={customFrom || undefined} onChange={(e) => setCustomTo(e.target.value)} /></label>
+              </div>
+            )}
+            <div className="range-label">
+              <CalendarDays size={16} />
+              {rangeValid
+                ? <span>הנתונים מוצגים לטווח: <strong>{rangeText}</strong> ({rangeDays(range)} {rangeDays(range) === 1 ? 'יום' : 'ימים'})</span>
+                : <span className="range-bad">טווח תאריכים לא תקין</span>}
+            </div>
+          </div>
+        )}
+
         {reportType !== 'prep' && reportType !== 'detail' && (
           <div className="controls">
             <div className="seg">
@@ -316,38 +399,125 @@ const KitchenReports = () => {
         )}
 
         {reportType === 'payments' && (
+          <>
           <div className="cards">
-            <div className="card">
+            <button type="button" className={`card clickable ${drill === 'all' ? 'selected' : ''}`} onClick={() => setDrill(drill === 'all' ? null : 'all')}>
               <div className="card-head"><TrendingUp size={15} /> סה"כ עסקאות</div>
               <div className="card-value">{paymentsTotals.count}</div>
               <div className="card-sub">₪{paymentsTotals.amount.toFixed(0)} סה"כ</div>
-            </div>
-            <div className="card daily">
+              <div className="card-range">{rangeText}</div>
+              <div className="card-hint">לחץ לרשימת התלמידים</div>
+            </button>
+            <button type="button" className={`card daily clickable ${drill === 'daily' ? 'selected' : ''}`} onClick={() => setDrill(drill === 'daily' ? null : 'daily')}>
               <div className="card-head"><span className="legend-dot" style={{ background: COLOR_DAILY }} /> תשלום לארוחה בודדת</div>
               <div className="card-value">{paymentsTotals.dailyCount}</div>
               <div className="card-sub">₪{paymentsTotals.dailyAmount.toFixed(0)}</div>
-            </div>
-            <div className="card monthly">
+              <div className="card-range">{rangeText}</div>
+              <div className="card-hint">לחץ לרשימת התלמידים</div>
+            </button>
+            <button type="button" className={`card monthly clickable ${drill === 'monthly' ? 'selected' : ''}`} onClick={() => setDrill(drill === 'monthly' ? null : 'monthly')}>
               <div className="card-head"><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> תשלום לארוחה חודשית</div>
               <div className="card-value">{paymentsTotals.monthlyCount}</div>
               <div className="card-sub">₪{paymentsTotals.monthlyAmount.toFixed(0)}</div>
-            </div>
+              <div className="card-range">{rangeText}</div>
+              <div className="card-hint">לחץ לרשימת התלמידים</div>
+            </button>
           </div>
+
+          {drill && (
+            <div className="panel drill-panel">
+              <div className="panel-title">
+                <h2>
+                  {drill === 'monthly' ? 'תלמידים ששילמו חודשי' : drill === 'daily' ? 'תלמידים ששילמו לארוחה בודדת' : 'כל התשלומים'} · {rangeText}
+                </h2>
+                <button type="button" className="drill-close" onClick={() => setDrill(null)}>סגור</button>
+              </div>
+              <div className="table-wrap">
+                {detailLoading || !detail ? (
+                  <div className="empty">טוען נתונים...</div>
+                ) : (() => {
+                  const list = detail.rows.filter(r => drill === 'all' || (drill === 'monthly' ? r.payment_type === 'monthly' : r.payment_type !== 'monthly'));
+                  return list.length === 0 ? (
+                    <div className="empty">אין תשלומים בטווח הזה</div>
+                  ) : (
+                    <table>
+                      <thead>
+                        <tr><th>תאריך</th><th>שעה</th><th>שם תלמיד</th><th>כיתה</th><th>סוג</th><th>אמצעי תשלום</th><th>סכום</th></tr>
+                      </thead>
+                      <tbody>
+                        {list.map(r => (
+                          <tr key={r.id}>
+                            <td>{formatDate(r.transaction_date)}</td>
+                            <td>{formatTime(r.transaction_date)}</td>
+                            <td>{r.student_name}</td>
+                            <td>{r.grade}</td>
+                            <td>{r.payment_type === 'monthly' ? 'חודשי' : 'בודד'}</td>
+                            <td>{methodLabel(r.payment_method)}</td>
+                            <td>₪{r.amount.toFixed(2)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+            </div>
+          )}
+          </>
         )}
 
         {reportType === 'meals' && (
+          <>
           <div className="cards">
-            <div className="card meals">
-              <div className="card-head"><UtensilsCrossed size={15} /> סה"כ ארוחות שסופקו (בטווח שנבחר)</div>
+            <button type="button" className={`card meals clickable ${drill === 'students' ? 'selected' : ''}`} onClick={() => setDrill(drill ? null : 'students')}>
+              <div className="card-head"><UtensilsCrossed size={15} /> סה"כ ארוחות שסופקו</div>
               <div className="card-value">{mealsTotals.count}</div>
               <div className="card-sub">₪{mealsTotals.amount.toFixed(0)} הכנסה מארוחות</div>
-            </div>
-            <div className="card meals">
+              <div className="card-range">בטווח: {rangeText}</div>
+              <div className="card-hint">לחץ לרשימת התלמידים</div>
+            </button>
+            <button type="button" className={`card meals clickable ${drill === 'students' ? 'selected' : ''}`} onClick={() => setDrill(drill ? null : 'students')}>
               <div className="card-head"><Users size={15} /> כמה ילדים שונים אכלו</div>
               <div className="card-value">{mealsTotals.uniqueStudents}</div>
               <div className="card-sub">כל ילד נספר פעם אחת בלבד, לא משנה כמה פעמים אכל. לא קשור לאופן התשלום</div>
-            </div>
+              <div className="card-range">בטווח: {rangeText}</div>
+              <div className="card-hint">לחץ לרשימת התלמידים</div>
+            </button>
           </div>
+
+          {drill && (
+            <div className="panel drill-panel">
+              <div className="panel-title">
+                <h2>תלמידים שאכלו · {rangeText}</h2>
+                <button type="button" className="drill-close" onClick={() => setDrill(null)}>סגור</button>
+              </div>
+              <div className="table-wrap">
+                {mealsDetailLoading || !mealsDetail ? (
+                  <div className="empty">טוען נתונים...</div>
+                ) : mealsDetail.students.length === 0 ? (
+                  <div className="empty">אף תלמיד לא אכל בטווח הזה</div>
+                ) : (
+                  <table>
+                    <thead>
+                      <tr><th>שם תלמיד</th><th>כיתה</th><th>מספר ארוחות</th><th>סכום</th><th>ארוחה אחרונה</th></tr>
+                    </thead>
+                    <tbody>
+                      {mealsDetail.students.map(st => (
+                        <tr key={st.student_id || st.student_name}>
+                          <td>{st.student_name}</td>
+                          <td>{st.grade}</td>
+                          <td>{st.count}</td>
+                          <td>₪{st.amount.toFixed(2)}</td>
+                          <td>{st.last_meal ? `${formatDate(st.last_meal)} ${formatTime(st.last_meal)}` : ''}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                )}
+              </div>
+            </div>
+          )}
+          </>
         )}
 
         {reportType === 'prep' && (
@@ -376,13 +546,6 @@ const KitchenReports = () => {
         {reportType === 'detail' ? (
           <>
             <div className="controls">
-              <div className="seg">
-                {['today', 'week', 'month'].map(k => (
-                  <button key={k} className={detailPreset === k ? 'active' : ''} onClick={() => setDetailPreset(k)}>
-                    <CalendarDays size={16} /> {rangeTitle(k)}
-                  </button>
-                ))}
-              </div>
               <div className="seg">
                 <button onClick={downloadDetail} disabled={!detail || detail.rows.length === 0}>
                   <Download size={16} /> הורד לאקסל
