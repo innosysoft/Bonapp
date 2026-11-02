@@ -2734,6 +2734,106 @@ app.get('/api/schools/:schoolId/reports/meals-detail', authenticateToken, requir
   }
 });
 
+// מי שילם מנוי חודשי עבור חודש מסוים (למשל נובמבר), גם אם התשלום נעשה מראש בחודש קודם. מבוסס על
+// טבלת monthly_payments (שורה = "שולם עבור החודש הזה"), להבדיל מדוחות התשלומים שמסודרים לפי תאריך
+// התשלום. תאריך/סכום/אמצעי תשלום נלקחים מעסקת התשלום החודשית הקרובה לרגע יצירת השורה (שורות ישנות
+// נשמרו בלי סכום). קריאה בלבד.
+app.get('/api/schools/:schoolId/reports/monthly-paid', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), requireSchoolAccess(req => req.params.schoolId), async (req, res) => {
+  try {
+    const { schoolId } = req.params;
+    const year = parseInt(req.query.year, 10);
+    const month = parseInt(req.query.month, 10);
+    if (!Number.isInteger(year) || year < 2020 || year > 2100 || !Number.isInteger(month) || month < 1 || month > 12) {
+      return res.status(400).json({ success: false, message: 'חודש לא תקין' });
+    }
+
+    const paidRows = await fetchAllRows(() => supabase
+      .from('monthly_payments')
+      .select('id, student_id, amount, credited, created_at')
+      .eq('school_id', schoolId)
+      .eq('year', year)
+      .eq('month', month)
+      .order('id'));
+
+    // תלמיד פעם אחת (אם נוצרה שורה כפולה - נשארת הראשונה)
+    const rowByStudent = new Map();
+    paidRows.forEach(r => { if (!rowByStudent.has(r.student_id)) rowByStudent.set(r.student_id, r); });
+    const studentIds = [...rowByStudent.keys()];
+
+    const studentById = new Map();
+    for (let i = 0; i < studentIds.length; i += 200) {
+      const { data: studs, error: studError } = await supabase
+        .from('students')
+        .select('id, first_name, last_name, grade')
+        .in('id', studentIds.slice(i, i + 200));
+      if (studError) throw studError;
+      (studs || []).forEach(st => studentById.set(st.id, st));
+    }
+
+    // עסקאות תשלום חודשי בסביבת זמני יצירת השורות, להתאמה (±10 דקות) לכל שורה
+    const txByStudent = new Map();
+    if (paidRows.length > 0) {
+      const times = paidRows.map(r => Date.parse(r.created_at)).filter(Number.isFinite);
+      const lo = new Date(Math.min(...times) - 3600 * 1000).toISOString();
+      const hi = new Date(Math.max(...times) + 3600 * 1000).toISOString();
+      const txs = await fetchAllRows(() => supabase
+        .from('transactions')
+        .select('student_id, amount, payment_method, transaction_date')
+        .eq('school_id', schoolId)
+        .eq('type', 'payment')
+        .eq('payment_type', 'monthly')
+        .gte('transaction_date', lo)
+        .lte('transaction_date', hi)
+        .order('id'));
+      txs.forEach(t => {
+        if (!txByStudent.has(t.student_id)) txByStudent.set(t.student_id, []);
+        txByStudent.get(t.student_id).push(t);
+      });
+    }
+
+    const monthStart = israelDayStartUtc(`${year}-${String(month).padStart(2, '0')}-01`);
+    const rows = studentIds.map(id => {
+      const r = rowByStudent.get(id);
+      const st = studentById.get(id);
+      const created = Date.parse(r.created_at);
+      let best = null;
+      (txByStudent.get(id) || []).forEach(t => {
+        const diff = Math.abs(Date.parse(t.transaction_date) - created);
+        if (diff <= 10 * 60 * 1000 && (!best || diff < best.diff)) best = { t, diff };
+      });
+      const amount = r.amount !== null && r.amount !== undefined ? parseFloat(r.amount) : (best ? parseFloat(best.t.amount) : null);
+      const paidAt = best ? best.t.transaction_date : r.created_at;
+      return {
+        student_id: id,
+        student_name: st ? `${st.first_name || ''} ${st.last_name || ''}`.trim() : 'תלמיד שנמחק',
+        grade: st?.grade || '',
+        paid_at: paidAt,
+        amount: amount === null || Number.isNaN(amount) ? null : Math.round(amount * 100) / 100,
+        payment_method: best?.t.payment_method || '',
+        paid_in_advance: new Date(paidAt) < monthStart,
+        pending_credit: r.credited === false
+      };
+    }).sort((a, b) => Date.parse(b.paid_at) - Date.parse(a.paid_at));
+
+    const known = rows.filter(r => r.amount !== null);
+    res.json({
+      success: true,
+      year,
+      month,
+      rows,
+      totals: {
+        count: rows.length,
+        amount: Math.round(known.reduce((a, r) => a + r.amount, 0) * 100) / 100,
+        unknownAmountCount: rows.length - known.length,
+        inAdvanceCount: rows.filter(r => r.paid_in_advance).length
+      }
+    });
+  } catch (error) {
+    console.error('Monthly paid report error:', error);
+    res.status(500).json({ success: false, message: 'שגיאה בטעינת דוח מנוי חודשי' });
+  }
+});
+
 app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { studentId, items, total, forceOverride } = req.body;

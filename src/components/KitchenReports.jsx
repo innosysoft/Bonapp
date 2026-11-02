@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getTransactionsReport, getMealsReport, getMealsDetailReport, getKitchenSummary, getSchools, getPaymentsDetailReport } from '../api';
+import { getTransactionsReport, getMealsReport, getMealsDetailReport, getMonthlyPaidReport, getKitchenSummary, getSchools, getPaymentsDetailReport } from '../api';
 import * as XLSX from 'xlsx';
-import { buildPaymentReportRows, RANGE_PRESETS, reportRange, rangeLabel, rangeDays, formatDate, formatTime, methodLabel } from '../paymentsReportUtils';
-import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet, Users, UtensilsCrossed, CreditCard, ClipboardList, Sun, ListChecks, Download, Search } from 'lucide-react';
+import { buildPaymentReportRows, RANGE_PRESETS, reportRange, rangeLabel, rangeDays, formatDate, formatTime, methodLabel, israelDateString } from '../paymentsReportUtils';
+import { BarChart3, LogOut, TrendingUp, Receipt, CalendarDays, Wallet, Users, UtensilsCrossed, CreditCard, ClipboardList, Sun, ListChecks, CalendarCheck, Download, Search } from 'lucide-react';
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, PieChart, Pie, Cell
 } from 'recharts';
@@ -35,6 +35,19 @@ const formatPeriodLabel = (period, groupBy) => {
   return `${d}/${m}`;
 };
 
+const HEBREW_MONTHS = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+
+// אפשרויות בחירת חודש: 8 חודשים אחורה עד 3 קדימה (לפי שעון ישראל), למשל כדי לראות מי כבר שילם לחודש הבא
+const monthOptions = () => {
+  const [y, m] = israelDateString().split('-').map(n => parseInt(n, 10));
+  const opts = [];
+  for (let i = -8; i <= 3; i++) {
+    const d = new Date(Date.UTC(y, m - 1 + i, 1));
+    opts.push({ year: d.getUTCFullYear(), month: d.getUTCMonth() + 1 });
+  }
+  return opts.reverse();
+};
+
 const KitchenReports = () => {
   const navigate = useNavigate();
   const [currentUser, setCurrentUser] = useState(null);
@@ -47,6 +60,13 @@ const KitchenReports = () => {
   const [mealsDetail, setMealsDetail] = useState(null);
   const [mealsDetailLoading, setMealsDetailLoading] = useState(false);
   const reportReqRef = useRef(0);
+  const [monthSel, setMonthSel] = useState(() => {
+    const [y, m] = israelDateString().split('-').map(n => parseInt(n, 10));
+    return { year: y, month: m };
+  });
+  const [monthly, setMonthly] = useState(null);
+  const [monthlyLoading, setMonthlyLoading] = useState(false);
+  const [monthlySearch, setMonthlySearch] = useState('');
   const [detail, setDetail] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [detailSearch, setDetailSearch] = useState('');
@@ -167,6 +187,41 @@ const KitchenReports = () => {
     XLSX.writeFile(wb, `פירוט_תשלומים_${detail.from}_${detail.to}.xlsx`);
   };
 
+  // מנוי חודשי לפי החודש שעבורו שולם (לא לפי תאריך התשלום)
+  useEffect(() => {
+    if (!currentUser || reportType !== 'monthly') return undefined;
+    let cancelled = false;
+    (async () => {
+      setMonthlyLoading(true);
+      setMonthly(null);
+      try {
+        const result = await getMonthlyPaidReport(currentUser.school_id, monthSel.year, monthSel.month);
+        if (!cancelled && result.success) setMonthly(result);
+      } catch (error) {
+        console.error('Error loading monthly paid report:', error);
+      } finally {
+        if (!cancelled) setMonthlyLoading(false);
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [currentUser, reportType, monthSel.year, monthSel.month]);
+
+  const downloadMonthly = () => {
+    if (!monthly || monthly.rows.length === 0) return;
+    const data = monthly.rows.map(r => ({
+      'שם תלמיד': r.student_name,
+      'כיתה': r.grade,
+      'תאריך תשלום': formatDate(r.paid_at),
+      'שעה': formatTime(r.paid_at),
+      'סכום': r.amount === null ? '' : `₪${r.amount.toFixed(2)}`,
+      'אמצעי תשלום': methodLabel(r.payment_method),
+      'שולם מראש': r.paid_in_advance ? 'כן' : 'לא'
+    }));
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(data), 'מנוי חודשי');
+    XLSX.writeFile(wb, `מנוי_חודשי_${monthly.year}-${String(monthly.month).padStart(2, '0')}.xlsx`);
+  };
+
   const handleSelectPreset = (key) => {
     setRangePreset(key);
     if (key === '12m') setGroupBy('month');
@@ -278,6 +333,8 @@ const KitchenReports = () => {
         .bap-reports .card .card-hint{font-size:12px;color:var(--blue);font-weight:600}
         .bap-reports .drill-close{border:1px solid var(--line);background:#fff;border-radius:8px;padding:6px 14px;font-weight:700;color:var(--navy)}
         .bap-reports .drill-panel .panel-title{display:flex;align-items:center;justify-content:space-between;gap:12px}
+        .bap-reports .month-pick{display:flex;align-items:center;gap:8px;font-weight:700;color:var(--navy)}
+        .bap-reports .month-pick select{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;background:#fff;color:var(--navy);min-width:160px}
         .bap-reports .detail-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid var(--line);border-radius:10px;padding:0 12px;min-height:40px}
         .bap-reports .detail-search input{border:0;outline:0;font:inherit;min-width:180px;background:transparent}
         .bap-reports .method-chips{display:flex;gap:8px;flex-wrap:wrap}
@@ -332,9 +389,13 @@ const KitchenReports = () => {
             <span className="rt-title"><ListChecks size={17} color="var(--blue)" /> פירוט תשלומים</span>
             <span className="rt-sub">מי שילם, מתי (תאריך ושעה), כמה ובאיזה אמצעי - מופרד לחודשי / בודד</span>
           </button>
+          <button className={`report-tab ${reportType === 'monthly' ? 'active' : ''}`} onClick={() => handleSelectReportType('monthly')}>
+            <span className="rt-title"><CalendarCheck size={17} color="var(--green)" /> מנוי חודשי לפי חודש</span>
+            <span className="rt-sub">מי שילם עבור חודש מסוים (למשל נובמבר), גם אם שילם מראש בחודש קודם</span>
+          </button>
         </div>
 
-        {reportType !== 'prep' && (
+        {reportType !== 'prep' && reportType !== 'monthly' && (
           <div className="range-bar">
             <div className="seg range-presets">
               {RANGE_PRESETS.map(pr => (
@@ -358,7 +419,7 @@ const KitchenReports = () => {
           </div>
         )}
 
-        {reportType !== 'prep' && reportType !== 'detail' && (
+        {reportType !== 'prep' && reportType !== 'detail' && reportType !== 'monthly' && (
           <div className="controls">
             <div className="seg">
               <button className={groupBy === 'day' ? 'active' : ''} onClick={() => { setGroupBy('day'); if (metric === 'students') setMetric('amount'); }}>
@@ -543,7 +604,85 @@ const KitchenReports = () => {
           </div>
         )}
 
-        {reportType === 'detail' ? (
+        {reportType === 'monthly' ? (
+          <>
+            <div className="range-bar">
+              <label className="month-pick">
+                חודש
+                <select value={`${monthSel.year}-${monthSel.month}`} onChange={(e) => { const [y, m] = e.target.value.split('-').map(n => parseInt(n, 10)); setMonthSel({ year: y, month: m }); }}>
+                  {monthOptions().map(o => (
+                    <option key={`${o.year}-${o.month}`} value={`${o.year}-${o.month}`}>{HEBREW_MONTHS[o.month - 1]} {o.year}</option>
+                  ))}
+                </select>
+              </label>
+              <div className="seg">
+                <button onClick={downloadMonthly} disabled={!monthly || monthly.rows.length === 0}>
+                  <Download size={16} /> הורד לאקסל
+                </button>
+              </div>
+              <div className="detail-search">
+                <Search size={16} />
+                <input type="text" placeholder="חיפוש לפי שם תלמיד..." value={monthlySearch} onChange={(e) => setMonthlySearch(e.target.value)} />
+              </div>
+              <div className="range-label">
+                <CalendarDays size={16} />
+                <span>הנתונים מוצגים עבור חודש: <strong>{HEBREW_MONTHS[monthSel.month - 1]} {monthSel.year}</strong> (לפי החודש ששולם עבורו, לא לפי תאריך התשלום)</span>
+              </div>
+            </div>
+
+            <div className="cards">
+              <div className="card monthly">
+                <div className="card-head"><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> שילמו עבור {HEBREW_MONTHS[monthSel.month - 1]}</div>
+                <div className="card-value">{monthly ? monthly.totals.count : '...'}</div>
+                <div className="card-sub">
+                  {monthly ? `₪${monthly.totals.amount.toFixed(0)} סה"כ` : ''}
+                  {monthly && monthly.totals.unknownAmountCount > 0 && ` · בלי סכום שמור: ${monthly.totals.unknownAmountCount}`}
+                </div>
+              </div>
+              <div className="card">
+                <div className="card-head"><CalendarCheck size={15} /> מתוכם שילמו מראש</div>
+                <div className="card-value">{monthly ? monthly.totals.inAdvanceCount : '...'}</div>
+                <div className="card-sub">שולם לפני תחילת {HEBREW_MONTHS[monthSel.month - 1]}</div>
+              </div>
+            </div>
+
+            <div className="panel">
+              <div className="panel-title">
+                <h2><span className="legend-dot" style={{ background: COLOR_MONTHLY }} /> תלמידים ששילמו עבור {HEBREW_MONTHS[monthSel.month - 1]} {monthSel.year}</h2>
+              </div>
+              <div className="table-wrap">
+                {monthlyLoading || !monthly ? (
+                  <div className="empty">טוען נתונים...</div>
+                ) : (() => {
+                  const q = monthlySearch.trim();
+                  const list = monthly.rows.filter(r => !q || r.student_name.includes(q));
+                  return list.length === 0 ? (
+                    <div className="empty">{monthly.rows.length === 0 ? 'אף אחד עוד לא שילם עבור החודש הזה' : 'לא נמצאו תלמידים'}</div>
+                  ) : (
+                    <table>
+                      <thead>
+                        <tr><th>שם תלמיד</th><th>כיתה</th><th>תאריך תשלום</th><th>שעה</th><th>סכום</th><th>אמצעי תשלום</th><th>הערה</th></tr>
+                      </thead>
+                      <tbody>
+                        {list.map(r => (
+                          <tr key={r.student_id}>
+                            <td>{r.student_name}</td>
+                            <td>{r.grade}</td>
+                            <td>{formatDate(r.paid_at)}</td>
+                            <td>{formatTime(r.paid_at)}</td>
+                            <td>{r.amount === null ? '—' : `₪${r.amount.toFixed(2)}`}</td>
+                            <td>{methodLabel(r.payment_method)}</td>
+                            <td>{r.paid_in_advance ? 'שולם מראש' : ''}{r.pending_credit ? ' · יזוכה ביתרה ב-1 לחודש' : ''}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  );
+                })()}
+              </div>
+            </div>
+          </>
+        ) : reportType === 'detail' ? (
           <>
             <div className="controls">
               <div className="seg">
@@ -701,7 +840,7 @@ const KitchenReports = () => {
           </div>
         )}
 
-        {reportType !== 'prep' && reportType !== 'detail' && (
+        {reportType !== 'prep' && reportType !== 'detail' && reportType !== 'monthly' && (
           <div className="panel">
             <div className="panel-title">
               <h2>טבלת פירוט</h2>

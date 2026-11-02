@@ -690,3 +690,15 @@ export const getMealsDetailReport = async (schoolId, from, to) => {
     throw error;
   }
 };
+
+// מי שילם מנוי חודשי עבור חודש מסוים (גם אם שילם מראש בחודש קודם).
+export const getMonthlyPaidReport = async (schoolId, year, month) => {
+  try {
+    const params = new URLSearchParams({ year: String(year), month: String(month) });
+    const response = await authFetch(`${API_URL}/schools/${schoolId}/reports/monthly-paid?${params.toString()}`);
+    return await response.json();
+  } catch (error) {
+    console.error('Get monthly paid report error:', error);
+    throw error;
+  }
+};
