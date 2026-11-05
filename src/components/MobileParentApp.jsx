@@ -23,6 +23,7 @@ const MobileParentApp = () => {
   const [weeklyMenu, setWeeklyMenu] = useState([]);
   const [schoolName, setSchoolName] = useState('');
   const [activeTab, setActiveTab] = useState('qr'); // qr, menu, info
+  const [loadFailed, setLoadFailed] = useState(false);
 
   useEffect(() => {
     loadMobileData();
@@ -44,9 +45,12 @@ const MobileParentApp = () => {
         if (data.children.length > 0) {
           loadQR(data.children[0].id);
         }
+      } else {
+        setLoadFailed(true);
       }
     } catch (error) {
       console.error('Error loading mobile data:', error);
+      setLoadFailed(true);
     } finally {
       setLoading(false);
     }
@@ -272,6 +276,39 @@ const MobileParentApp = () => {
         fontSize: '1.2rem'
       }}>
         טוען...
+      </div>
+    );
+  }
+
+
+  if (loadFailed) {
+    return (
+      <div style={{
+        ...styles.container,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        padding: '1.5rem'
+      }}>
+        <div style={{ background: '#fff', borderRadius: 20, padding: '2rem 1.5rem', maxWidth: 380, textAlign: 'center', direction: 'rtl' }}>
+          <div style={{ fontSize: '2.2rem', marginBottom: '0.5rem' }}>⚠️</div>
+          <h2 style={{ margin: '0 0 0.75rem', color: '#17324a', fontSize: '1.3rem' }}>הקישור לא נטען</h2>
+          <p style={{ margin: '0 0 1.25rem', color: '#607482', lineHeight: 1.6 }}>
+            אפשר להיכנס מחדש עם המייל והסיסמה, או לבקש קישור חדש מתוך אזור ההורים באתר.
+          </p>
+          <button
+            onClick={() => navigate('/login')}
+            style={{ width: '100%', height: 48, border: 'none', borderRadius: 12, background: '#356b8c', color: '#fff', fontSize: '1rem', fontWeight: 700, cursor: 'pointer' }}
+          >
+            כניסה לחשבון
+          </button>
+          <button
+            onClick={() => { setLoading(true); setLoadFailed(false); loadMobileData(); }}
+            style={{ width: '100%', height: 44, marginTop: 10, border: '1px solid #dce6e9', borderRadius: 12, background: '#fff', color: '#17324a', fontSize: '1rem', fontWeight: 600, cursor: 'pointer' }}
+          >
+            נסו שוב
+          </button>
+        </div>
       </div>
     );
   }

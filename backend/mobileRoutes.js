@@ -80,9 +80,11 @@ const sendMobileLink = async (toEmail, userName, url) => {
   }
 };
 
+// מפתח שרת (כמו ב-server.js): טבלאות users/students חסומות ב-RLS למפתח הציבורי (anon), ואז הקישור
+// של ההורה/התלמיד החזיר "0 שורות" גם עם טוקן תקין. ההרשאה כאן היא לפי הטוקן שנבדק בקוד.
 const supabase = createClient(
   process.env.SUPABASE_URL,
-  process.env.SUPABASE_ANON_KEY
+  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 );
 
 // **יצירת Token ייחודי להורה**
