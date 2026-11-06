@@ -436,6 +436,11 @@ const finalizeTranzilaCheckout = async (checkoutId, transactionIndex) => {
   };
   const fakeRes = { json: () => {}, status() { return this; } };
   await growWebhookV2Handler(fakeReq, fakeRes);
+  if (fakeReq.creditFailed) {
+    // הזיכוי נכשל (לפני שהיתרה השתנתה) - לא משאירים 'שולם' בלי זיכוי; אימות חוזר/הודעה חוזרת ינסו שוב
+    await supabase.from('gateway_checkouts').update({ status: 'pending', paid_at: null }).eq('id', checkoutId).eq('status', 'paid');
+    return { status: 'credit_failed' };
+  }
   return { status: 'paid' };
 };
 
@@ -4618,6 +4623,7 @@ const growWebhookV2Handler = async (req, res) => {
         .single();
       if (creditError) {
         console.error('Credit balance error:', creditError.message);
+        req.creditFailed = true; // ראו finalizeTranzilaCheckout: ההזמנה חוזרת ל-pending כדי שאישור חוזר יזכה
         return res.json({ success: true });
       }
     }
@@ -4694,6 +4700,7 @@ app.all('/api/tranzila-notify', async (req, res) => {
     await supabase.from('gateway_checkouts').update({ notified_index: index }).eq('id', checkoutId).eq('status', 'pending');
 
     const result = await finalizeTranzilaCheckout(checkoutId, index);
+    if (result.status === 'credit_failed') return res.status(500).json({ success: false }); // Tranzila ינסה שוב
     return res.json({ success: true, result: result.status });
   } catch (error) {
     // אימות לא זמין זמנית (למשל שירות הדוחות): 500 כדי שייעשה ניסיון חוזר, וההזמנה נשארת pending.
@@ -4808,6 +4815,46 @@ app.post('/api/grow-payment-link', async (req, res) => {
 });
 
 // יצירת קישור תשלום דרך Make
+// בדיקת בקשת תשלום (Grow/Tranzila). ה-description נושא את זהות התלמיד והחודש שיזוכו אחרי התשלום, ולכן
+// חייב להתאים ל-student_id שנבדקה בעלותו; והסכום חייב להתאים לתעריף. בלי זה אפשר היה לסמן חודש
+// כשולם בסכום קטן, או לשלם "עבור" תלמיד אחר. תבניות ה-description הן אלה שהאפליקציה בונה.
+const validatePaymentRequest = async ({ student, studentId, amount, description }) => {
+  const sum = Number(amount);
+  if (!Number.isFinite(sum) || sum <= 0 || sum > MAX_GATEWAY_CREDIT) return { ok: false, message: 'סכום לתשלום לא תקין' };
+  const desc = String(description || '');
+  const base = `BonApp-${studentId}`;
+  if (desc === base) return { ok: true }; // הפקדה רגילה (הורה/קיוסק)
+  const suffix = desc.startsWith(base + '-') ? desc.slice(base.length + 1) : null;
+  if (!suffix) return { ok: false, message: 'פרטי תשלום לא תקינים' };
+  const cents = (n) => Math.round(n * 100);
+
+  if (suffix === 'daily') {
+    const price = parseFloat(student.schools && student.schools.daily_meal_price) || 0;
+    if (price > 0 && cents(sum) !== cents(price)) return { ok: false, message: 'סכום התשלום לא תואם למחיר הארוחה' };
+    return { ok: true };
+  }
+
+  const mm = /^monthly-(\d{4})-(\d{1,2})$/.exec(suffix);
+  if (!mm) return { ok: false, message: 'פרטי תשלום לא תקינים' };
+  const year = parseInt(mm[1], 10);
+  const month = parseInt(mm[2], 10);
+  if (!student.group_id || month < 1 || month > 12) return { ok: false, message: 'פרטי תשלום לא תקינים' };
+  const { data: schedule } = await supabase
+    .from('meal_schedules')
+    .select('days_count, meal_price')
+    .eq('group_id', student.group_id)
+    .eq('year', year)
+    .eq('month', month)
+    .maybeSingle();
+  if (!schedule) return { ok: false, message: 'עדיין לא הוגדר סכום לתשלום לחודש הזה' };
+  const expected = (parseFloat(schedule.days_count) || 0) * (parseFloat(schedule.meal_price) || 0);
+  if (!(expected > 0) || cents(sum) !== cents(expected)) {
+    console.error('Payment request rejected: monthly amount mismatch', studentId, year, month, sum, expected);
+    return { ok: false, message: 'סכום התשלום לא תואם לסכום החודשי שהוגדר' };
+  }
+  return { ok: true };
+};
+
 app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
   try {
     const { parent_name, parent_phone, amount, student_name, description, student_id } = req.body;
@@ -4815,7 +4862,7 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
     // קבל את ה-webhook URL של בית הספר של התלמיד
     const { data: student } = await supabase
       .from('students')
-      .select('school_id, parent_id, schools(gateway_webhook_url, payment_gateway)')
+      .select('school_id, parent_id, group_id, schools(gateway_webhook_url, payment_gateway, daily_meal_price)')
       .eq('id', student_id)
       .single();
 
@@ -4828,6 +4875,11 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
       String(req.user.school_id) === String(student.school_id);
     if (req.user.role !== 'super_admin' && !isOwnParent && !isStaffOfSchool) {
       return res.status(403).json({ success: false, message: 'אין הרשאה ליצור תשלום עבור תלמיד זה' });
+    }
+
+    const paymentCheck = await validatePaymentRequest({ student, studentId: student_id, amount, description });
+    if (!paymentCheck.ok) {
+      return res.status(400).json({ success: false, message: paymentCheck.message });
     }
 
     // בית ספר שסולק ב-Tranzila: דף תשלום מאוחסן של המסוף שלו (אותו description, אותו מסלול אישור)
