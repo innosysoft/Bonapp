@@ -22,6 +22,7 @@ const PORT = process.env.PORT || 5000;
 // Trust the nginx reverse proxy in front of this app so req.ip / express-rate-limit
 // see the real client IP (from X-Forwarded-For) instead of nginx's own address.
 app.set('trust proxy', 1);
+app.disable('x-powered-by');
 
 // Middleware
 const ALLOWED_ORIGINS = ['https://bonapp.dev', 'https://api.bonapp.dev'];
@@ -149,6 +150,35 @@ const verifyPasswordLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { success: false, message: 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות' }
+});
+
+const escapeHtml = (value) => String(value == null ? '' : value).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+// הרשמה ופניות ציבוריות: כל קריאה שולחת מיילים, לכן מגבילים לפי כתובת (נדיב: משפחות רבות יכולות להירשם מאותה רשת בית ספר)
+const publicFormLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 60,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'יותר מדי בקשות מהכתובת הזו, נסו שוב מאוחר יותר' }
+});
+const contactFormLimiter = rateLimit({
+  windowMs: 60 * 60 * 1000,
+  max: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'יותר מדי פניות מהכתובת הזו, נסו שוב מאוחר יותר' }
+});
+// זיהוי תלמיד בקיוסק לפי QR/PIN: סופרים רק כשלונות (לא נמצא), לפי המשתמש המחובר - מונע ניחוש PIN
+const kioskIdentifyLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 120,
+  skipSuccessfulRequests: true,
+  keyGenerator: (req) => String((req.user && req.user.id) || 'anon'),
+  validate: false,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'יותר מדי ניסיונות זיהוי כושלים, נסו שוב בעוד כמה דקות' }
 });
 
 
@@ -3400,7 +3430,7 @@ app.get('/api/pending-registrations/:schoolId', authenticateToken, requireRole('
   }
 });
 
-app.post('/api/pending-registrations', async (req, res) => {
+app.post('/api/pending-registrations', publicFormLimiter, async (req, res) => {
   try {
     const {
       school_id,
@@ -3492,7 +3522,7 @@ app.post('/api/pending-registrations', async (req, res) => {
         let childrenList = [];
         try { childrenList = JSON.parse(children_data); } catch (e) { /* ignore */ }
         const childrenHtml = childrenList.map(c =>
-          `<li>${c.firstName || ''} ${c.lastName || ''}${c.grade ? ' - כיתה ' + c.grade : ''}</li>`
+          `<li>${escapeHtml(c.firstName)} ${escapeHtml(c.lastName)}${c.grade ? ' - כיתה ' + escapeHtml(c.grade) : ''}</li>`
         ).join('');
 
         await transporter.sendMail({
@@ -5080,7 +5110,7 @@ app.get('/api/guest-sales/:id/status', authenticateToken, requireRole('kitchen',
 // Runs logged in as the kitchen device's own session (kitchen/secretary/admin role) - the
 // screen itself is locked, not the API. Students never get their own auth token.
 
-app.post('/api/kiosk/identify', authenticateToken, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
+app.post('/api/kiosk/identify', authenticateToken, kioskIdentifyLimiter, requireRole('kitchen', 'secretary', 'admin'), async (req, res) => {
   try {
     const { qrCode, pin } = req.body;
     if (!qrCode && !pin) {
@@ -5393,9 +5423,18 @@ app.delete('/api/tutorial-videos/:id', authenticateToken, requireRole('super_adm
 });
 
 // ===== SCHOOL CONTACT FORM =====
-app.post('/api/school-contact', async (req, res) => {
+app.post('/api/school-contact', contactFormLimiter, async (req, res) => {
   try {
-    const { organizationName, fullName, phone, email, message, type } = req.body;
+    const body = req.body || {};
+    const { type } = body;
+    const organizationName = escapeHtml(body.organizationName);
+    const fullName = escapeHtml(body.fullName);
+    const phone = escapeHtml(body.phone);
+    const email = String(body.email || '').trim();
+    const message = escapeHtml(body.message);
+    if (email && !/^[^\s@<>"']+@[^\s@<>"']+\.[^\s@<>"']+$/.test(email)) {
+      return res.status(400).json({ success: false, message: 'כתובת המייל לא תקינה' });
+    }
 
 const subject = type === 'suggestion' 
   ? `💡 הצעה לשיפור - BonApp`
@@ -5421,7 +5460,7 @@ const subject = type === 'suggestion'
             <p><strong>שם הארגון:</strong> ${organizationName}</p>
             <p><strong>שם איש קשר:</strong> ${fullName}</p>
             <p><strong>טלפון:</strong> ${phone}</p>
-            <p><strong>אימייל:</strong> ${email}</p>
+            <p><strong>אימייל:</strong> ${escapeHtml(email)}</p>
           </div>
 
 ${message ? `<div style="background: #fff3cd; padding: 15px; border-radius: 8px; margin: 20px 0;">
