@@ -1,10 +1,41 @@
 const jwt = require('jsonwebtoken');
+const { createClient } = require('@supabase/supabase-js');
 
 const JWT_SECRET = process.env.JWT_SECRET;
 const STAFF_ROLES = ['secretary', 'admin', 'super_admin'];
 
 const generateToken = (payload) => {
   return jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' });
+};
+
+// חסימה/מחיקה של משתמש צריכות להשפיע גם על התחברות קיימת (JWT תקף עד 7 ימים). בודקים מול ה-DB, עם
+// מטמון קצר כדי לא לפגוע בביצועים. כל כשל בבדיקה (שגיאת DB וכו') = ממשיכים כרגיל, כדי שתקלה זמנית
+// לא תנתק את כולם. מנהל-על נכנס עם סיסמת סביבה (מזהה לא-UUID) ולכן לא נבדק כאן.
+const USER_STATUS_TTL_MS = 30 * 1000;
+const userStatusCache = new Map();
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+let statusClient = null;
+const getStatusClient = () => {
+  if (!statusClient) {
+    statusClient = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY);
+  }
+  return statusClient;
+};
+
+const isAccountRevoked = async (decoded) => {
+  if (!decoded || decoded.role === 'super_admin' || !UUID_RE.test(String(decoded.id))) return false;
+  const cached = userStatusCache.get(decoded.id);
+  if (cached && Date.now() - cached.at < USER_STATUS_TTL_MS) return cached.revoked;
+  try {
+    const { data, error } = await getStatusClient().from('users').select('status').eq('id', decoded.id).maybeSingle();
+    if (error) return false;
+    const revoked = !data || data.status === 'blocked';
+    userStatusCache.set(decoded.id, { revoked, at: Date.now() });
+    if (userStatusCache.size > 5000) userStatusCache.clear();
+    return revoked;
+  } catch (e) {
+    return false;
+  }
 };
 
 const authenticateToken = (req, res, next) => {
@@ -15,9 +46,12 @@ const authenticateToken = (req, res, next) => {
     return res.status(401).json({ success: false, message: 'נדרשת התחברות' });
   }
 
-  jwt.verify(token, JWT_SECRET, (err, decoded) => {
+  jwt.verify(token, JWT_SECRET, async (err, decoded) => {
     if (err) {
       return res.status(401).json({ success: false, message: 'ההתחברות פגה, יש להתחבר מחדש' });
+    }
+    if (await isAccountRevoked(decoded)) {
+      return res.status(401).json({ success: false, message: 'החשבון חסום או לא קיים. יש לפנות למזכירות בית הספר.' });
     }
     req.user = decoded;
     next();

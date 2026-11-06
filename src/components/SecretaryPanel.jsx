@@ -337,6 +337,7 @@ const loadStudentSchedule = async (studentId) => {
   if (currentRegistration) {
     const copyText = `אימייל: ${currentRegistration.parent_email}\nסיסמה: ${result.parentPassword}`;
 
+    const escapeHtml = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
     const detailsDiv = document.createElement('div');
     detailsDiv.innerHTML = `
   <div style="position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
@@ -345,8 +346,8 @@ const loadStudentSchedule = async (studentId) => {
     <h3 style="color: #75a843; margin-bottom: 1rem;">ההרשמה אושרה בהצלחה!</h3>
     <div style="background: #eaf3f7; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
       <h4>פרטי גישה להורה:</h4>
-      <p><strong>אימייל:</strong> ${currentRegistration.parent_email}</p>
-      <p><strong>סיסמה:</strong> <span style="font-family: monospace; font-size: 1.2rem; color: #356b8c;">${result.parentPassword}</span></p>
+      <p><strong>אימייל:</strong> ${escapeHtml(currentRegistration.parent_email)}</p>
+      <p><strong>סיסמה:</strong> <span style="font-family: monospace; font-size: 1.2rem; color: #356b8c;">${escapeHtml(result.parentPassword)}</span></p>
     </div>
     <div style="margin-top: 1rem;">
       <button onclick="this.parentElement.parentElement.remove()"

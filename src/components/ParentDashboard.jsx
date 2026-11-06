@@ -620,12 +620,13 @@ const handleShowQR = async (studentId) => {
 };
 
 const handlePrintQR = () => {
+  const esc = (v) => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const printWindow = window.open('', '_blank');
   printWindow.document.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>QR Code - ${children[selectedChild]?.first_name}</title>
+      <title>QR Code - ${esc(children[selectedChild]?.first_name)}</title>
       <style>
         body {
           font-family: Arial, sans-serif;
@@ -654,10 +655,10 @@ const handlePrintQR = () => {
       </style>
     </head>
     <body>
-      <h1>QR Code - ${children[selectedChild]?.first_name} ${children[selectedChild]?.last_name}</h1>
-      <p>בית ספר: ${schoolName}</p>
-      <img src="${currentQR.qrImage}" alt="QR Code" />
-      <div class="code">קוד: ${currentQR.qrCode}</div>
+      <h1>QR Code - ${esc(children[selectedChild]?.first_name)} ${esc(children[selectedChild]?.last_name)}</h1>
+      <p>בית ספר: ${esc(schoolName)}</p>
+      <img src="${esc(currentQR.qrImage)}" alt="QR Code" />
+      <div class="code">קוד: ${esc(currentQR.qrCode)}</div>
       <p style="margin-top: 2rem; color: #607482;">
         סרוק את הקוד במזנון בית הספר לביצוע רכישות
       </p>

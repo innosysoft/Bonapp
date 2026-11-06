@@ -47,6 +47,110 @@ const authLimiter = rateLimit({
   message: { success: false, message: 'יותר מדי ניסיונות התחברות, נסה שוב מאוחר יותר' }
 });
 
+// ===== כלי אבטחה משותפים (ראו דוח בדיקת אבטחה 04.11.2026) =====
+
+// סיסמה זמנית אקראית קריפטוגרפית (במקום Math.random). בלי תווים מבלבלים (0/O, 1/l/I).
+const TEMP_PASSWORD_CHARS = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const generateTempPassword = (length = 10) =>
+  Array.from(crypto.randomBytes(length), b => TEMP_PASSWORD_CHARS[b % TEMP_PASSWORD_CHARS.length]).join('');
+
+// מסיר מאובייקט שורה (משתמש/הרשמה) כל שדה שנראה כמו סוד: hash, סיסמה, טוקן.
+const stripSecrets = (row) => {
+  if (!row || typeof row !== 'object') return row;
+  const clean = { ...row };
+  Object.keys(clean).forEach(k => { if (/password|token|secret/i.test(k)) delete clean[k]; });
+  return clean;
+};
+
+// שדות בית ספר שמיועדים למנהל-על בלבד (סיסמת מייל, מפתחות ספקים, כתובת webhook).
+const SCHOOL_PRIVATE_FIELDS = ['email_user', 'email_pass', 'paybox_secret_key', 'paybox_merchant_id', 'cardcom_username', 'gateway_webhook_url'];
+const sanitizeSchoolForRole = (school, role) => {
+  if (!school || role === 'super_admin') return school;
+  const clean = { ...school };
+  SCHOOL_PRIVATE_FIELDS.forEach(k => { delete clean[k]; });
+  return clean;
+};
+
+// כתובת webhook לקריאת שרת (Make/Grow): HTTPS בלבד, בלי פרטי התחברות ובלי יעד פנימי (SSRF).
+const net = require('net');
+const dnsPromises = require('dns').promises;
+
+const isPrivateAddress = (address) => {
+  const a = String(address).toLowerCase().replace(/^\[|\]$/g, '');
+  if (net.isIPv4(a)) {
+    const [p1, p2] = a.split('.').map(n => parseInt(n, 10));
+    return p1 === 0 || p1 === 10 || p1 === 127 || (p1 === 169 && p2 === 254) ||
+      (p1 === 172 && p2 >= 16 && p2 <= 31) || (p1 === 192 && p2 === 168) ||
+      (p1 === 100 && p2 >= 64 && p2 <= 127) || p1 >= 224;
+  }
+  if (net.isIPv6(a)) {
+    if (a === '::1' || a === '::') return true;
+    if (a.startsWith('::ffff:')) return isPrivateAddress(a.slice(7));
+    return a.startsWith('fc') || a.startsWith('fd') || a.startsWith('fe8') || a.startsWith('fe9') || a.startsWith('fea') || a.startsWith('feb');
+  }
+  return false;
+};
+
+const isSafeWebhookUrl = (value) => {
+  let u;
+  try { u = new URL(String(value)); } catch (e) { return false; }
+  if (u.protocol !== 'https:' || u.username || u.password) return false;
+  if (u.port && u.port !== '443') return false;
+  const host = u.hostname.toLowerCase();
+  if (host === 'localhost' || host.endsWith('.localhost') || host.endsWith('.local') || host.endsWith('.internal')) return false;
+  return !isPrivateAddress(host);
+};
+
+// בדיקה גם ברגע השימוש: ה-DNS של הכתובת לא מצביע לכתובת פנימית (הגנה מפני rebinding).
+const assertSafeWebhookTarget = async (value) => {
+  if (!isSafeWebhookUrl(value)) throw new Error('כתובת ספק התשלום לא בטוחה');
+  const host = new URL(String(value)).hostname;
+  if (net.isIP(host.replace(/^\[|\]$/g, ''))) return;
+  const addresses = await dnsPromises.lookup(host, { all: true });
+  if (!addresses.length || addresses.some(a => isPrivateAddress(a.address))) {
+    throw new Error('כתובת ספק התשלום לא בטוחה');
+  }
+};
+
+// אימות הודעות Grow/Make: אם הוגדר GROW_WEBHOOK_SECRET בשרת, ההודעה חייבת לשאת אותו (כותרת
+// x-bonapp-webhook-secret או ?secret=). בלי הגדרה - ההתנהגות הקיימת, כדי לא לשבור אינטגרציה פעילה.
+const growWebhookAuthorized = (req) => {
+  const secret = process.env.GROW_WEBHOOK_SECRET;
+  if (!secret) return true;
+  const provided = req.get('x-bonapp-webhook-secret') || (req.query && req.query.secret);
+  if (typeof provided !== 'string' || provided.length !== secret.length) return false;
+  return crypto.timingSafeEqual(Buffer.from(provided), Buffer.from(secret));
+};
+const growWebhookGuard = (req, res, next) => {
+  if (growWebhookAuthorized(req)) return next();
+  console.error('Grow webhook rejected: missing/invalid secret');
+  return res.status(401).json({ success: false });
+};
+
+// תקרה לזיכוי בודד מהודעת סליקה (הגנה משגיאת סכום ומהודעה מזויפת). תשלום חודשי/בודד אמיתי נמוך בהרבה.
+const MAX_GATEWAY_CREDIT = 10000;
+
+// תמונה: בדיקת חתימת הקובץ בפועל (לא סומכים על "data:image/..." מהלקוח) וגודל סביר.
+const MAX_PHOTO_BYTES = 6 * 1024 * 1024;
+const detectImageType = (buf) => {
+  if (!buf || buf.length < 12) return null;
+  if (buf[0] === 0xff && buf[1] === 0xd8 && buf[2] === 0xff) return { contentType: 'image/jpeg', ext: 'jpg' };
+  if (buf[0] === 0x89 && buf[1] === 0x50 && buf[2] === 0x4e && buf[3] === 0x47) return { contentType: 'image/png', ext: 'png' };
+  if (buf.slice(0, 4).toString() === 'RIFF' && buf.slice(8, 12).toString() === 'WEBP') return { contentType: 'image/webp', ext: 'webp' };
+  return null;
+};
+
+// הגבלת ניסיונות לאימות סיסמה (יציאה מקיוסק וכו'): לפי משתמש, לא לפי כתובת
+const verifyPasswordLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 20,
+  keyGenerator: (req) => String((req.user && req.user.id) || 'anon'),
+  validate: false,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { success: false, message: 'יותר מדי ניסיונות, נסו שוב בעוד כמה דקות' }
+});
+
 
 
 // Email transporter
@@ -457,6 +561,8 @@ const splitCustomLines = (items) => {
       if (!Number.isFinite(amount) || amount <= 0 || amount > MAX_CUSTOM_AMOUNT) { invalid = true; return; }
       customLines.push(amount);
     } else {
+      const q = i && i.quantity !== undefined && i.quantity !== null ? Number(i.quantity) : 1;
+      if (!Number.isInteger(q) || q < 1 || q > 100) { invalid = true; return; }
       regularItems.push(i);
     }
   });
@@ -564,7 +670,7 @@ const getAddonSchoolId = async (req) => {
 // A 4-digit PIN, unique among students of the same school, for self-service kiosk identification.
 const generateUniqueStudentPin = async (schoolId) => {
   for (let attempt = 0; attempt < 20; attempt++) {
-    const pin = String(Math.floor(1000 + Math.random() * 9000));
+    const pin = String(crypto.randomInt(1000, 10000));
     const { data: existing } = await supabase
       .from('students')
       .select('id')
@@ -595,9 +701,13 @@ app.get('/api/health', async (req, res) => {
 
 app.post('/api/admin/auth', authLimiter, async (req, res) => {
   const { password } = req.body;
-  const adminPassword = process.env.SUPER_ADMIN_PASSWORD || 'admin123';
+  // בלי סיסמת ברירת מחדל בקוד: אם SUPER_ADMIN_PASSWORD לא מוגדר, כניסת מנהל-על חסומה.
+  const adminPassword = process.env.SUPER_ADMIN_PASSWORD;
+  const passwordMatches = !!adminPassword && typeof password === 'string' &&
+    Buffer.byteLength(password) === Buffer.byteLength(adminPassword) &&
+    crypto.timingSafeEqual(Buffer.from(password), Buffer.from(adminPassword));
 
-  if (password === adminPassword) {
+  if (passwordMatches) {
     const token = generateToken({ id: 'super_admin', role: 'super_admin', school_id: null });
     res.json({ success: true, message: 'Admin authenticated', token });
   } else {
@@ -805,7 +915,7 @@ app.get('/api/schools/:schoolId', authenticateToken, requireSchoolAccess(req => 
 
     if (error) throw error;
 
-    res.json({ success: true, school });
+    res.json({ success: true, school: sanitizeSchoolForRole(school, req.user.role) });
   } catch (error) {
     console.error('Get school error:', error);
     res.status(500).json({ 
@@ -921,8 +1031,8 @@ app.put('/api/schools/:schoolId/settings', authenticateToken, requireRole('secre
     if (contact_phone !== undefined) updateData.contact_phone = contact_phone;
     if (contact_email !== undefined) updateData.contact_email = contact_email;
     if (school_phone !== undefined) updateData.school_phone = school_phone;
-    if (email_user !== undefined) updateData.email_user = email_user;
-    if (email_pass !== undefined) updateData.email_pass = email_pass;
+    if (email_user !== undefined && req.user.role === 'super_admin') updateData.email_user = email_user;
+    if (email_pass !== undefined && req.user.role === 'super_admin') updateData.email_pass = email_pass;
     if (menu_type !== undefined) updateData.menu_type = menu_type;
     if (allow_negative_balance !== undefined) updateData.allow_negative_balance = allow_negative_balance;
     if (max_negative_balance !== undefined) updateData.max_negative_balance = max_negative_balance;
@@ -949,8 +1059,8 @@ const {
   pos_credit_via_grow
 } = req.body;
 
-if (paybox_merchant_id !== undefined) updateData.paybox_merchant_id = paybox_merchant_id;
-if (paybox_secret_key !== undefined) updateData.paybox_secret_key = paybox_secret_key;
+if (paybox_merchant_id !== undefined && req.user.role === 'super_admin') updateData.paybox_merchant_id = paybox_merchant_id;
+if (paybox_secret_key !== undefined && req.user.role === 'super_admin') updateData.paybox_secret_key = paybox_secret_key;
 if (bit_payment_link !== undefined) updateData.bit_payment_link = bit_payment_link;
 if (cardcom_terminal !== undefined) updateData.cardcom_terminal = cardcom_terminal;
 if (cardcom_username !== undefined) updateData.cardcom_username = cardcom_username;
@@ -966,7 +1076,12 @@ if (enable_free_payment !== undefined) updateData.enable_free_payment = enable_f
 if (auto_print_receipt !== undefined) updateData.auto_print_receipt = auto_print_receipt;
 if (enable_kiosk_lock !== undefined) updateData.enable_kiosk_lock = enable_kiosk_lock;
 if (pos_credit_via_grow !== undefined) updateData.pos_credit_via_grow = pos_credit_via_grow;
-if (req.body.payment_gateway !== undefined) updateData.payment_gateway = req.body.payment_gateway;
+if (req.body.payment_gateway !== undefined && req.user.role === 'super_admin') {
+  if (!['none', 'grow', 'tranzila'].includes(req.body.payment_gateway)) {
+    return res.status(400).json({ success: false, message: 'ספק סליקה לא תקין' });
+  }
+  updateData.payment_gateway = req.body.payment_gateway;
+}
 // פרטי סליקה של Tranzila קובעים לאן הכסף נכנס - רק מנהל-על רשאי לשנות אותם (לא מזכירה/מנהל בית ספר).
 // המפתחות נשמרים מוצפנים בטבלה נפרדת ולעולם לא מוחזרים לדפדפן.
 if (req.user.role === 'super_admin') {
@@ -994,7 +1109,13 @@ if (req.user.role === 'super_admin') {
   }
 }
 
-if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url = req.body.gateway_webhook_url;
+if (req.body.gateway_webhook_url !== undefined && req.user.role === 'super_admin') {
+  const webhookUrl = String(req.body.gateway_webhook_url || '').trim();
+  if (webhookUrl && !isSafeWebhookUrl(webhookUrl)) {
+    return res.status(400).json({ success: false, message: 'כתובת webhook חייבת להיות HTTPS ציבורית' });
+  }
+  updateData.gateway_webhook_url = webhookUrl || null;
+}
 
 
     const { data: school, error } = await supabase
@@ -1008,7 +1129,7 @@ if (req.body.gateway_webhook_url !== undefined) updateData.gateway_webhook_url =
     if (error) throw error;
 
 
-    res.json({ success: true, school });
+    res.json({ success: true, school: sanitizeSchoolForRole(school, req.user.role) });
   } catch (error) {
     console.error('Update school settings error:', error);
     res.status(500).json({ 
@@ -1145,7 +1266,7 @@ app.put('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin
 
     if (error) throw error;
 
-    res.json({ success: true, user });
+    res.json({ success: true, user: stripSecrets(user) });
   } catch (error) {
     console.error('Update user error:', error);
     res.status(500).json({
@@ -1171,7 +1292,7 @@ app.post('/api/users/:userId/reset-password', authenticateToken, requireRole('se
       return res.status(404).json({ success: false, message: 'משתמש לא נמצא' });
     }
 
-    const newPassword = Math.random().toString(36).slice(-8);
+    const newPassword = generateTempPassword();
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
     const { error: updateError } = await supabase
@@ -1216,7 +1337,7 @@ app.post('/api/users/:userId/reset-password', authenticateToken, requireRole('se
   }
 });
 
-app.delete('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.delete('/api/users/:userId', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getUserSchoolId), async (req, res) => {
   try {
     const { userId } = req.params;
 
@@ -1531,12 +1652,14 @@ app.post('/api/students/:studentId/photo', authenticateToken, requireSelfOrStaff
     
     const base64Data = photoData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
+    const imageType = detectImageType(buffer);
+    if (!imageType || buffer.length > MAX_PHOTO_BYTES) throw new Error('INVALID_IMAGE');
     
-    const fileName = `${studentId}_${Date.now()}.jpg`;
+    const fileName = `${studentId}_${Date.now()}.${imageType.ext}`;
     const { data: uploadData, error: uploadError } = await supabase.storage
       .from('student-photos')
       .upload(fileName, buffer, {
-        contentType: 'image/jpeg',
+        contentType: imageType.contentType,
         upsert: true
       });
     
@@ -1570,11 +1693,13 @@ const uploadStudentPhoto = async (studentId, photoDataUrl) => {
   try {
     const base64Data = photoDataUrl.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
-    const fileName = `${studentId}_${Date.now()}.jpg`;
+    const imageType = detectImageType(buffer);
+    if (!imageType || buffer.length > MAX_PHOTO_BYTES) throw new Error('INVALID_IMAGE');
+    const fileName = `${studentId}_${Date.now()}.${imageType.ext}`;
 
     const { error: uploadError } = await supabase.storage
       .from('student-photos')
-      .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
+      .upload(fileName, buffer, { contentType: imageType.contentType, upsert: true });
     if (uploadError) throw uploadError;
 
     const { data: urlData } = supabase.storage.from('student-photos').getPublicUrl(fileName);
@@ -1884,7 +2009,7 @@ app.post('/api/scan-student', authenticateToken, requireRole('kitchen', 'secreta
   }
 });
 
-app.post('/api/generate-qr/:studentId', authenticateToken, async (req, res) => {
+app.post('/api/generate-qr/:studentId', authorizeStudentQrAccess, async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -1930,7 +2055,9 @@ app.post('/api/generate-qr/:studentId', authenticateToken, async (req, res) => {
 // ===== PARENT =====
 
 app.post('/api/register', async (req, res) => {
-  
+  // מסלול ישן שלא בשימוש (הטופס הנוכחי משתמש ב-/api/pending-registrations) - סגור כדי שלא ייווצרו דרכו משתמשים.
+  return res.status(410).json({ success: false, message: 'מסלול ההרשמה הזה הוחלף. יש להירשם דרך טופס ההרשמה באתר.' });
+  // eslint-disable-next-line no-unreachable
   try {
     const { 
       familyName, 
@@ -2095,7 +2222,7 @@ app.get('/api/parent/:userId', authenticateToken, requireSelfOrStaff(req => req.
   }
 });
 
-app.get('/api/student/:studentId/parent', authenticateToken, requireRole('secretary', 'admin'), async (req, res) => {
+app.get('/api/student/:studentId/parent', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getStudentSchoolId), async (req, res) => {
   try {
     const { studentId } = req.params;
 
@@ -2871,9 +2998,6 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
     if (requestSplit.invalid) {
       return res.status(400).json({ success: false, message: `סכום חיוב לא תקין (עד ₪${MAX_CUSTOM_AMOUNT})` });
     }
-    if (requestSplit.customLines.length > 0 && school.menu_type !== 'items') {
-      return res.status(400).json({ success: false, message: 'חיוב חופשי זמין רק בבתי ספר עם תפריט לפי פריטים' });
-    }
 
     if (!requestSplit.customOnly && student.max_daily_meals && mealsToday >= student.max_daily_meals) {
       return res.status(400).json({
@@ -2899,7 +3023,14 @@ app.post('/api/process-meal-purchase', authenticateToken, requireRole('kitchen',
 
     let chargeAmount;
     let kitchenOrderItems = [];
-    if (school.menu_type === 'items' && Array.isArray(items) && items.length > 0) {
+    if (requestSplit.customLines.length > 0 && school.menu_type !== 'items') {
+      // מסופון בבית ספר עם תפריט יומי: הסכום שהוקלד + (אם יש) ארוחות רגילות במחיר הקבוע של בית הספר
+      const dailyPrice = (paymentType === 'monthly' ? parseFloat(school.monthly_meal_price) : parseFloat(school.daily_meal_price)) || 0;
+      const regularMeals = requestSplit.regularItems.reduce((sum, i) => sum + (parseInt(i.quantity, 10) || 1), 0);
+      chargeAmount = Math.round((requestSplit.customTotal + regularMeals * dailyPrice) * 100) / 100;
+      if (regularMeals > 0) kitchenOrderItems.push({ name: 'ארוחת היום', quantity: regularMeals, addons: [] });
+      kitchenOrderItems.push({ name: FREE_CHARGE_LABEL, quantity: requestSplit.customLines.length, addons: [] });
+    } else if (school.menu_type === 'items' && Array.isArray(items) && items.length > 0) {
       // תפריט פריטים בודדים - החיוב מחושב מהעגלה בפועל, לא ממחיר קבוע. מחושב מחדש
       // בשרת לפי המחירים האמיתיים של הפריטים ותוספות (לא סומכים על total שנשלח מהלקוח).
       // שורות "חיוב חופשי" (מסופון) מופרדות ומתווספות בנפרד - החישוב לפריטי התפריט לא משתנה.
@@ -3296,7 +3427,7 @@ app.post('/api/pending-registrations', async (req, res) => {
       parent_phone,
       parent_email,
       children_data,
-      status,
+      status: 'pending', // קבוע בשרת - לא מקבלים סטטוס מהלקוח
       created_at: new Date().toISOString()
     };
 
@@ -3343,7 +3474,7 @@ app.post('/api/pending-registrations', async (req, res) => {
     res.json({
       success: true,
       message: 'ההרשמה נשלחה בהצלחה',
-      registration: registration
+      registration: { id: registration.id, status: registration.status }
     });
 
     // מייל התראה אמיתי על הרשמת הורה בפועל - נפרד ומדויק, לא כמו מייל "צור קשר" הכללי.
@@ -3452,7 +3583,7 @@ app.get('/api/verify-registration/:token', async (req, res) => {
 
       // מקרה קצה: הטופס לא אסף סיסמה (כי חשב שהמייל כבר קיים) אבל בפועל אין הורה קיים -
       // נייצר סיסמה אקראית כדי שהחשבון עדיין יהיה שמיש (בדיוק כמו בזרימת האישור הידני הישנה).
-      const passwordHash = registration.password_hash || await bcrypt.hash(Math.random().toString(36).slice(-8), 10);
+      const passwordHash = registration.password_hash || await bcrypt.hash(generateTempPassword(), 10);
 
       const { data: newParent, error: userError } = await supabase
         .from('users')
@@ -3622,7 +3753,7 @@ app.post('/api/pending-registrations/:registrationId/action', authenticateToken,
         parentId = existingParent.id;
         generatedPassword = null;
       } else {
-        generatedPassword = Math.random().toString(36).slice(-8);
+        generatedPassword = generateTempPassword();
         const hashedPassword = await bcrypt.hash(generatedPassword, 10);
 
         const nameParts = registration.parent_name.split(' ');
@@ -4048,11 +4179,13 @@ app.post('/api/menu-items/:itemId/image', authenticateToken, requireRole('secret
 
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
+    const imageType = detectImageType(buffer);
+    if (!imageType || buffer.length > MAX_PHOTO_BYTES) throw new Error('INVALID_IMAGE');
 
-    const fileName = `${itemId}_${Date.now()}.jpg`;
+    const fileName = `${itemId}_${Date.now()}.${imageType.ext}`;
     const { error: uploadError } = await supabase.storage
       .from('menu-item-images')
-      .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
+      .upload(fileName, buffer, { contentType: imageType.contentType, upsert: true });
 
     if (uploadError) throw uploadError;
 
@@ -4081,11 +4214,13 @@ app.post('/api/menu-item-addons/:addonId/image', authenticateToken, requireRole(
 
     const base64Data = imageData.replace(/^data:image\/\w+;base64,/, '');
     const buffer = Buffer.from(base64Data, 'base64');
+    const imageType = detectImageType(buffer);
+    if (!imageType || buffer.length > MAX_PHOTO_BYTES) throw new Error('INVALID_IMAGE');
 
-    const fileName = `addon_${addonId}_${Date.now()}.jpg`;
+    const fileName = `addon_${addonId}_${Date.now()}.${imageType.ext}`;
     const { error: uploadError } = await supabase.storage
       .from('menu-item-images')
-      .upload(fileName, buffer, { contentType: 'image/jpeg', upsert: true });
+      .upload(fileName, buffer, { contentType: imageType.contentType, upsert: true });
 
     if (uploadError) throw uploadError;
 
@@ -4222,10 +4357,13 @@ app.delete('/api/groups/:groupId', authenticateToken, requireRole('secretary', '
 });
 
 // קבל/עדכן לוח ארוחות לשכבה לחודש
-app.post('/api/groups/:groupId/schedule', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(req => req.body.school_id), async (req, res) => {
+app.post('/api/groups/:groupId/schedule', authenticateToken, requireRole('secretary', 'admin'), requireSchoolAccess(getGroupSchoolId), async (req, res) => {
   try {
     const { groupId } = req.params;
-    const { school_id, month, year, days_count, meal_price } = req.body;
+    // בית הספר נגזר מהשכבה עצמה (לא מגוף הבקשה), כך שאי אפשר לכתוב ללוח של שכבה בבית ספר אחר
+    const school_id = await getGroupSchoolId(req);
+    if (!school_id) return res.status(404).json({ success: false, message: 'שכבה לא נמצאה' });
+    const { month, year, days_count, meal_price } = req.body;
     const { data, error } = await supabase
       .from('meal_schedules')
       .upsert([{ group_id: groupId, school_id, month, year, days_count, meal_price }], 
@@ -4451,6 +4589,10 @@ const growWebhookV2Handler = async (req, res) => {
     }
     
     const amount = parseFloat(payment_sum) || 0;
+    if (!(amount > 0) || amount > MAX_GATEWAY_CREDIT) {
+      console.error('Gateway credit rejected: invalid amount', amount, 'student', studentId);
+      return res.json({ success: true });
+    }
 
 
     // קבל school_id (לצורך רישום העסקה בהמשך)
@@ -4518,7 +4660,7 @@ const growWebhookV2Handler = async (req, res) => {
   }
 };
 
-app.post('/api/grow-webhook-v2', growWebhookV2Handler);
+app.post('/api/grow-webhook-v2', growWebhookGuard, growWebhookV2Handler);
 
 // העברה לדף התשלום של Tranzila ב-POST (כך שה-thtk לא נחשף בכתובת או בהיסטוריה). הקישור חד-פעמי לפי מזהה ההזמנה.
 app.get('/api/tranzila-launch/:id', async (req, res) => {
@@ -4575,7 +4717,7 @@ app.post('/api/tranzila/reverify/:checkoutId', authenticateToken, requireRole('s
 });
 
 // Webhook מ-Grow אחרי תשלום
-app.post('/api/grow-webhook', async (req, res) => {
+app.post('/api/grow-webhook', growWebhookGuard, async (req, res) => {
   try {
     
     
@@ -4605,7 +4747,7 @@ app.post('/api/grow-webhook', async (req, res) => {
       }
       
       
-      if (studentId) {
+      if (studentId && amount > 0 && amount <= MAX_GATEWAY_CREDIT) {
         // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
         // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
         const { data: creditResult, error: creditError } = await supabase
@@ -4715,6 +4857,7 @@ app.post('/api/create-grow-payment', authenticateToken, async (req, res) => {
     
     
     
+    await assertSafeWebhookTarget(makeWebhookUrl);
     const response = await fetch(makeWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4821,6 +4964,7 @@ app.post('/api/create-guest-grow-payment', authenticateToken, requireRole('kitch
     const growName = !typedName ? 'לקוח מזדמן' : (typedName.includes(' ') ? typedName : `${typedName} מזדמן`);
     const growPhone = String(guestPhone).replace(/\D/g, '').replace(/^972/, '0');
 
+    await assertSafeWebhookTarget(makeWebhookUrl);
     const response = await fetch(makeWebhookUrl, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -4996,7 +5140,7 @@ app.post('/api/kiosk/identify', authenticateToken, requireRole('kitchen', 'secre
 });
 
 // מאמת את הסיסמה של המשתמש המחובר כרגע - משמש לנעילת יציאה ממסך הקיוסק
-app.post('/api/verify-password', authenticateToken, async (req, res) => {
+app.post('/api/verify-password', authenticateToken, verifyPasswordLimiter, async (req, res) => {
   try {
     const { password } = req.body;
     const { data: user, error } = await supabase
@@ -5792,55 +5936,69 @@ app.post('/api/create-paybox-payment', authenticateToken, async (req, res) => {
 
 // Callback מPaybox (יקרא כשהתשלום יושלם)
 app.post('/api/paybox-callback', async (req, res) => {
+  // חסום כברירת מחדל: ל-callback אין אימות ספק (חתימה). Paybox לא מופעל בבתי הספר, ולכן כל קריאה כאן
+  // היא לא לגיטימית. להפעלה עתידית צריך קודם אימות מול Paybox, ורק אז PAYBOX_ENABLED=1.
+  if (process.env.PAYBOX_ENABLED !== '1') {
+    return res.status(503).json({ success: false, message: 'Paybox לא פעיל' });
+  }
   try {
-    const { transaction_id, status, amount } = req.body;
-    
-    
+    const { transaction_id, status } = req.body;
+
     // מצא את התשלום
     const { data: payment } = await supabase
       .from('online_payments')
       .select('*')
       .eq('transaction_id', transaction_id)
-      .single();
-    
+      .maybeSingle();
+
     if (!payment) {
       return res.status(404).json({ success: false });
     }
-    
+
     if (status === 'completed') {
-      // עדכן סטטוס תשלום
-      await supabase
+      // תפיסה אטומית: pending -> completed פעם אחת בלבד (callback חוזר לא מזכה שוב)
+      const { data: claimed } = await supabase
         .from('online_payments')
-        .update({ 
-          status: 'completed',
-          completed_at: new Date().toISOString()
-        })
-        .eq('id', payment.id);
-      
-      // זיכוי אטומי מול בסיס הנתונים (ראו backend/sql/add_atomic_balance_and_kiosk_lock.sql) -
-      // ראו הסבר מלא ב-process-meal-purchase למה זה חשוב.
-      await supabase
-        .rpc('credit_student_balance', { p_student_id: payment.student_id, p_amount: parseFloat(amount) })
+        .update({ status: 'completed', completed_at: new Date().toISOString() })
+        .eq('id', payment.id)
+        .eq('status', 'pending')
+        .select('id')
+        .maybeSingle();
+      if (!claimed) {
+        return res.json({ success: true });
+      }
+
+      // הסכום נלקח מהרשומה השמורה בשרת, לא מגוף הבקשה
+      const amount = parseFloat(payment.amount) || 0;
+      if (!(amount > 0) || amount > MAX_GATEWAY_CREDIT) {
+        return res.json({ success: true });
+      }
+
+      const { error: creditError } = await supabase
+        .rpc('credit_student_balance', { p_student_id: payment.student_id, p_amount: amount })
         .single();
-      
-      // צור עסקה
+      if (creditError) {
+        // החזרה ל-pending כדי שלא יישאר "completed" בלי זיכוי
+        await supabase.from('online_payments').update({ status: 'pending', completed_at: null }).eq('id', payment.id);
+        throw creditError;
+      }
+
       await supabase
         .from('transactions')
         .insert({
           student_id: payment.student_id,
-          school_id: student.school_id,
-          amount: amount,
+          school_id: payment.school_id,
+          amount,
           type: 'payment',
           payment_method: 'paybox',
           payment_type: payment.payment_type || 'balance',
           description: `תשלום Paybox - עסקה ${transaction_id || Date.now()}`,
           transaction_date: new Date().toISOString()
         });
-      
     }
-    
+
     res.json({ success: true });
-    
+
   } catch (error) {
     console.error('Callback error:', error);
     res.status(500).json({ success: false });
